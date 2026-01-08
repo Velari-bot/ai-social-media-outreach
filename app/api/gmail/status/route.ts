@@ -1,0 +1,55 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/firebase-admin';
+import { db } from '@/lib/firebase-admin';
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
+/**
+ * GET /api/gmail/status
+ * Get Gmail connection status for current user
+ */
+export async function GET(request: NextRequest) {
+  try {
+    // Get user ID from Authorization header
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.substring(7);
+    const decodedToken = await auth.verifyIdToken(token);
+    const userId = decodedToken.uid;
+
+    // Get Gmail connection from Firestore
+    const gmailConnectionRef = db.collection('gmail_connections').doc(userId);
+    const gmailConnectionDoc = await gmailConnectionRef.get();
+
+    if (!gmailConnectionDoc.exists) {
+      return NextResponse.json({
+        success: true,
+        connected: false,
+      });
+    }
+
+    const data = gmailConnectionDoc.data()!;
+
+    return NextResponse.json({
+      success: true,
+      connected: true,
+      email: data.email,
+      lastSync: data.last_sync,
+      connectedAt: data.connected_at,
+    });
+  } catch (error: any) {
+    console.error('Error fetching Gmail status:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to fetch Gmail status' },
+      { status: 500 }
+    );
+  }
+}
+

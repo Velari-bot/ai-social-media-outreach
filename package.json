@@ -1,0 +1,35 @@
+{
+  "name": "ai-social-media-outreach",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.89.0",
+    "date-fns": "^4.1.0",
+    "firebase": "^12.7.0",
+    "firebase-admin": "^13.6.0",
+    "googleapis": "^170.0.0",
+    "ics": "^3.8.1",
+    "lucide-react": "^0.562.0",
+    "next": "14.2.5",
+    "nodemailer": "^7.0.12",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-hot-toast": "^2.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.12",
+    "@types/nodemailer": "^7.0.4",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.40",
+    "tailwindcss": "^3.4.7",
+    "typescript": "^5.5.4"
+  }
+}
