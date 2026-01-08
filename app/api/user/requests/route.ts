@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getRecentRequests, createCreatorRequest } from '@/lib/database';
 import { auth } from '@/lib/firebase-admin';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/user/requests
  * Get user's recent creator requests
