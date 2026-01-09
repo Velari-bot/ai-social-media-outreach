@@ -18,6 +18,17 @@ export default function BookingWizard() {
     const [loadingAvailability, setLoadingAvailability] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [userTimezone, setUserTimezone] = useState<string>("");
+
+    useEffect(() => {
+        // Get user's timezone
+        try {
+            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            setUserTimezone(tz);
+        } catch (e) {
+            setUserTimezone("UTC");
+        }
+    }, []);
 
     // Fetch availability on mount (next 45 days)
     useEffect(() => {
@@ -90,7 +101,7 @@ export default function BookingWizard() {
                 </div>
                 <h1 className="text-3xl font-black text-gray-900 mb-4">Booking Confirmed!</h1>
                 <p className="text-gray-600 text-lg mb-4">
-                    We've scheduled your call for <strong>{selectedSlot?.date}</strong> at <strong>{format(parseISO(selectedSlot!.startTime), 'h:mm a')}</strong>.
+                    We've scheduled your call for <strong>{selectedSlot?.date}</strong> at <strong>{format(parseISO(selectedSlot!.startTime), 'h:mm a')}</strong> ({userTimezone}).
                 </p>
                 <p className="text-gray-600 mb-8">
                     You'll receive an email from <strong>benderaiden826</strong> for confirmations and reminders automatically. This same system will be set up for your email sending with creators.
@@ -141,9 +152,17 @@ export default function BookingWizard() {
                                 </div>
                             ) : (
                                 <div className="space-y-6">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <Clock className="w-5 h-5 text-gray-400" />
-                                        <h2 className="text-xl font-bold">Select a Time</h2>
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <Clock className="w-5 h-5 text-gray-400" />
+                                            <h2 className="text-xl font-bold">Select a Time</h2>
+                                        </div>
+                                        {userTimezone && (
+                                            <div className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                                <span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
+                                                Times shown in {userTimezone}
+                                            </div>
+                                        )}
                                     </div>
                                     <TimeSlotPicker
                                         date={selectedDate}
@@ -164,6 +183,7 @@ export default function BookingWizard() {
                             onBack={() => setStep(1)}
                             selectedDate={selectedDate}
                             selectedTime={format(parseISO(selectedSlot.startTime), 'h:mm a')}
+                            userTimezone={userTimezone}
                         />
                     )}
                 </div>

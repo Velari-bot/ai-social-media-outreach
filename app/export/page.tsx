@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth-helpers";
 import { fetchRecentRequests } from "@/lib/api-client";
 import toast from "react-hot-toast";
 import Navbar from "@/components/Navbar";
+import SubscriptionGuard from "@/components/SubscriptionGuard";
 
 interface CreatorOutreachData {
   id: string;
@@ -79,6 +80,14 @@ const AVAILABLE_COLUMNS = [
 ] as const;
 
 export default function ExportPage({ searchParams }: { searchParams: { demo?: string } }) {
+  return (
+    <SubscriptionGuard>
+      <ExportContent searchParams={searchParams} />
+    </SubscriptionGuard>
+  );
+}
+
+function ExportContent({ searchParams }: { searchParams: { demo?: string } }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [rawData, setRawData] = useState<CreatorOutreachData[]>([]);

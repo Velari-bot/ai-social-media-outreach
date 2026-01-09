@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth-helpers";
 import { fetchUserAccount, fetchUserStats, fetchRecentRequests, createRequest } from "@/lib/api-client";
 import type { UserAccount, UserStats } from "@/lib/database";
 import { useSearchParams } from "next/navigation";
+import SubscriptionGuard from "@/components/SubscriptionGuard";
 
 interface RecentRequest {
   id: number;
@@ -19,9 +20,11 @@ interface RecentRequest {
 
 export default function CreatorRequestPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#F3F1EB] flex items-center justify-center">Loading...</div>}>
-      <CreatorRequestContent />
-    </Suspense>
+    <SubscriptionGuard>
+      <Suspense fallback={<div className="min-h-screen bg-[#F3F1EB] flex items-center justify-center">Loading...</div>}>
+        <CreatorRequestContent />
+      </Suspense>
+    </SubscriptionGuard>
   );
 }
 

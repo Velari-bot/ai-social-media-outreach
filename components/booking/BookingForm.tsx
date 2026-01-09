@@ -17,9 +17,10 @@ interface BookingFormProps {
     onBack: () => void;
     selectedDate: Date;
     selectedTime: string;
+    userTimezone: string;
 }
 
-export default function BookingForm({ onSubmit, isSubmitting, onBack, selectedDate, selectedTime }: BookingFormProps) {
+export default function BookingForm({ onSubmit, isSubmitting, onBack, selectedDate, selectedTime, userTimezone }: BookingFormProps) {
     const [formData, setFormData] = useState<BookingFormData>({
         name: '',
         email: '',
@@ -40,7 +41,7 @@ export default function BookingForm({ onSubmit, isSubmitting, onBack, selectedDa
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="mb-6 pb-6 border-b border-gray-100">
                 <h3 className="text-xl font-bold text-gray-900 mb-1">Final Details</h3>
-                <p className="text-gray-500 text-sm">You're booking a call for <strong>{selectedTime}</strong> on <strong>{selectedDate.toLocaleDateString()}</strong>.</p>
+                <p className="text-gray-500 text-sm">You're booking a call for <strong>{selectedTime}</strong> ({userTimezone}) on <strong>{selectedDate.toLocaleDateString()}</strong>.</p>
             </div>
 
             <div className="space-y-4">

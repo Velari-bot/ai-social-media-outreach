@@ -8,6 +8,7 @@ import { fetchUserAccount, fetchUserStats, fetchRecentRequests, getGmailStatus }
 import toast from "react-hot-toast";
 import Navbar from "@/components/Navbar";
 import DemoDashboard from "@/components/demo/DemoDashboard";
+import SubscriptionGuard from "@/components/SubscriptionGuard";
 
 interface DashboardMetrics {
   emailsSentToday: number;
@@ -38,9 +39,11 @@ interface Campaign {
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#F3F1EB] flex items-center justify-center">Loading dashboard...</div>}>
-      <DashboardContent />
-    </Suspense>
+    <SubscriptionGuard>
+      <Suspense fallback={<div className="min-h-screen bg-[#F3F1EB] flex items-center justify-center">Loading dashboard...</div>}>
+        <DashboardContent />
+      </Suspense>
+    </SubscriptionGuard>
   );
 }
 

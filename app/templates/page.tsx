@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 import Navbar from "@/components/Navbar";
+import SubscriptionGuard from "@/components/SubscriptionGuard";
 
 interface EmailTemplate {
   id: string;
@@ -19,9 +20,11 @@ interface EmailTemplate {
 
 export default function TemplatesPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#F5F3EF] flex items-center justify-center">Loading templates...</div>}>
-      <TemplatesContent />
-    </Suspense>
+    <SubscriptionGuard>
+      <Suspense fallback={<div className="min-h-screen bg-[#F5F3EF] flex items-center justify-center">Loading templates...</div>}>
+        <TemplatesContent />
+      </Suspense>
+    </SubscriptionGuard>
   );
 }
 

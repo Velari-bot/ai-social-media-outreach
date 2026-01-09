@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth-helpers";
 import { fetchUserAccount, getGmailStatus, disconnectGmail, getGmailOAuthUrl } from "@/lib/api-client";
 import toast from "react-hot-toast";
 import Navbar from "@/components/Navbar";
+import SubscriptionGuard from "@/components/SubscriptionGuard";
 
 interface GmailConnection {
   connected: boolean;
@@ -25,9 +26,11 @@ interface DailyLimits {
 
 export default function SettingsPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#F3F1EB] flex items-center justify-center">Loading settings...</div>}>
-      <SettingsContent />
-    </Suspense>
+    <SubscriptionGuard>
+      <Suspense fallback={<div className="min-h-screen bg-[#F3F1EB] flex items-center justify-center">Loading settings...</div>}>
+        <SettingsContent />
+      </Suspense>
+    </SubscriptionGuard>
   );
 }
 

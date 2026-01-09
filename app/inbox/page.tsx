@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 import Navbar from "@/components/Navbar";
+import SubscriptionGuard from "@/components/SubscriptionGuard";
 
 interface EmailMessage {
   id: string;
@@ -36,6 +37,14 @@ interface Reply {
 }
 
 export default function InboxPage({ searchParams }: { searchParams: { demo?: string } }) {
+  return (
+    <SubscriptionGuard>
+      <InboxContent searchParams={searchParams} />
+    </SubscriptionGuard>
+  );
+}
+
+function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
   const router = useRouter();
   const [replies, setReplies] = useState<Reply[]>([]);
   const [loading, setLoading] = useState(true);
@@ -151,10 +160,6 @@ export default function InboxPage({ searchParams }: { searchParams: { demo?: str
         }
 
         setUserId(user.id);
-
-        // TODO: Fetch replies from database
-        // This will need a replies table in the database
-        // For now, set empty array
         setReplies([]);
       } catch (error: any) {
         console.error("Error loading inbox:", error);
@@ -165,7 +170,7 @@ export default function InboxPage({ searchParams }: { searchParams: { demo?: str
     }
 
     loadUserAndReplies();
-  }, [router]);
+  }, [router, searchParams]);
 
   const filteredReplies = useMemo(() => {
     let result = [...replies];
@@ -381,7 +386,7 @@ export default function InboxPage({ searchParams }: { searchParams: { demo?: str
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className={`font-bold ${(reply.isNew || reply.hasNewReply || reply.isUnread) ? "text-black" : "text-black"}`}>
+                                <span className="font-bold text-black">
                                   {reply.creatorName}
                                 </span>
                                 {(reply.isNew || reply.hasNewReply) && (
