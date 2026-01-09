@@ -2,19 +2,28 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import toast from "react-hot-toast";
 
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const isDemo = searchParams?.get("demo") === "true";
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
+      setLoading(false);
+      return;
+    }
+
+    if (isDemo) {
+      setIsAuthenticated(true);
       setLoading(false);
       return;
     }
@@ -37,7 +46,7 @@ export default function Navbar() {
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, []);
+  }, [isDemo]);
 
   const handleLogout = async () => {
     try {
@@ -53,6 +62,10 @@ export default function Navbar() {
     }
   };
 
+  const getLink = (path: string) => {
+    return isDemo ? `${path}?demo=true` : path;
+  };
+
   return (
     <nav className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
       <div className="pointer-events-auto w-full max-w-[1200px] bg-white/90 backdrop-blur-xl border border-gray-200/60 rounded-full shadow-sm px-2 py-2.5 flex items-center justify-between h-[72px] transition-all duration-300">
@@ -66,7 +79,7 @@ export default function Navbar() {
             Pricing
           </Link>
           {isAuthenticated && (
-            <Link href="/dashboard" className="text-sm font-medium text-gray-600 hover:text-black transition-colors">
+            <Link href={getLink("/dashboard")} className="text-sm font-medium text-gray-600 hover:text-black transition-colors">
               Dashboard
             </Link>
           )}
@@ -74,7 +87,7 @@ export default function Navbar() {
 
         {/* Center Section: Logo (Desktop: Center, Mobile: Left) */}
         <div className="flex-1 lg:flex-none flex justify-start lg:justify-center pl-4 lg:pl-0">
-          <Link href={isAuthenticated ? "/dashboard" : "/"} className="flex items-center gap-2 group">
+          <Link href={isAuthenticated ? getLink("/dashboard") : "/"} className="flex items-center gap-2 group">
             <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold text-lg rotate-3 group-hover:rotate-6 transition-transform">
               V
             </div>
@@ -89,7 +102,7 @@ export default function Navbar() {
               {isAuthenticated ? (
                 <>
                   <Link
-                    href="/inbox"
+                    href={getLink("/inbox")}
                     className="w-10 h-10 flex items-center justify-center rounded-full text-gray-600 hover:text-black hover:bg-gray-100 transition-all"
                     title="Inbox"
                   >
@@ -98,7 +111,7 @@ export default function Navbar() {
                     </svg>
                   </Link>
                   <Link
-                    href="/settings"
+                    href={getLink("/settings")}
                     className="w-10 h-10 flex items-center justify-center rounded-full text-gray-600 hover:text-black hover:bg-gray-100 transition-all"
                     title="Settings"
                   >
@@ -117,7 +130,7 @@ export default function Navbar() {
                     </svg>
                   </button>
                   <Link
-                    href="/creator-request"
+                    href={getLink("/creator-request")}
                     className="px-6 py-3 bg-black text-white rounded-full font-bold text-sm hover:bg-gray-800 transition-all hover:scale-105"
                   >
                     Find Creators
@@ -164,10 +177,10 @@ export default function Navbar() {
         <div className="absolute top-[88px] left-4 right-4 pointer-events-auto bg-white border border-gray-200 rounded-3xl shadow-xl p-4 flex flex-col gap-2 z-40 transform origin-top animate-in fade-in slide-in-from-top-4 duration-200">
           {isAuthenticated ? (
             <>
-              <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium">Dashboard</Link>
-              <Link href="/creator-request" onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium">Find Creators</Link>
-              <Link href="/inbox" onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium">Inbox</Link>
-              <Link href="/settings" onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium">Settings</Link>
+              <Link href={getLink("/dashboard")} onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium">Dashboard</Link>
+              <Link href={getLink("/creator-request")} onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium">Find Creators</Link>
+              <Link href={getLink("/inbox")} onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium">Inbox</Link>
+              <Link href={getLink("/settings")} onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium">Settings</Link>
               <button onClick={() => { handleLogout(); setMobileMenuOpen(false); }} className="p-4 hover:bg-gray-50 rounded-xl font-medium text-left text-red-600">Log out</button>
             </>
           ) : (

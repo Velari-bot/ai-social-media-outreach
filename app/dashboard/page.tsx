@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { fetchUserAccount, fetchUserStats, fetchRecentRequests, getGmailStatus } from "@/lib/api-client";
 import toast from "react-hot-toast";
 import Navbar from "@/components/Navbar";
+import DemoDashboard from "@/components/demo/DemoDashboard";
 
 interface DashboardMetrics {
   emailsSentToday: number;
@@ -38,6 +39,9 @@ interface Campaign {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isDemo = searchParams.get("demo") === "true";
+
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState<DashboardMetrics>({
@@ -58,6 +62,11 @@ export default function DashboardPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
 
   const [newRepliesCount, setNewRepliesCount] = useState(0);
+
+  // If in demo mode, return the demo dashboard immediately
+  if (isDemo) {
+    return <DemoDashboard />;
+  }
 
   // Load dashboard data
   useEffect(() => {

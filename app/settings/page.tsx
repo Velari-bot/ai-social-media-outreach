@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { fetchUserAccount, getGmailStatus, disconnectGmail, getGmailOAuthUrl } from "@/lib/api-client";
 import toast from "react-hot-toast";
@@ -25,6 +25,9 @@ interface DailyLimits {
 
 export default function SettingsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isDemo = searchParams?.get("demo") === "true";
+
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [gmailConnection, setGmailConnection] = useState<GmailConnection>({
@@ -43,8 +46,27 @@ export default function SettingsPage() {
   useEffect(() => {
     async function loadSettings() {
       try {
+        if (isDemo) {
+          // Mock data for demo
+          setDailyLimits({
+            email_quota_daily: 100,
+            email_quota_monthly: 3000,
+            email_used_today: 42,
+            email_used_this_month: 850,
+            remaining_daily: 58,
+            remaining_monthly: 2150,
+          });
+          setGmailConnection({
+            connected: true,
+            email: "demo@verality.io",
+            lastSync: new Date().toISOString(),
+          });
+          setLoading(false);
+          return;
+        }
+
         const user = getCurrentUser();
-        
+
         if (!user) {
           toast.error("Please log in to continue");
           router.push("/login");
@@ -94,7 +116,7 @@ export default function SettingsPage() {
     }
 
     loadSettings();
-  }, [router]);
+  }, [router, isDemo]);
 
   const handleConnectGmail = async () => {
     try {
@@ -171,7 +193,7 @@ export default function SettingsPage() {
                 </p>
               </div>
               <Link
-                href="/dashboard"
+                href={isDemo ? "/dashboard?demo=true" : "/dashboard"}
                 className="px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-sm font-medium text-black"
               >
                 Back to Dashboard
@@ -297,7 +319,8 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-black">Email Templates</h2>
                 <Link
-                  href="/templates"
+                  href={isDemo ? "#" : "/templates"}
+                  onClick={(e) => isDemo && toast.success("Templates are read-only in demo")}
                   className="px-4 py-2 bg-black text-white rounded-xl hover:bg-gray-900 transition-colors text-sm font-medium flex items-center gap-2"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -312,7 +335,8 @@ export default function SettingsPage() {
                   Manage your email templates for outreach campaigns. Create, edit, and organize templates with variables.
                 </p>
                 <Link
-                  href="/templates"
+                  href={isDemo ? "#" : "/templates"}
+                  onClick={(e) => isDemo && toast.success("Templates are read-only in demo")}
                   className="text-sm font-medium text-purple-600 hover:text-purple-700 transition-colors inline-flex items-center gap-1"
                 >
                   Go to Templates
@@ -415,5 +439,3 @@ export default function SettingsPage() {
     </main>
   );
 }
-
-
