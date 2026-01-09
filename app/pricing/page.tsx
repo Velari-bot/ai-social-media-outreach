@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import Navbar from "@/components/Navbar";
+import toast from "react-hot-toast";
 
 const tiers = [
     {
@@ -155,15 +156,15 @@ function PricingContent() {
                                         </p>
                                     </div>
 
-                                    <Link
-                                        href={tier.isCustom ? "/book" : "/login"}
+                                    <button
+                                        onClick={() => tier.isCustom ? window.location.href = "/book" : toast.error("Billing isn't ready yet (demo phase)")}
                                         className={`w-full py-3.5 rounded-full font-bold text-[15px] mb-8 transition-transform active:scale-95 text-center inline-block ${isDark
                                             ? "bg-white text-black hover:bg-gray-100"
                                             : "bg-[#0A0A0A] text-white hover:bg-gray-900"
                                             }`}
                                     >
                                         {tier.isCustom ? "Book a call" : (isDark ? "Build your plan" : "Get Started")}
-                                    </Link>
+                                    </button>
 
                                     {/* What you get */}
                                     <div className="mb-4">

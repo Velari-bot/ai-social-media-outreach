@@ -251,7 +251,7 @@ function SettingsContent() {
                 <button
                   onClick={(e) => {
                     e.preventDefault();
-                    toast.success("Billing portal link coming soon!");
+                    toast.error("Billing isn't ready yet (demo phase)");
                   }}
                   className="px-4 py-2 bg-white border border-gray-200 text-black rounded-xl hover:bg-gray-50 transition-colors text-sm font-medium"
                 >

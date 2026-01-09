@@ -288,9 +288,12 @@ function DashboardContent() {
                 />
               </div>
 
-              <Link href="/pricing" className="mt-6 block w-full py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl font-bold text-sm text-center transition-colors relative z-10">
+              <button
+                onClick={() => toast.error("Billing isn't ready yet (demo phase)")}
+                className="mt-6 block w-full py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl font-bold text-sm text-center transition-colors relative z-10"
+              >
                 Upgrade Plan
-              </Link>
+              </button>
             </div>
 
             {/* Quick Actions (Restored) */}
