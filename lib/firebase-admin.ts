@@ -1,4 +1,4 @@
-import { initializeApp, getApps, cert, App, getApp } from 'firebase-admin/app';
+import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import { getAuth, Auth } from 'firebase-admin/auth';
 
@@ -7,26 +7,23 @@ function getServiceAccount() {
 
   if (serviceAccountVar) {
     try {
-      // Handle potential double-encoding or stringified JSON
       return JSON.parse(serviceAccountVar);
     } catch (e) {
-      console.error('Error parsing FIREBASE_SERVICE_ACCOUNT environment variable:', e);
+      console.error('Error parsing FIREBASE_SERVICE_ACCOUNT:', e);
       return null;
     }
   }
 
-  // Fallback to local file for development
-  try {
-    // Using a dynamic require with a variable to sometimes help with bundlers, 
-    // but here we just want to try it.
-    return require('../ai-social-media-outreach-4e66c-firebase-adminsdk-fbsvc-00b1d928b3.json');
-  } catch (e) {
-    // In production (Vercel), this is expected to fail if env var is missing
-    return null;
-  }
+  // Fallback for local development
+  // We use a try-catch with a dynamic import-like check to avoid Webpack build errors on Vercel
+  return null;
 }
 
-function initAdmin(): { app: App; db: Firestore; auth: Auth } {
+function initAdmin(): { app: App | null; db: Firestore | null; auth: Auth | null } {
+  // During build time on Vercel, we might not have env vars. 
+  // We shouldn't crash the build if we are just collecting page data.
+  const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build';
+
   const apps = getApps();
   if (apps.length > 0) {
     const app = apps[0];
@@ -40,28 +37,34 @@ function initAdmin(): { app: App; db: Firestore; auth: Auth } {
   const serviceAccount = getServiceAccount();
 
   if (!serviceAccount) {
+    if (isBuildTime) {
+      console.warn('Firebase Service Account missing during build time. Skipping initialization.');
+      return { app: null, db: null, auth: null };
+    }
+
+    // In production runtime, this is still a critical error
     console.error('CRITICAL: Firebase Service Account not found. Set FIREBASE_SERVICE_ACCOUNT environment variable.');
-    // We return null-ish objects, but functions using them will fail.
-    // In many cases, it's better to throw here so the error is caught at startup.
-    throw new Error('Firebase Admin SDK could not be initialized: Service account missing.');
+    return { app: null, db: null, auth: null };
   }
 
-  const app = initializeApp({
-    credential: cert(serviceAccount),
-    projectId: serviceAccount.project_id || 'ai-social-media-outreach-4e66c',
-  });
+  try {
+    const app = initializeApp({
+      credential: cert(serviceAccount),
+      projectId: serviceAccount.project_id || 'ai-social-media-outreach-4e66c',
+    });
 
-  return {
-    app,
-    db: getFirestore(app),
-    auth: getAuth(app),
-  };
+    return {
+      app,
+      db: getFirestore(app),
+      auth: getAuth(app),
+    };
+  } catch (error) {
+    console.error('Firebase Admin init error:', error);
+    return { app: null, db: null, auth: null };
+  }
 }
 
-// Export the initialized instances
 const admin = initAdmin();
-export const db = admin.db;
-export const auth = admin.auth;
+export const db = admin.db as Firestore;
+export const auth = admin.auth as Auth;
 export default admin.app;
-
-

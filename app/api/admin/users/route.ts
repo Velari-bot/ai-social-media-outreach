@@ -2,6 +2,8 @@
 import { NextResponse } from 'next/server';
 import { db, auth } from '@/lib/firebase-admin';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
     try {
         // 1. List users from Firebase Auth

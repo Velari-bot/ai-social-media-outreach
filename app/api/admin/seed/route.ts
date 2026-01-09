@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { seedAvailability } from '@/lib/booking-service';
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: NextRequest) {
     try {
         // You might want to add auth check here
