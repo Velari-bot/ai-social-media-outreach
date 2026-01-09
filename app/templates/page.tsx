@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 import Navbar from "@/components/Navbar";
@@ -19,6 +19,9 @@ interface EmailTemplate {
 
 export default function TemplatesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isDemo = searchParams?.get("demo") === "true";
+
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
@@ -30,8 +33,48 @@ export default function TemplatesPage() {
   useEffect(() => {
     async function loadUserAndTemplates() {
       try {
+        if (isDemo) {
+          // Mock templates data for Demo
+          const mockTemplates: EmailTemplate[] = [
+            {
+              id: "1",
+              name: "Initial Outreach - Tech",
+              subject: "Collaboration Opportunity - {{creatorName}}",
+              body: "Hi {{creatorName}},\n\nI came across your {{platform}} channel and love your content about {{topic}}. We're looking for creators like you to collaborate with.\n\nOur product is {{productDescription}} and we think it would be a great fit for your audience.\n\nWould you be interested in learning more? I'd love to discuss potential collaboration opportunities.\n\nBest regards,\n{{yourName}}",
+              isDefault: true,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+            {
+              id: "2",
+              name: "Follow-up - Budget Discussion",
+              subject: "Re: Collaboration Opportunity - Budget Details",
+              body: "Hi {{creatorName}},\n\nFollowing up on our previous conversation about collaboration. I wanted to share more details about our budget and what we're looking for:\n\n• Budget: ${{budgetRange}}\n• Deliverables: {{deliverables}}\n• Timeline: {{timeline}}\n\nLet me know if this works for you or if you'd like to discuss any adjustments.\n\nLooking forward to working together!\n\nBest,\n{{yourName}}",
+              isDefault: false,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+            {
+              id: "3",
+              name: "Quick Intro",
+              subject: "Quick question - {{platform}} collaboration",
+              body: "Hi {{creatorName}},\n\nQuick question - are you currently accepting brand partnership opportunities?\n\nWe'd love to work with you if you're interested.\n\nThanks!\n{{yourName}}",
+              isDefault: false,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+          ];
+
+          setTemplates(mockTemplates);
+          if (mockTemplates.length > 0) {
+            setSelectedTemplate(mockTemplates[0]);
+          }
+          setLoading(false);
+          return;
+        }
+
         const { data: { user }, error: authError } = await supabase.auth.getUser();
-        
+
         if (authError || !user) {
           toast.error("Please log in to continue");
           router.push("/login");
@@ -41,6 +84,7 @@ export default function TemplatesPage() {
         setUserId(user.id);
 
         // Mock templates data (in production, this would come from a database table)
+        // ... (rest of the code)
         const mockTemplates: EmailTemplate[] = [
           {
             id: "1",
@@ -226,9 +270,8 @@ export default function TemplatesPage() {
                           setIsEditing(false);
                           setIsCreating(false);
                         }}
-                        className={`w-full text-left p-4 hover:bg-gray-50 transition-colors ${
-                          selectedTemplate?.id === template.id ? "bg-gray-50 border-l-4 border-black" : ""
-                        }`}
+                        className={`w-full text-left p-4 hover:bg-gray-50 transition-colors ${selectedTemplate?.id === template.id ? "bg-gray-50 border-l-4 border-black" : ""
+                          }`}
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">

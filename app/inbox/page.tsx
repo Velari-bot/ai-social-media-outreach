@@ -70,11 +70,42 @@ export default function InboxPage({ searchParams }: { searchParams: { demo?: str
             thread: [
               {
                 id: "msg1",
+                from: "AI Assistant",
+                fromEmail: "ai@verality.io",
+                subject: "Collaboration Proposal",
+                body: "Hi Sarah,\n\nI love the content you're creating on Instagram! Your recent post about sustainable living really resonated with what we're building at Verality.\n\nWe'd love to chat about a potential partnership for our upcoming launch. Are you open to collaborations right now?\n\nBest,\nVerality Team",
+                timestamp: new Date(Date.now() - 86400000 * 2).toISOString(),
+                isAI: true,
+                isUser: false
+              },
+              {
+                id: "msg2",
                 from: "Sarah Jenkins",
                 fromEmail: "sarah.content@gmail.com",
                 subject: "Re: Collaboration Proposal",
                 body: "Hi,\n\nThanks for reaching out! I've taken a look at your website and I think your product would be a great fit for my audience. I typically work with brands in the lifestyle space.\n\nCould you send over more details about the campaign requirements and budget?\n\nBest,\nSarah",
+                timestamp: new Date(Date.now() - 86400000).toISOString(),
+                isAI: false,
+                isUser: false
+              },
+              {
+                id: "msg3",
+                from: "AI Assistant",
+                fromEmail: "ai@verality.io",
+                subject: "Re: Collaboration Proposal",
+                body: "Hi Sarah,\n\nThat's great to hear! We're looking for 1 Reel and 3 Stories highlighting the product's daily use.\n\nOur budget for this campaign is in the range of $1,500 - $2,000. Does that align with your rates?\n\nBest,\nVerality Team",
+                timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
+                isAI: true,
+                isUser: false
+              },
+              {
+                id: "msg4",
+                from: "Sarah Jenkins",
+                fromEmail: "sarah.content@gmail.com",
+                subject: "Re: Collaboration Proposal",
+                body: "Yes, that fits within my rate card! I can send over my media kit. When are you looking to start?",
                 timestamp: new Date().toISOString(),
+                isAI: false,
                 isUser: false
               }
             ]
@@ -230,10 +261,10 @@ export default function InboxPage({ searchParams }: { searchParams: { demo?: str
   }
 
   return (
-    <main className="h-screen bg-[#F5F3EF] font-sans overflow-hidden flex flex-col">
+    <main className="min-h-screen bg-[#F5F3EF] font-sans flex flex-col">
       <Navbar />
 
-      <div className="flex-1 flex flex-col overflow-hidden pt-20">
+      <div className="flex-1 flex flex-col pt-20">
         <div className="w-full px-4 sm:px-6 py-6">
           <div className="max-w-7xl mx-auto h-full flex flex-col">
             {/* Header */}
@@ -259,8 +290,8 @@ export default function InboxPage({ searchParams }: { searchParams: { demo?: str
                   <button
                     onClick={() => setFilter("new")}
                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${filter === "new"
-                        ? "bg-black text-white"
-                        : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                      ? "bg-black text-white"
+                      : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
                       }`}
                   >
                     New ({replies.filter(r => r.isNew || r.hasNewReply).length})
@@ -268,8 +299,8 @@ export default function InboxPage({ searchParams }: { searchParams: { demo?: str
                   <button
                     onClick={() => setFilter("unread")}
                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${filter === "unread"
-                        ? "bg-blue-600 text-white"
-                        : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                      ? "bg-blue-600 text-white"
+                      : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
                       }`}
                   >
                     Unread ({replies.filter(r => r.isUnread).length})
@@ -277,8 +308,8 @@ export default function InboxPage({ searchParams }: { searchParams: { demo?: str
                   <button
                     onClick={() => setFilter("all")}
                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${filter === "all"
-                        ? "bg-gray-700 text-white"
-                        : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                      ? "bg-gray-700 text-white"
+                      : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
                       }`}
                   >
                     All ({replies.length})
@@ -286,8 +317,8 @@ export default function InboxPage({ searchParams }: { searchParams: { demo?: str
                   <button
                     onClick={() => setFilter("interested")}
                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${filter === "interested"
-                        ? "bg-green-600 text-white"
-                        : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                      ? "bg-green-600 text-white"
+                      : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
                       }`}
                   >
                     Interested ({replies.filter(r => r.tag === "interested").length})
@@ -295,8 +326,8 @@ export default function InboxPage({ searchParams }: { searchParams: { demo?: str
                   <button
                     onClick={() => setFilter("needs_followup")}
                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${filter === "needs_followup"
-                        ? "bg-yellow-600 text-white"
-                        : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                      ? "bg-yellow-600 text-white"
+                      : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
                       }`}
                   >
                     Needs Follow-up ({replies.filter(r => r.tag === "needs_followup").length})
@@ -304,8 +335,8 @@ export default function InboxPage({ searchParams }: { searchParams: { demo?: str
                   <button
                     onClick={() => setFilter("not_a_fit")}
                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${filter === "not_a_fit"
-                        ? "bg-gray-600 text-white"
-                        : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                      ? "bg-gray-600 text-white"
+                      : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
                       }`}
                   >
                     Not a Fit ({replies.filter(r => r.tag === "not_a_fit").length})
@@ -425,19 +456,19 @@ export default function InboxPage({ searchParams }: { searchParams: { demo?: str
                       <div
                         key={message.id}
                         className={`p-4 rounded-xl ${message.isAI
-                            ? "bg-purple-50 border border-purple-200"
-                            : message.isUser
-                              ? "bg-blue-50 border border-blue-200"
-                              : "bg-gray-50 border border-gray-200"
+                          ? "bg-purple-50 border border-purple-200"
+                          : message.isUser
+                            ? "bg-blue-50 border border-blue-200"
+                            : "bg-gray-50 border border-gray-200"
                           }`}
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-2">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${message.isAI
-                                ? "bg-purple-600 text-white"
-                                : message.isUser
-                                  ? "bg-blue-600 text-white"
-                                  : "bg-gray-600 text-white"
+                              ? "bg-purple-600 text-white"
+                              : message.isUser
+                                ? "bg-blue-600 text-white"
+                                : "bg-gray-600 text-white"
                               }`}>
                               {message.isAI ? "AI" : message.isUser ? "U" : message.from.charAt(0)}
                             </div>

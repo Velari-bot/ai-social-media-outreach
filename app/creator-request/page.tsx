@@ -107,6 +107,7 @@ export default function CreatorRequestPage({ searchParams }: { searchParams: { d
 
       if (demoMode) {
         // Set mock data for demo
+        // Set mock data for Demo
         setUserId("demo-user");
         setUserAccount({
           id: "demo",
@@ -114,34 +115,50 @@ export default function CreatorRequestPage({ searchParams }: { searchParams: { d
           name: "Demo User",
           plan: "pro",
           email_quota_daily: 100,
-          email_used_today: 12,
+          email_used_today: 25,
           created_at: new Date().toISOString(),
         } as any);
         setUserStats({
           id: "demo",
-          requests_this_week: 5,
+          requests_this_week: 12,
           emails_sent_this_week: 124,
           creators_contacted: 850,
           average_reply_rate: 24.8,
           created_at: new Date().toISOString(),
         } as any);
-        setDailyQuota({ used: 12, limit: 100 });
+        setDailyQuota({ used: 25, limit: 100 });
         setRecentRequests([
           {
             id: 1,
-            name: "Tech Reviewers",
-            platform: ["YouTube"],
-            status: "in_progress",
+            name: "Demo Campaign - All Platforms",
+            platform: ["YouTube", "Twitch", "TikTok", "Instagram"],
+            status: "delivered",
             dateSubmitted: new Date().toISOString().split('T')[0],
-            resultsCount: 45
+            resultsCount: 25
           },
           {
             id: 2,
-            name: "Fashion Influencers",
-            platform: ["Instagram"],
+            name: "Tech Reviewers",
+            platform: ["YouTube"],
             status: "delivered",
             dateSubmitted: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-            resultsCount: 128
+            resultsCount: 12
+          },
+          {
+            id: 3,
+            name: "Gaming Streamers",
+            platform: ["Twitch"],
+            status: "delivered",
+            dateSubmitted: new Date(Date.now() - 172800000).toISOString().split('T')[0],
+            resultsCount: 8
+          },
+          {
+            id: 4,
+            name: "Lifestyle Influencers",
+            platform: ["Instagram", "TikTok"],
+            status: "delivered",
+            dateSubmitted: new Date(Date.now() - 259200000).toISOString().split('T')[0],
+            resultsCount: 5
           }
         ]);
         setLoading(false);

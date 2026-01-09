@@ -11,7 +11,7 @@ import Navbar from "@/components/Navbar";
 interface CreatorOutreachData {
   id: string;
   campaignName: string;
-  platform: "TikTok" | "Instagram" | "YouTube";
+  platform: "TikTok" | "Instagram" | "YouTube" | "Twitch";
   creatorHandle: string;
   creatorName: string;
   email: string;
@@ -29,7 +29,7 @@ interface CreatorOutreachData {
   emailVariant?: string;
   lastContactedDate: string;
   replyDate?: string;
-  source: "Modash" | "Cached" | "Manual";
+  source: string;
   tags?: string[];
   selected?: boolean;
 }
@@ -45,7 +45,7 @@ interface SummaryStats {
 
 interface FilterState {
   campaigns: string[];
-  platforms: ("TikTok" | "Instagram" | "YouTube")[];
+  platforms: ("TikTok" | "Instagram" | "YouTube" | "Twitch")[];
   statuses: ("Sent" | "Follow-up" | "Replied" | "Interested")[];
   dateRange: { start: string; end: string };
   replyTypes: ("Interested" | "Question" | "Not a fit")[];
@@ -216,25 +216,33 @@ export default function ExportPage({ searchParams }: { searchParams: { demo?: st
       if (demoMode) {
         setUserId("demo-user");
         // Mock data
-        const mockData: CreatorOutreachData[] = Array.from({ length: 50 }, (_, i) => ({
-          id: `demo-${i}`,
-          campaignName: i % 2 === 0 ? "Tech Launch" : "Lifestyle Q1",
-          platform: i % 3 === 0 ? "YouTube" : i % 3 === 1 ? "Instagram" : "TikTok",
-          creatorHandle: `@creator_${i}`,
-          creatorName: `Creator ${i}`,
-          email: `creator${i}@example.com`,
-          followers: Math.floor(Math.random() * 500000) + 10000,
-          avgViews: Math.floor(Math.random() * 100000),
-          engagementRate: parseFloat((Math.random() * 5 + 1).toFixed(2)),
-          audienceCountry: i % 4 === 0 ? "US" : "UK",
-          status: i % 5 === 0 ? "Interested" : i % 5 === 1 ? "Replied" : "Sent",
-          replyType: i % 5 === 0 ? "Interested" : undefined,
-          replied: i % 5 <= 1,
-          responseTime: i % 5 <= 1 ? Math.floor(Math.random() * 48) : undefined,
-          followupsSent: Math.floor(Math.random() * 2),
-          lastContactedDate: new Date(Date.now() - Math.floor(Math.random() * 1000000000)).toISOString().split('T')[0],
-          source: "Modash"
-        }));
+        const mockData: CreatorOutreachData[] = [
+          { id: "1", campaignName: "Demo Campaign", platform: "YouTube", creatorHandle: "@FrostBytePlays", creatorName: "Alex “FrostByte” Chen", email: "frostbyte@gamingmail.com", followers: 248000, avgViews: 55400, engagementRate: 4.8, audienceCountry: "US 52%, CA 12%, UK 10%, DE 8%", status: "Replied", replyType: "Interested", replied: true, responseTime: 14, followupsSent: 1, aiTag: "✔", personalizationScore: 9, emailVariant: "B", lastContactedDate: "2026-01-03", replyDate: "2026-01-04", source: "Hashtag" },
+          { id: "2", campaignName: "Demo Campaign", platform: "Twitch", creatorHandle: "@NOVA_Geek", creatorName: "Nina Patel", email: "nova_geek@streamhub.com", followers: 312500, avgViews: 22100, engagementRate: 9.2, audienceCountry: "US 48%, UK 14%, AU 6%", status: "Replied", replyType: "Interested", replied: true, responseTime: 27, followupsSent: 2, aiTag: "✔", personalizationScore: 8, emailVariant: "A", lastContactedDate: "2025-12-30", replyDate: "2026-01-01", source: "CRM List" },
+          { id: "3", campaignName: "Demo Campaign", platform: "TikTok", creatorHandle: "@PwnWizard", creatorName: "Marcus Lee", email: "pwnwizard@tokmail.com", followers: 186200, avgViews: 67300, engagementRate: 13.5, audienceCountry: "US 40%, PH 15%, BR 10%", status: "Sent", replied: false, followupsSent: 1, aiTag: "✘", personalizationScore: 7, emailVariant: "C", lastContactedDate: "2026-01-02", source: "Inbound" },
+          { id: "4", campaignName: "Demo Campaign", platform: "YouTube", creatorHandle: "@GlitchGuru", creatorName: "Samantha “Sam” Ortiz", email: "glitchguru@ytcreator.com", followers: 412800, avgViews: 82500, engagementRate: 6.1, audienceCountry: "US 38%, UK 20%, CA 10%", status: "Sent", replied: false, followupsSent: 0, aiTag: "✘", personalizationScore: 8, emailVariant: "A", lastContactedDate: "2026-01-05", source: "Outreach" },
+          { id: "5", campaignName: "Demo Campaign", platform: "Instagram", creatorHandle: "@FPS_Master", creatorName: "Eli Robinson", email: "fps_master@insta.com", followers: 98700, avgViews: 9800, engagementRate: 5.5, audienceCountry: "US 60%, UK 8%, MX 7%", status: "Replied", replyType: "Interested", replied: true, responseTime: 5, followupsSent: 1, aiTag: "✔", personalizationScore: 6, emailVariant: "C", lastContactedDate: "2026-01-06", replyDate: "2026-01-06", source: "Search" },
+          { id: "6", campaignName: "Demo Campaign", platform: "YouTube", creatorHandle: "@TechTactic", creatorName: "Jordan Kim", email: "techtactic@youtubemail.com", followers: 274300, avgViews: 45300, engagementRate: 7.0, audienceCountry: "US 50%, CA 15%, UK 9%", status: "Sent", replied: false, followupsSent: 1, aiTag: "✘", personalizationScore: 7, emailVariant: "B", lastContactedDate: "2026-01-04", source: "Outreach" },
+          { id: "7", campaignName: "Demo Campaign", platform: "Twitch", creatorHandle: "@LagBusters", creatorName: "Olivia Nguyen", email: "lagbusters@streammail.com", followers: 159900, avgViews: 18700, engagementRate: 8.8, audienceCountry: "US 42%, UK 12%, CA 9%", status: "Replied", replyType: "Interested", replied: true, responseTime: 12, followupsSent: 2, aiTag: "✔", personalizationScore: 8, emailVariant: "A", lastContactedDate: "2025-12-29", replyDate: "2025-12-30", source: "CRM List" },
+          { id: "8", campaignName: "Demo Campaign", platform: "TikTok", creatorHandle: "@PC_Perf_Guru", creatorName: "Carlos “PCGuru” Mendez", email: "pc_perfguru@tokmail.com", followers: 223400, avgViews: 52800, engagementRate: 12.2, audienceCountry: "US 45%, ES 10%, BR 10%", status: "Sent", replied: false, followupsSent: 0, aiTag: "✘", personalizationScore: 9, emailVariant: "A", lastContactedDate: "2026-01-03", source: "Influencer DB" },
+          { id: "9", campaignName: "Demo Campaign", platform: "YouTube", creatorHandle: "@HighFPS_Hero", creatorName: "Zoe Sinclair", email: "highfps_hero@gamingmail.com", followers: 321100, avgViews: 74900, engagementRate: 5.9, audienceCountry: "US 47%, UK 17%, CA 11%", status: "Replied", replyType: "Interested", replied: true, responseTime: 9, followupsSent: 1, aiTag: "✔", personalizationScore: 8, emailVariant: "B", lastContactedDate: "2026-01-01", replyDate: "2026-01-02", source: "Hashtag" },
+          { id: "10", campaignName: "Demo Campaign", platform: "Instagram", creatorHandle: "@BuildsByBen", creatorName: "Ben Thompson", email: "buildsbyben@insta.com", followers: 87600, avgViews: 8400, engagementRate: 4.9, audienceCountry: "US 58%, DE 6%, UK 6%", status: "Sent", replied: false, followupsSent: 0, aiTag: "✘", personalizationScore: 6, emailVariant: "C", lastContactedDate: "2026-01-06", source: "Outreach" },
+          { id: "11", campaignName: "Demo Campaign", platform: "YouTube", creatorHandle: "@ShroudFanZ", creatorName: "Derek Wu", email: "shroudfanz@ytmail.com", followers: 532900, avgViews: 110200, engagementRate: 5.2, audienceCountry: "US 55%, CA 10%, UK 9%", status: "Replied", replyType: "Interested", replied: true, responseTime: 30, followupsSent: 1, aiTag: "✔", personalizationScore: 7, emailVariant: "B", lastContactedDate: "2025-12-28", replyDate: "2025-12-29", source: "CRM List" },
+          { id: "12", campaignName: "Demo Campaign", platform: "TikTok", creatorHandle: "@FPSFairy", creatorName: "Alana Brooks", email: "fpsfairy@tokmail.com", followers: 140300, avgViews: 29400, engagementRate: 10.7, audienceCountry: "US 46%, PH 12%, BR 9%", status: "Sent", replied: false, followupsSent: 1, aiTag: "✘", personalizationScore: 7, emailVariant: "C", lastContactedDate: "2026-01-02", source: "Search" },
+          { id: "13", campaignName: "Demo Campaign", platform: "Twitch", creatorHandle: "@ClipKing", creatorName: "Mateo Garcia", email: "clipking@streamhub.com", followers: 278400, avgViews: 25900, engagementRate: 7.9, audienceCountry: "US 49%, UK 11%, CA 10%", status: "Replied", replyType: "Interested", replied: true, responseTime: 22, followupsSent: 2, aiTag: "✔", personalizationScore: 9, emailVariant: "A", lastContactedDate: "2025-12-27", replyDate: "2025-12-28", source: "Influencer DB" },
+          { id: "14", campaignName: "Demo Campaign", platform: "YouTube", creatorHandle: "@BenchmarkBabe", creatorName: "Tara Singh", email: "benchmarkbabe@ytmail.com", followers: 193700, avgViews: 38600, engagementRate: 6.5, audienceCountry: "US 42%, UK 14%, CA 8%", status: "Sent", replied: false, followupsSent: 0, aiTag: "✘", personalizationScore: 8, emailVariant: "B", lastContactedDate: "2026-01-05", source: "Outreach" },
+          { id: "15", campaignName: "Demo Campaign", platform: "Instagram", creatorHandle: "@Queue_QT", creatorName: "Quinn Parker", email: "queue_qt@insta.com", followers: 64500, avgViews: 6700, engagementRate: 5.1, audienceCountry: "US 65%, UK 7%, AU 5%", status: "Replied", replyType: "Interested", replied: true, responseTime: 4, followupsSent: 1, aiTag: "✔", personalizationScore: 5, emailVariant: "C", lastContactedDate: "2026-01-07", replyDate: "2026-01-07", source: "Search" },
+          { id: "16", campaignName: "Demo Campaign", platform: "Twitch", creatorHandle: "@0msDream", creatorName: "Satvik Rao", email: "0msdream@streammail.com", followers: 202800, avgViews: 21500, engagementRate: 9.5, audienceCountry: "US 50%, CA 13%, UK 8%", status: "Sent", replied: false, followupsSent: 1, aiTag: "✘", personalizationScore: 8, emailVariant: "A", lastContactedDate: "2026-01-04", source: "CRM List" },
+          { id: "17", campaignName: "Demo Campaign", platform: "YouTube", creatorHandle: "@GPU_Guru", creatorName: "Rachel Adams", email: "gpu_guru@youtubemail.com", followers: 349500, avgViews: 68900, engagementRate: 4.4, audienceCountry: "US 44%, DE 11%, UK 10%", status: "Replied", replyType: "Interested", replied: true, responseTime: 17, followupsSent: 2, aiTag: "✔", personalizationScore: 7, emailVariant: "B", lastContactedDate: "2025-12-31", replyDate: "2026-01-01", source: "Hashtag" },
+          { id: "18", campaignName: "Demo Campaign", platform: "TikTok", creatorHandle: "@Rig_Rundown", creatorName: "Ethan Zhou", email: "rig_rundown@tokmail.com", followers: 158600, avgViews: 40300, engagementRate: 11.8, audienceCountry: "US 43%, BR 13%, PH 12%", status: "Sent", replied: false, followupsSent: 0, aiTag: "✘", personalizationScore: 9, emailVariant: "A", lastContactedDate: "2026-01-03", source: "Influencer DB" },
+          { id: "19", campaignName: "Demo Campaign", platform: "Instagram", creatorHandle: "@GameSenseGal", creatorName: "Mia Lopez", email: "gamesensegal@insta.com", followers: 92200, avgViews: 10200, engagementRate: 6.2, audienceCountry: "US 54%, UK 9%, CA 8%", status: "Replied", replyType: "Interested", replied: true, responseTime: 6, followupsSent: 1, aiTag: "✔", personalizationScore: 7, emailVariant: "B", lastContactedDate: "2026-01-05", replyDate: "2026-01-06", source: "Search" },
+          { id: "20", campaignName: "Demo Campaign", platform: "Twitch", creatorHandle: "@PingPals", creatorName: "Logan & Lex", email: "pingpals@streamhub.com", followers: 276900, avgViews: 26800, engagementRate: 8.3, audienceCountry: "US 48%, UK 10%, AU 7%", status: "Replied", replyType: "Interested", replied: true, responseTime: 20, followupsSent: 2, aiTag: "✔", personalizationScore: 8, emailVariant: "A", lastContactedDate: "2025-12-26", replyDate: "2025-12-27", source: "CRM List" },
+          { id: "21", campaignName: "Demo Campaign", platform: "YouTube", creatorHandle: "@ShaderShred", creatorName: "Ivan Petrov", email: "shadershred@youtubemail.com", followers: 207400, avgViews: 44000, engagementRate: 5.7, audienceCountry: "US 41%, RU 15%, UK 8%", status: "Sent", replied: false, followupsSent: 1, aiTag: "✘", personalizationScore: 7, emailVariant: "B", lastContactedDate: "2026-01-02", source: "Outreach" },
+          { id: "22", campaignName: "Demo Campaign", platform: "TikTok", creatorHandle: "@FrameFreak", creatorName: "Layla Hassan", email: "framefreak@tokmail.com", followers: 185900, avgViews: 55100, engagementRate: 12.9, audienceCountry: "US 39%, EG 11%, SA 9%", status: "Replied", replyType: "Interested", replied: true, responseTime: 8, followupsSent: 1, aiTag: "✔", personalizationScore: 9, emailVariant: "A", lastContactedDate: "2026-01-01", replyDate: "2026-01-02", source: "Hashtag" },
+          { id: "23", campaignName: "Demo Campaign", platform: "Instagram", creatorHandle: "@BoostBuilds", creatorName: "Carter Young", email: "boostbuilds@insta.com", followers: 77300, avgViews: 7900, engagementRate: 5.8, audienceCountry: "US 57%, UK 8%, CA 7%", status: "Sent", replied: false, followupsSent: 0, aiTag: "✘", personalizationScore: 6, emailVariant: "C", lastContactedDate: "2026-01-06", source: "Search" },
+          { id: "24", campaignName: "Demo Campaign", platform: "YouTube", creatorHandle: "@LatencyLegend", creatorName: "Noah Kim", email: "latencylegend@youtubemail.com", followers: 421200, avgViews: 90400, engagementRate: 5.4, audienceCountry: "US 49%, CA 14%, UK 11%", status: "Replied", replyType: "Interested", replied: true, responseTime: 15, followupsSent: 2, aiTag: "✔", personalizationScore: 8, emailVariant: "A", lastContactedDate: "2025-12-29", "source": "CRM List", replyDate: "2025-12-30" },
+          { id: "25", campaignName: "Demo Campaign", platform: "Twitch", creatorHandle: "@OptiM8", creatorName: "Priya Singh", email: "opti_m8@streamhub.com", followers: 236800, avgViews: 19900, engagementRate: 10.0, audienceCountry: "US 46%, UK 12%, IN 10%", status: "Sent", replied: false, followupsSent: 1, aiTag: "✘", personalizationScore: 8, emailVariant: "B", lastContactedDate: "2026-01-04", source: "Outreach" }
+        ];
         setRawData(mockData);
         setFileName(`creator-outreach-export-DEMO`);
         setLoading(false);
@@ -739,12 +747,12 @@ export default function ExportPage({ searchParams }: { searchParams: { demo?: st
                           else if (typeof value === "number" && column.id.includes("Score")) displayValue = value.toFixed(1);
 
                           return (
-                            <td key={column.id} className="px-4 py-4 whitespace-nowrap text-sm">
+                            <td key={column.id} className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                               {column.id === "status" ? (
                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${value === "Interested" ? "bg-green-100 text-green-800" :
-                                    value === "Replied" ? "bg-blue-100 text-blue-800" :
-                                      value === "Follow-up" ? "bg-yellow-100 text-yellow-800" :
-                                        "bg-gray-100 text-gray-800"
+                                  value === "Replied" ? "bg-blue-100 text-blue-800" :
+                                    value === "Follow-up" ? "bg-yellow-100 text-yellow-800" :
+                                      "bg-gray-100 text-gray-800"
                                   }`}>
                                   {displayValue}
                                 </span>
@@ -782,14 +790,14 @@ export default function ExportPage({ searchParams }: { searchParams: { demo?: st
                   <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                    className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-gray-900"
                   >
                     Previous
                   </button>
                   <button
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                    className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-gray-900"
                   >
                     Next
                   </button>
