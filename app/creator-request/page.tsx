@@ -954,10 +954,108 @@ export default function CreatorRequestPage({ searchParams }: { searchParams: { d
               )}
             </div>
 
-            {/* Results will go here - placeholder for now */}
-            <div className="text-center py-20 text-gray-500">
-              <p>Select filters and platform to see creator results</p>
-            </div>
+            {/* Results */}
+            {potentialMatches !== null ? (
+              <div className="space-y-4">
+                {/* Mock Profiles for Demo */}
+                {[
+                  {
+                    id: 1,
+                    name: "Alex “FrostByte” Chen",
+                    handle: "@FrostBytePlays",
+                    platform: "YouTube",
+                    followers: "248K",
+                    engagement: "4.8%",
+                    bio: "Tech reviews, gaming setups, and mechanical keyboards. 🎮 ⌨️",
+                    imgColor: "bg-blue-600"
+                  },
+                  {
+                    id: 2,
+                    name: "Sarah Jenkins",
+                    handle: "@sarah.content",
+                    platform: "Instagram",
+                    followers: "125K",
+                    engagement: "3.2%",
+                    bio: "Sustainable living & lifestyle content creator based in NYC. 🌿",
+                    imgColor: "bg-pink-600"
+                  },
+                  {
+                    id: 3,
+                    name: "Nina Patel",
+                    handle: "@NOVA_Geek",
+                    platform: "Twitch",
+                    followers: "312K",
+                    engagement: "9.2%",
+                    bio: "Live streaming coding sessions and indie game dev. 💻",
+                    imgColor: "bg-purple-600"
+                  },
+                  {
+                    id: 4,
+                    name: "Marcus Lee",
+                    handle: "@PwnWizard",
+                    platform: "TikTok",
+                    followers: "186K",
+                    engagement: "13.5%",
+                    bio: "Quick tech tips and gadget hacks. 📱",
+                    imgColor: "bg-black"
+                  }
+                ].map((profile) => (
+                  <div key={profile.id} className="flex items-start gap-4 p-4 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all bg-white group">
+                    <div className={`w-12 h-12 rounded-full ${profile.imgColor} flex items-center justify-center text-white font-bold text-lg`}>
+                      {profile.name.charAt(0)}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <div>
+                          <h3 className="font-bold text-gray-900">{profile.name}</h3>
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <span>{profile.handle}</span>
+                            <span>•</span>
+                            <span className="flex items-center gap-1">
+                              <span className={`w-2 h-2 rounded-full ${profile.platform === 'YouTube' ? 'bg-red-500' :
+                                  profile.platform === 'Twitch' ? 'bg-purple-500' :
+                                    profile.platform === 'TikTok' ? 'bg-black' : 'bg-pink-500'
+                                }`}></span>
+                              {profile.platform}
+                            </span>
+                          </div>
+                        </div>
+                        <button className="px-3 py-1.5 text-xs font-semibold border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                          Analyze Profile
+                        </button>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-3">{profile.bio}</p>
+                      <div className="flex items-center gap-4 text-xs font-medium text-gray-500">
+                        <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-md">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                          {profile.followers} Followers
+                        </div>
+                        <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-md">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                          {profile.engagement} Engagement
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {potentialMatches > 4 && (
+                  <div className="text-center py-4 bg-gray-50 rounded-xl border border-dashed border-gray-200 text-sm text-gray-500">
+                    + {formatNumber(potentialMatches - 4)} more profiles match your criteria
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-20 text-gray-500">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-1">Start your search</h3>
+                <p>Select filters or type keywords to find creators</p>
+              </div>
+            )}
           </div>
         </div>
 
