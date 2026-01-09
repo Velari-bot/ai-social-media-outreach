@@ -8,7 +8,12 @@ const COLLECTION_BOOKINGS = 'bookings';
 
 // Helper to generate slots (seeded for demo purposes if empty)
 export async function seedAvailability(daysToSeed = 14) {
+    if (!db) {
+        console.warn('Skipping availability seeding: Database not initialized.');
+        return;
+    }
     const snapshot = await db.collection(COLLECTION_AVAILABILITY).limit(1).get();
+
     if (!snapshot.empty) return; // Already seeded or has data
 
     console.log('Seeding availability...');
@@ -59,6 +64,9 @@ export async function seedAvailability(daysToSeed = 14) {
 }
 
 export async function getAvailability(startDate: string, endDate: string) {
+    if (!db) {
+        throw new Error('Database not initialized. Check FIREBASE_SERVICE_ACCOUNT environment variable.');
+    }
     // Ensure seeded
     await seedAvailability();
 
