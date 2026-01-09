@@ -22,10 +22,8 @@ export async function seedAvailability(daysToSeed = 14) {
 
     for (let i = 0; i < daysToSeed; i++) {
         const currentDate = addDays(today, i);
-        const dayOfWeek = currentDate.getDay();
 
-        // Skip weekends (0 = Sunday, 6 = Saturday)
-        if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+        // Generate slots for every day including weekends
 
         const dateStr = format(currentDate, 'yyyy-MM-dd');
 

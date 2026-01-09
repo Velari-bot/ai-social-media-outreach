@@ -197,7 +197,7 @@ export default function AvailabilityManager() {
                         disabled={loading}
                         className="w-full py-3 border border-gray-200 hover:bg-gray-50 rounded-lg font-bold text-black transition-colors"
                     >
-                        Auto-Seed Next 14 Days (9-5 M-F)
+                        Auto-Seed Next 14 Days (9-5 includes Weekends)
                     </button>
                 </div>
             </div>

@@ -83,9 +83,8 @@ export default function SimpleCalendar({ selectedDate, onSelect, availableDates 
                     const isCurrentMonth = isSameMonth(day, currentMonth);
 
                     // We can check availableDates here if provided to gray out unavailable days
-                    // For now, simpler: disable past days and weekends (if business only)
-                    const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-                    const isDisabled = isPast || isWeekend;
+                    // For now, simpler: disable past days
+                    const isDisabled = isPast;
 
                     return (
                         <button
