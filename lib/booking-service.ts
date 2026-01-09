@@ -67,8 +67,8 @@ export async function getAvailability(startDate: string, endDate: string) {
     if (!db) {
         throw new Error('Database not initialized. Check FIREBASE_SERVICE_ACCOUNT environment variable.');
     }
-    // Ensure seeded
-    await seedAvailability();
+    // Ensure seeded - REMOVED to prevent "zombie slots" when admin deletes all slots.
+    // await seedAvailability();
 
     // Query without 'isBooked' filter to avoid composite index requirement
     const snapshot = await db.collection(COLLECTION_AVAILABILITY)

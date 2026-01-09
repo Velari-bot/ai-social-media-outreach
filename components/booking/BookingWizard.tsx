@@ -131,7 +131,7 @@ export default function BookingWizard() {
                 {/* Right Panel: Times & Form */}
                 <div className="lg:col-span-8">
                     {step === 1 && (
-                        <div className="bg-white rounded-3xl p-1">
+                        <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
                             {!selectedDate ? (
                                 <div className="flex flex-col items-center justify-center h-[400px] text-gray-400 border-2 border-dashed border-gray-100 rounded-2xl">
                                     <CalendarIcon className="w-12 h-12 mb-4 opacity-20" />

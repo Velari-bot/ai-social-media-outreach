@@ -1,12 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import toast from "react-hot-toast";
 
 export default function Navbar() {
+  return (
+    <Suspense fallback={<div className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none opacity-0"><div className="w-full max-w-[1200px] h-[72px]" /></div>}>
+      <NavbarContent />
+    </Suspense>
+  );
+}
+
+function NavbarContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
@@ -18,6 +18,14 @@ interface EmailTemplate {
 }
 
 export default function TemplatesPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#F5F3EF] flex items-center justify-center">Loading templates...</div>}>
+      <TemplatesContent />
+    </Suspense>
+  );
+}
+
+function TemplatesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isDemo = searchParams?.get("demo") === "true";
@@ -84,7 +92,6 @@ export default function TemplatesPage() {
         setUserId(user.id);
 
         // Mock templates data (in production, this would come from a database table)
-        // ... (rest of the code)
         const mockTemplates: EmailTemplate[] = [
           {
             id: "1",
@@ -128,7 +135,7 @@ export default function TemplatesPage() {
     }
 
     loadUserAndTemplates();
-  }, [router]);
+  }, [router, isDemo]);
 
   const handleSaveTemplate = () => {
     if (!editForm.name || !editForm.subject || !editForm.body) {
@@ -431,4 +438,3 @@ export default function TemplatesPage() {
     </main>
   );
 }
-

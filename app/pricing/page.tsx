@@ -1,97 +1,111 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense } from "react";
 import Navbar from "@/components/Navbar";
 
-export default function PricingPage() {
-    const tiers = [
-        {
-            name: "Basic",
-            price: 400,
-            dailyLimit: 50,
-            description: "Entry-level, for small agencies",
-            features: [
-                "50 Creators per day",
-                "~1,500 Creators per month",
-                "Basic search filters",
-                "Email support",
-                "Export to CSV"
-            ]
-        },
-        {
-            name: "Pro",
-            price: 600,
-            dailyLimit: 100,
-            isDark: true, // verality.io uses a dark card for the main plan
-            popular: true,
-            description: "Ideal for scaled outreach",
-            features: [
-                "100 Creators per day",
-                "~3,000 Creators per month",
-                "Advanced search filters",
-                "Priority support",
-                "Campaign management",
-                "Verified emails"
-            ]
-        },
-        {
-            name: "Growth",
-            price: 900,
-            dailyLimit: 200,
-            description: "Mid-size agencies scaling up",
-            features: [
-                "200 Creators per day",
-                "~6,000 Creators per month",
-                "All Pro features",
-                "Dedicated Success Manager",
-                "API Access",
-                "White-label reports"
-            ]
-        },
-        {
-            name: "Scale",
-            price: 1500,
-            dailyLimit: 400,
-            description: "High-volume users & teams",
-            features: [
-                "400 Creators per day",
-                "~12,000 Creators per month",
-                "Custom contracts",
-                "SLA support",
-                "Unlimited seats",
-                "Custom integrations"
-            ]
-        },
-        {
-            name: "Custom",
-            price: "Custom",
-            dailyLimit: "Unlimited",
-            description: "For large organizations",
-            isCustom: true,
-            features: [
-                "Unlimited Creators",
-                "Full API Access",
-                "Custom Solutions",
-                "24/7 Priority Support",
-                "Dedicated Engineering",
-                "On-premise options"
-            ]
-        }
-    ];
+const tiers = [
+    {
+        name: "Basic",
+        price: 400,
+        dailyLimit: 50,
+        monthlyVolume: "1,500",
+        costPerCreator: "0.27",
+        description: "For small teams getting started",
+        bestFor: "testing outreach, small agencies, solo founders",
+        features: [
+            "50 creators per day (≈ 1,500 / month)",
+            "Search creators by platform, niche, and follower count",
+            "Verified emails included",
+            "Export results to CSV",
+            "Email support"
+        ]
+    },
+    {
+        name: "Pro",
+        price: 600,
+        fromText: "From",
+        dailyLimit: 100,
+        monthlyVolume: "3,000",
+        costPerCreator: "0.20",
+        isDark: true,
+        description: "For teams running consistent outreach",
+        bestFor: "agencies running daily campaigns",
+        features: [
+            "100 creators per day (≈ 3,000 / month)",
+            "Advanced search filters (location, email presence, engagement)",
+            "Verified emails",
+            "Campaign management tools",
+            "Priority support"
+        ]
+    },
+    {
+        name: "Growth",
+        price: 900,
+        dailyLimit: 200,
+        monthlyVolume: "6,000",
+        costPerCreator: "0.15",
+        description: "For agencies scaling volume",
+        bestFor: "teams with systems + automation",
+        features: [
+            "200 creators per day (≈ 6,000 / month)",
+            "Everything in Pro",
+            "API access for automation",
+            "White-label reports",
+            "Dedicated success manager"
+        ]
+    },
+    {
+        name: "Scale",
+        price: 1500,
+        dailyLimit: 400,
+        monthlyVolume: "12,000",
+        costPerCreator: "0.13",
+        description: "For high-volume teams",
+        bestFor: "large agencies and outbound teams",
+        features: [
+            "400 creators per day (≈ 12,000 / month)",
+            "Everything in Growth",
+            "Unlimited seats",
+            "Custom integrations",
+            "SLA-backed support"
+        ]
+    },
+    {
+        name: "Custom",
+        price: "Custom",
+        priceText: "Custom pricing",
+        description: "For enterprise & special use cases",
+        bestFor: "enterprises, data platforms, marketplaces",
+        isCustom: true,
+        features: [
+            "Unlimited creator volume",
+            "Full API access",
+            "Custom discovery logic",
+            "Dedicated engineering support",
+            "24/7 priority support",
+            "On-premise or private deployments"
+        ]
+    }
+];
 
+export default function PricingPage() {
     return (
-        <main className="min-h-screen bg-[#EBE9E4] relative overflow-hidden font-sans selection:bg-pink-200">
+        <Suspense fallback={<div className="min-h-screen bg-[#F3F1EB] flex items-center justify-center">Loading pricing...</div>}>
+            <PricingContent />
+        </Suspense>
+    );
+}
+
+function PricingContent() {
+    return (
+        <main className="min-h-screen bg-[#F3F1EB] relative overflow-hidden font-sans selection:bg-pink-200">
             <Navbar />
 
-            {/* Decorative Background Gradients - Replicating Sendr.ai style */}
+            {/* Decorative Background Gradients */}
             <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-80 overflow-hidden">
-                {/* Top left purple/pink fade */}
                 <div className="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vh] bg-gradient-to-br from-[#E8D4E3] via-[#DBCDE6] to-transparent blur-[80px]" />
-
-                {/* Top right blue/white fade */}
                 <div className="absolute top-[-10%] right-[-10%] w-[50vw] h-[70vh] bg-gradient-to-bl from-[#DCE4F2] via-[#E6EDF5] to-transparent blur-[80px]" />
-
-                {/* Stronger Blue Side Glows (verality.io signature) */}
                 <div className="absolute top-[20%] left-[-100px] w-[200px] h-[600px] bg-blue-400/20 blur-[100px]" />
                 <div className="absolute top-[20%] right-[-100px] w-[200px] h-[600px] bg-blue-400/20 blur-[100px]" />
             </div>
@@ -112,12 +126,6 @@ export default function PricingPage() {
                     {/* Pricing Grid */}
                     <div className="grid md:grid-cols-2 xl:grid-cols-5 gap-6 items-start">
                         {tiers.map((tier) => {
-                            const monthlyVolume = typeof tier.dailyLimit === 'number' ? tier.dailyLimit * 30 : tier.dailyLimit;
-                            const costPerCreator = typeof tier.price === 'number' && typeof monthlyVolume === 'number'
-                                ? (tier.price / monthlyVolume).toFixed(2)
-                                : 'Custom';
-
-                            // Dark card style vs Light card style
                             const isDark = tier.isDark;
 
                             return (
@@ -128,14 +136,17 @@ export default function PricingPage() {
                                         : "bg-[#F7F5F2] text-[#1A1A1A] border border-gray-200/60 shadow-lg"
                                         }`}
                                 >
+
                                     <div className="mb-6">
                                         <h3 className={`text-lg font-bold mb-1 ${isDark ? "text-white" : "text-[#1A1A1A]"}`}>
-                                            {tier.name} plan
+                                            {tier.name} Plan
                                         </h3>
 
                                         <div className="flex items-baseline gap-1.5 mb-2 mt-4">
-                                            {tier.name === "Pro" && <span className="text-sm font-medium opacity-60">From</span>}
-                                            <span className="text-4xl font-[800] tracking-tight">{typeof tier.price === 'number' ? `$${tier.price}` : tier.price}</span>
+                                            {tier.fromText && <span className="text-sm font-medium opacity-60">{tier.fromText}</span>}
+                                            <span className="text-4xl font-[800] tracking-tight">
+                                                {typeof tier.price === 'number' ? `$${tier.price}` : tier.priceText || tier.price}
+                                            </span>
                                             {typeof tier.price === 'number' && <span className={`text-sm font-medium ${isDark ? "text-gray-400" : "text-gray-500"}`}>/ month</span>}
                                         </div>
 
@@ -154,19 +165,26 @@ export default function PricingPage() {
                                         {tier.isCustom ? "Book a call" : (isDark ? "Build your plan" : "Get Started")}
                                     </Link>
 
+                                    {/* What you get */}
+                                    <div className="mb-4">
+                                        <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? "text-white/40" : "text-gray-400"}`}>What you get</span>
+                                    </div>
+
                                     {/* Feature List */}
                                     <div className="space-y-4 mb-8 flex-1">
                                         {/* Cost per creator Feature - Highlighted */}
-                                        <div className="flex items-start gap-3">
-                                            <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${isDark ? "bg-white/20" : "bg-black/10"}`}>
-                                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                </svg>
+                                        {tier.costPerCreator && (
+                                            <div className="flex items-start gap-3">
+                                                <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${isDark ? "bg-white/20" : "bg-black/10"}`}>
+                                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                    </svg>
+                                                </div>
+                                                <span className={`text-sm font-bold ${isDark ? "text-white" : "text-black"}`}>
+                                                    ${tier.costPerCreator} per creator
+                                                </span>
                                             </div>
-                                            <span className={`text-sm font-bold ${isDark ? "text-white" : "text-black"}`}>
-                                                {costPerCreator === 'Custom' ? 'Volume Discounts' : `$${costPerCreator} / creator`}
-                                            </span>
-                                        </div>
+                                        )}
 
                                         {tier.features.map((feature, i) => (
                                             <div key={i} className="flex items-start gap-3">
@@ -180,6 +198,14 @@ export default function PricingPage() {
                                                 </span>
                                             </div>
                                         ))}
+                                    </div>
+
+                                    {/* Best For */}
+                                    <div className={`mt-auto pt-6 border-t ${isDark ? "border-white/10" : "border-gray-200/60"}`}>
+                                        <p className={`text-[11px] font-bold uppercase tracking-wider mb-2 ${isDark ? "text-white/40" : "text-gray-400"}`}>Best for</p>
+                                        <p className={`text-sm font-medium ${isDark ? "text-white/80" : "text-gray-700"}`}>
+                                            {tier.bestFor}
+                                        </p>
                                     </div>
                                 </div>
                             );
