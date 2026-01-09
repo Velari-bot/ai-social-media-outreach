@@ -13,22 +13,23 @@ export default function AvailabilityManager() {
     const [loading, setLoading] = useState(false);
     const [slots, setSlots] = useState<any[]>([]);
 
-    useEffect(() => {
-        const fetchSlots = async () => {
-            const dateStr = format(selectedDate, 'yyyy-MM-dd');
-            try {
-                // Fetch just this day (start and end date same)
-                const res = await fetch(`/api/availability?startDate=${dateStr}&endDate=${dateStr}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    setSlots(data.slots || []);
-                }
-            } catch (e) {
-                console.error("Failed to fetch slots", e);
+    const fetchSlots = async () => {
+        const dateStr = format(selectedDate, 'yyyy-MM-dd');
+        try {
+            // Add timestamp to prevent caching
+            const res = await fetch(`/api/availability?startDate=${dateStr}&endDate=${dateStr}&t=${Date.now()}`);
+            if (res.ok) {
+                const data = await res.json();
+                setSlots(data.slots || []);
             }
-        };
+        } catch (e) {
+            console.error("Failed to fetch slots", e);
+        }
+    };
+
+    useEffect(() => {
         fetchSlots();
-    }, [selectedDate, loading]); // Re-fetch when date changes or after an action (loading toggle)
+    }, [selectedDate]); // Only refetch when date changes. Actions manually refetch.
 
     const handleAddSlot = async () => {
         setLoading(true);
@@ -50,6 +51,7 @@ export default function AvailabilityManager() {
 
             if (!res.ok) throw new Error('Failed to add slot');
             toast.success('Slot added successfully');
+            fetchSlots();
         } catch (error) {
             toast.error('Error adding slot');
         } finally {
@@ -69,8 +71,30 @@ export default function AvailabilityManager() {
 
             if (!res.ok) throw new Error('Failed to delete slot');
             toast.success('Slot deleted successfully');
+            fetchSlots();
         } catch (error) {
             toast.error('Error deleting slot');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (!confirm(`Are you sure you want to delete ALL ${slots.length} slots for this day?`)) return;
+        setLoading(true);
+        try {
+            const slotIds = slots.map(s => s.id);
+            const res = await fetch('/api/admin/slots', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slotIds }),
+            });
+
+            if (!res.ok) throw new Error('Failed to delete slots');
+            toast.success('All slots deleted');
+            fetchSlots();
+        } catch (error) {
+            toast.error('Error deleting slots');
         } finally {
             setLoading(false);
         }
@@ -101,7 +125,17 @@ export default function AvailabilityManager() {
                 </div>
 
                 <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                    <h2 className="text-xl font-bold mb-4 text-black">Existing Slots</h2>
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-xl font-bold text-black">Existing Slots</h2>
+                        {slots.length > 0 && (
+                            <button
+                                onClick={handleBulkDelete}
+                                className="text-xs px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 font-medium transition-colors"
+                            >
+                                Delete All ({slots.length})
+                            </button>
+                        )}
+                    </div>
 
                     {slots.length === 0 ? (
                         <p className="text-gray-500 text-sm">No available slots for this date.</p>

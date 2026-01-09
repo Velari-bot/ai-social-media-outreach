@@ -26,14 +26,25 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
     try {
-        const { slotId } = await request.json();
-        if (!slotId) {
-            return NextResponse.json({ error: 'Slot ID is required' }, { status: 400 });
+        const body = await request.json();
+        const { slotId, slotIds } = body;
+
+        if (slotIds && Array.isArray(slotIds)) {
+            const batch = db.batch();
+            slotIds.forEach((id: string) => {
+                const ref = db.collection('availability').doc(id);
+                batch.delete(ref);
+            });
+            await batch.commit();
+            return NextResponse.json({ success: true, count: slotIds.length });
         }
 
-        await db.collection('availability').doc(slotId).delete();
+        if (slotId) {
+            await db.collection('availability').doc(slotId).delete();
+            return NextResponse.json({ success: true });
+        }
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ error: 'Slot ID or IDs required' }, { status: 400 });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

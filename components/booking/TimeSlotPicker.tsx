@@ -41,11 +41,11 @@ export default function TimeSlotPicker({ date, slots, loading, onSelect, selecte
     }
 
     return (
-        <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+        <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 px-4 py-2">
             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
                 Available times for {format(date, 'EEEE, MMM d')}
             </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {daySlots.map((slot) => {
                     const startTime = parseISO(slot.startTime); // Expecting ISO string
                     const timeLabel = format(startTime, 'h:mm a');
@@ -56,7 +56,7 @@ export default function TimeSlotPicker({ date, slots, loading, onSelect, selecte
                             key={slot.id}
                             onClick={() => onSelect(slot)}
                             className={`
-                px-4 py-3 rounded-xl border text-sm font-medium transition-all duration-200
+                px-4 py-4 rounded-xl border text-base font-medium transition-all duration-200
                 ${isSelected
                                     ? 'border-black bg-black text-white shadow-lg scale-105'
                                     : 'border-gray-200 bg-white text-gray-700 hover:border-black hover:scale-[1.02]'}
@@ -69,4 +69,4 @@ export default function TimeSlotPicker({ date, slots, loading, onSelect, selecte
             </div>
         </div>
     );
-}
+};

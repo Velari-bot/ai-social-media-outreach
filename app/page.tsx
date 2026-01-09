@@ -165,6 +165,68 @@ export default function Home() {
         </div>
 
       </div>
+      {/* Our Process Section */}
+      <section className="py-24 bg-white">
+        <div className="max-w-6xl mx-auto px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <h2 className="text-3xl md:text-5xl font-black text-black tracking-tight mb-6">
+              How It Works
+            </h2>
+            <p className="text-xl text-gray-500">
+              Launch your first campaign in minutes.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative">
+            {/* Connecting Line (Desktop) */}
+            <div className="hidden md:block absolute top-12 left-[16%] right-[16%] h-0.5 bg-gray-100 -z-10"></div>
+
+            {/* Step 1: Search */}
+            <div className="flex flex-col items-center text-center">
+              <div className="w-24 h-24 bg-[#F3F1EB] rounded-2xl flex items-center justify-center mb-6 border border-gray-100 shadow-sm">
+                <span className="text-4xl">🔍</span>
+              </div>
+              <h3 className="text-xl font-bold text-black mb-2">1. Search</h3>
+              <p className="text-gray-500">
+                Find your perfect creators using our advanced AI filters for niche, location, and keywords.
+              </p>
+            </div>
+
+            {/* Step 2: Email Delivery */}
+            <div className="flex flex-col items-center text-center">
+              <div className="w-24 h-24 bg-[#F3F1EB] rounded-2xl flex items-center justify-center mb-6 border border-gray-100 shadow-sm">
+                <span className="text-4xl">📨</span>
+              </div>
+              <h3 className="text-xl font-bold text-black mb-2">2. Email Delivery</h3>
+              <p className="text-gray-500">
+                We automatically verify emails and send your personalized pitch directly to their inbox.
+              </p>
+            </div>
+
+            {/* Step 3: Reply */}
+            <div className="flex flex-col items-center text-center">
+              <div className="w-24 h-24 bg-[#F3F1EB] rounded-2xl flex items-center justify-center mb-6 border border-gray-100 shadow-sm">
+                <span className="text-4xl">↩️</span>
+              </div>
+              <h3 className="text-xl font-bold text-black mb-2">3. Email Reply</h3>
+              <p className="text-gray-500">
+                Get responses directly to your own inbox. Negotiate deals and start collaborating.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer (Simple) */}
+      <footer className="py-12 bg-[#F3F1EB] border-t border-gray-200">
+        <div className="max-w-6xl mx-auto px-6 flex justify-between items-center text-gray-500 text-sm">
+          <p>© 2026 Verality. All rights reserved.</p>
+          <div className="flex gap-6">
+            <Link href="/privacy" className="hover:text-black">Privacy</Link>
+            <Link href="/terms" className="hover:text-black">Terms</Link>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }
