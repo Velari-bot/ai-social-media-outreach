@@ -26,3 +26,20 @@ export async function GET() {
         return NextResponse.json({ success: false, error: 'Failed to fetch bookings' }, { status: 500 });
     }
 }
+
+export async function DELETE(req: Request) {
+    try {
+        const { id } = await req.json();
+
+        if (!id) {
+            return NextResponse.json({ success: false, error: 'Missing booking ID' }, { status: 400 });
+        }
+
+        await db.collection('bookings').doc(id).delete();
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting booking:', error);
+        return NextResponse.json({ success: false, error: 'Failed to delete booking' }, { status: 500 });
+    }
+}

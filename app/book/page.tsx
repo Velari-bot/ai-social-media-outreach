@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar";
 
 export default function BookCallPage() {
     return (
-        <main className="min-h-screen bg-white">
+        <main className="min-h-screen bg-[#F3F1EB]">
             <Navbar />
             <div className="pt-28 pb-20 px-4 md:px-8">
                 <BookingWizard />

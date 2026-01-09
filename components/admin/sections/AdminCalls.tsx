@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import AvailabilityManager from "../AvailabilityManager"; // Re-using the component we built earlier
-import { Calendar, CheckCircle2, XCircle, Clock, Loader2, Mail } from "lucide-react";
+import { Calendar, CheckCircle2, XCircle, Clock, Loader2, Mail, Trash2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import toast from "react-hot-toast";
 
 type Tab = "bookings" | "availability";
 
@@ -38,6 +39,7 @@ export default function AdminCalls() {
             }
         } catch (error) {
             console.error("Failed to fetch bookings", error);
+            toast.error("Failed to fetch bookings");
         } finally {
             setLoading(false);
         }
@@ -56,12 +58,36 @@ export default function AdminCalls() {
             if (data.success) {
                 // Optimistic update
                 setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: newStatus } : b));
+                toast.success(`Booking marked as ${newStatus}`);
             } else {
-                alert('Failed to update status');
+                toast.error('Failed to update status');
             }
         } catch (error) {
             console.error(error);
-            alert('Error updating status');
+            toast.error('Error updating status');
+        }
+    }
+
+    async function handleDelete(bookingId: string) {
+        if (!confirm('Are you sure you want to PERMANENTLY delete this booking?')) return;
+
+        try {
+            const res = await fetch('/api/admin/bookings', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: bookingId }),
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                setBookings(prev => prev.filter(b => b.id !== bookingId));
+                toast.success('Booking deleted');
+            } else {
+                toast.error(data.error || 'Failed to delete booking');
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error('Error deleting booking');
         }
     }
 
@@ -145,8 +171,8 @@ export default function AdminCalls() {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${booking.status === 'completed' ? 'bg-green-100 text-green-700' :
-                                                        booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                                                            'bg-blue-100 text-blue-700'
+                                                    booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                                                        'bg-blue-100 text-blue-700'
                                                     }`}>
                                                     <Clock className="w-3 h-3" />
                                                     {booking.status || 'Scheduled'}
@@ -167,6 +193,13 @@ export default function AdminCalls() {
                                                         className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-lg transition-colors"
                                                     >
                                                         <XCircle className="w-5 h-5" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(booking.id)}
+                                                        title="Delete Booking"
+                                                        className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-700 rounded-lg transition-colors border-l border-gray-100 ml-1"
+                                                    >
+                                                        <Trash2 className="w-5 h-5" />
                                                     </button>
                                                 </div>
                                             </td>
