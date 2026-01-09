@@ -1,6 +1,7 @@
 import { db } from '../firebase-admin';
 import { Creator, CreatorSearchFilters, Platform } from '../types';
 import { modashClient } from './modash-client';
+import { influencerClubClient } from './influencer-club-client';
 import { clayClient } from './clay-client';
 import { logApiCall } from './api-logger';
 import { Timestamp } from 'firebase-admin/firestore';
@@ -94,7 +95,7 @@ async function storeCreators(
   for (const result of discoveryResults) {
     const platform = result.platform.toLowerCase() as Platform;
     const handle = result.handle;
-    
+
     // Check if creator already exists (using platform + handle as unique key)
     const existingQuery = await db.collection('creators')
       .where('platform', '==', platform)
@@ -194,8 +195,8 @@ export async function searchCreators(params: {
   const delta = params.requestedCount - cachedCreators.length;
 
   try {
-    // Call Modash Discovery API
-    const discoveryResults = await modashClient.discoverCreators({
+    // Call Influencer Club Discovery API (replacing Modash)
+    const discoveryResults = await influencerClubClient.discoverCreators({
       platform: params.platform,
       filters: params.filters,
       limit: delta,
@@ -207,13 +208,13 @@ export async function searchCreators(params: {
     // Combine cached and new creators
     return [...cachedCreators, ...newCreators].slice(0, params.requestedCount);
   } catch (error) {
-    console.error('Error in creator search:', error);
-    
-    // If Modash fails, return cached results if available
+    console.error('Error in creation search:', error);
+
+    // If API fails, return cached results if available
     if (cachedCreators.length > 0) {
       return cachedCreators;
     }
-    
+
     throw error;
   }
 }
@@ -227,7 +228,7 @@ export async function getBasicProfile(creatorId: number | string): Promise<Creat
   try {
     // Try to find by numeric ID first (if stored as document ID)
     const doc = await db.collection('creators').doc(String(creatorId)).get();
-    
+
     if (doc.exists) {
       return docToCreator(doc);
     }

@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   description: "An AI assistant that finds creators, emails them from your inbox, handles the replies, and builds your creator list automatically.",
 };
 
+import AffiliateTracker from "@/components/AffiliateTracker";
+import { Suspense } from "react";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -20,9 +23,12 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <ErrorBoundary>
+          <Suspense fallback={null}>
+            <AffiliateTracker />
+          </Suspense>
           {children}
         </ErrorBoundary>
-        <Toaster 
+        <Toaster
           position="top-right"
           toastOptions={{
             style: {

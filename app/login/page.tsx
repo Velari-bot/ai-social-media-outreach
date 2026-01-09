@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { signIn, signUp, signInWithGoogle, getGoogleAuthResult } from "@/lib/auth-helpers";
-import { createUserAccount, fetchUserAccount } from "@/lib/api-client";
+import { signIn, signInWithGoogle, getGoogleAuthResult } from "@/lib/auth-helpers";
+import { fetchUserAccount } from "@/lib/api-client";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,65 +25,19 @@ export default function LoginPage() {
           toast.success("Signed in with Google!");
           console.log("Google auth successful, checking user account...");
 
-          // Check if user account exists
-          let isNewUser = false;
-          let accountCreationSuccess = false;
-
           try {
             const accountResponse = await fetchUserAccount();
-            if (!accountResponse.success || !accountResponse.account) {
-              console.log("User account not found via fetch, attempting creation...");
-              // Account doesn't exist, create it
-              isNewUser = true;
-              const createResponse = await createUserAccount({
-                email: user.email || '',
-                name: user.displayName || '',
-              });
-
-              if (createResponse.success && createResponse.account) {
-                console.log("User account created successfully");
-                accountCreationSuccess = true;
-                isNewUser = true;
-              } else {
-                throw new Error("Failed to create account record");
-              }
-            } else {
+            if (accountResponse.success && accountResponse.account) {
               // Account exists
               console.log("User account found:", accountResponse.account);
-              // For existing accounts, send them to dashboard directly to avoid annoying them
-              // We can add a "Complete Profile" prompt in the dashboard later if fields are missing
-              isNewUser = false;
-              accountCreationSuccess = true;
+              router.push("/dashboard");
+            } else {
+              // Account does not exist
+              toast.error("Account not found. Please contact sales to get access.");
             }
           } catch (error: any) {
             console.error("Error finding/accessing account:", error);
-            // Account might not exist or API error, try to create it as fallback
-            try {
-              console.log("Attempting account creation fallback...");
-              const createResponse = await createUserAccount({
-                email: user.email || '',
-                name: user.displayName || '',
-              });
-              if (createResponse.success) {
-                console.log("User account created successfully (fallback)");
-                isNewUser = true;
-                accountCreationSuccess = true;
-              }
-            } catch (createError: any) {
-              console.error('User account creation failed:', createError);
-              toast.error("Failed to set up your account: " + (createError.message || "Unknown error"));
-              // Don't redirect if we strictly failed to create an account
-              return;
-            }
-          }
-
-          // Only redirect if we successfully found or created an account
-          if (accountCreationSuccess) {
-            if (isNewUser) {
-              router.push("/onboarding");
-            } else {
-              router.push("/dashboard");
-            }
+            toast.error("Failed to verify account status.");
           }
         }
       } catch (error: any) {
@@ -107,98 +61,29 @@ export default function LoginPage() {
 
     setIsLoading(true);
     try {
-      // First, try to sign in
+      await signIn(email, password);
+      toast.success("Welcome back!");
+
+      // Check if user has completed onboarding
       try {
-        await signIn(email, password);
-        toast.success("Welcome back!");
-
-        // Check if user has completed onboarding
-        try {
-          const accountResponse = await fetchUserAccount();
-          if (accountResponse.success && accountResponse.account) {
-            const account = accountResponse.account;
-            // If they have a purpose, they've completed step 1 of onboarding at least
-            // You might also want to check if they have connected Gmail, but the request says "onboarding AND gmail"
-            // Usually 'purpose' is set in step 1.
-            if (account.purpose) {
-              router.push("/dashboard");
-            } else {
-              router.push("/onboarding");
-            }
-          } else {
-            // If we can't fetch account, assume they need to onboard or something is wrong
-            // But to be safe for existing users (who might have data errors), let's try to create/fix or just send to dashboard?
-            // User said: "if it is a previous made account... w/o onboarding"
-            // Failing to fetch account might mean it doesn't exist?
-            // If account doesn't exist but they signed in, we should create it.
-
-            console.log("Account not found after login, attempting creation...");
-            await createUserAccount({ email });
-            router.push("/onboarding");
-          }
-        } catch (accountError) {
-          console.error("Error checking account status:", accountError);
-          // Fallback to dashboard if we can't check
+        const accountResponse = await fetchUserAccount();
+        if (accountResponse.success && accountResponse.account) {
           router.push("/dashboard");
-        }
-
-      } catch (signInError: any) {
-        console.error("Sign in error:", signInError);
-
-        // Check for API key errors first
-        if (signInError.message?.includes('API key') || signInError.message?.includes('Firebase')) {
-          toast.error(
-            <div>
-              <div className="font-semibold mb-1">Firebase Configuration Required</div>
-              <div className="text-sm">Please set up Firebase in .env.local. See FIREBASE_SETUP.md</div>
-            </div>,
-            { duration: 6000 }
-          );
-          setIsLoading(false);
-          return;
-        }
-
-        // If sign in fails, check if we should try to create an account
-        // 'auth/user-not-found' is the old error code
-        // 'auth/invalid-credential' is the new error code (with email enumeration protection)
-        const errorCode = signInError.code || signInError.originalError?.code;
-
-        if (errorCode === 'auth/user-not-found' || errorCode === 'auth/invalid-credential') {
-          // Try to create account
-          try {
-            console.log("User not found or invalid credential, attempting auto-signup...");
-            await signUp(email, password);
-            toast.success("Account created! Please check your email to verify.");
-            router.push(`/check-email?email=${encodeURIComponent(email)}`);
-          } catch (signUpError: any) {
-            console.error("Sign up error during fallback:", signUpError);
-            const signUpErrorCode = signUpError.code || signUpError.originalError?.code;
-
-            if (signUpError.message?.includes('API key') || signUpError.message?.includes('Firebase')) {
-              toast.error(
-                <div>
-                  <div className="font-semibold mb-1">Firebase Configuration Required</div>
-                  <div className="text-sm">Please set up Firebase in .env.local. See FIREBASE_SETUP.md</div>
-                </div>,
-                { duration: 6000 }
-              );
-            } else if (signUpErrorCode === 'auth/email-already-in-use') {
-              // If signup fails because email exists, it means the original login error 
-              // was actually a wrong password, not a missing user
-              toast.error("Incorrect password. Please try again or reset your password.");
-            } else {
-              toast.error(signUpError.message || "Failed to create account");
-            }
-          }
         } else {
-          // Show the actual error message from Firebase
-          const errorMsg = signInError.message || signInError.code || "Failed to sign in";
-          toast.error(errorMsg);
+          // Account created in Auth but not in DB? 
+          // In a strict strict system this shouldn't happen if admin creates account.
+          // But if it does, it's an error state.
+          toast.error("Account setup incomplete. Please contact support.");
         }
+      } catch (accountError) {
+        console.error("Error checking account status:", accountError);
+        router.push("/dashboard");
       }
-    } catch (error: any) {
-      console.error('Login error:', error);
-      if (error.message?.includes('API key') || error.message?.includes('Firebase')) {
+
+    } catch (signInError: any) {
+      console.error("Sign in error:", signInError);
+
+      if (signInError.message?.includes('API key') || signInError.message?.includes('Firebase')) {
         toast.error(
           <div>
             <div className="font-semibold mb-1">Firebase Configuration Required</div>
@@ -206,8 +91,17 @@ export default function LoginPage() {
           </div>,
           { duration: 6000 }
         );
+        setIsLoading(false);
+        return;
+      }
+
+      // Explicitly handle user not found
+      const errorCode = signInError.code || signInError.originalError?.code;
+      if (errorCode === 'auth/user-not-found' || errorCode === 'auth/invalid-credential') {
+        toast.error("Invalid email or password. If you don't have an account, please contact sales.");
       } else {
-        toast.error(error.message || "An error occurred");
+        const errorMsg = signInError.message || signInError.code || "Failed to sign in";
+        toast.error(errorMsg);
       }
     } finally {
       setIsLoading(false);
@@ -228,59 +122,19 @@ export default function LoginPage() {
         toast.success("Signed in with Google!");
         console.log("Google auth successful, checking user account...");
 
-        let isNewUser = false;
-        let accountCreationSuccess = false;
-
         try {
           const accountResponse = await fetchUserAccount();
-          if (!accountResponse.success || !accountResponse.account) {
-            console.log("User account not found via fetch, attempting creation...");
-            isNewUser = true;
-            const createResponse = await createUserAccount({
-              email: user.email || '',
-              name: user.displayName || '',
-            });
-
-            if (createResponse.success && createResponse.account) {
-              console.log("User account created successfully");
-              accountCreationSuccess = true;
-              isNewUser = true;
-            } else {
-              throw new Error("Failed to create account record");
-            }
-          } else {
+          if (accountResponse.success && accountResponse.account) {
             console.log("User account found:", accountResponse.account);
-            // Default to dashboard for existing users
-            isNewUser = false;
-            accountCreationSuccess = true;
+            router.push("/dashboard");
+          } else {
+            // User authed with Google but no DB account found
+            toast.error("Account not found. Please contact sales to get access.");
+            // Optionally sign them out immediately
           }
         } catch (error: any) {
           console.error("Error finding/accessing account:", error);
-          // Fallback creation
-          try {
-            console.log("Attempting account creation fallback...");
-            const createResponse = await createUserAccount({
-              email: user.email || '',
-              name: user.displayName || '',
-            });
-            if (createResponse.success) {
-              console.log("User account created successfully (fallback)");
-              isNewUser = true;
-              accountCreationSuccess = true;
-            }
-          } catch (createError: any) {
-            console.error('User account creation failed:', createError);
-            toast.error("Failed to set up your account: " + (createError.message || "Unknown error"));
-            return;
-          }
-        }
-
-        if (accountCreationSuccess) {
-          if (isNewUser) {
-            router.push("/onboarding");
-          } else {
-            router.push("/dashboard");
-          }
+          toast.error("Failed to verify account.");
         }
       }
     } catch (error: any) {
@@ -289,7 +143,7 @@ export default function LoginPage() {
       const errorMessage = error.message || "Failed to connect to Google";
 
       if (errorMessage === "Sign in cancelled") {
-        return; // Don't show error for cancellation
+        return;
       }
 
       if (errorMessage.includes('API key') || errorMessage.includes('Firebase')) {
@@ -330,7 +184,7 @@ export default function LoginPage() {
           <div className="w-full max-w-sm">
             {/* Title */}
             <h1 className="text-xl sm:text-2xl font-black text-black text-center mb-4 sm:mb-5">
-              LOG IN OR SIGN UP
+              LOG IN
             </h1>
 
             {/* Google Button */}
@@ -439,10 +293,9 @@ export default function LoginPage() {
 
             {/* Footer Text */}
             <p className="mt-5 text-xs text-gray-500 text-center">
-              By signing up, you agree to verality's{" "}
-              <Link href="#" className="text-blue-600 underline">Privacy policy</Link>
-              {" "}&{" "}
-              <Link href="#" className="text-blue-600 underline">Terms of service</Link>
+              Don&apos;t have an account?{" "}
+              <Link href="/book" className="text-blue-600 underline">Book a demo</Link>
+              {" "}to get access.
             </p>
           </div>
         </div>

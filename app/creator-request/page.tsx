@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import toast from "react-hot-toast";
 import { getCurrentUser } from "@/lib/auth-helpers";
-import { fetchUserAccount, fetchUserStats, fetchRecentRequests, createRequest, incrementQuota } from "@/lib/api-client";
-import type { UserAccount, CreatorRequest, UserStats } from "@/lib/database";
+import { fetchUserAccount, fetchUserStats, fetchRecentRequests, createRequest } from "@/lib/api-client";
+import type { UserAccount, UserStats } from "@/lib/database";
 import { useSearchParams } from "next/navigation";
 
 interface RecentRequest {
@@ -17,7 +16,6 @@ interface RecentRequest {
   dateSubmitted: string;
   resultsCount?: number;
 }
-
 
 export default function CreatorRequestPage() {
   return (
@@ -65,8 +63,6 @@ function CreatorRequestContent() {
 
       const user = await getCurrentUser();
       if (!user) {
-        // Redirect logic handled by layout or middleware usually, but here:
-        // router.push("/login");
         setLoading(false);
         return;
       }
@@ -265,7 +261,7 @@ function CreatorRequestContent() {
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Creator Type</label>
                   <select
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black/5"
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black/5 text-gray-900"
                     value={formData.creatorType}
                     onChange={(e) => setFormData({ ...formData, creatorType: e.target.value })}
                   >
@@ -284,7 +280,7 @@ function CreatorRequestContent() {
                   <input
                     type="text"
                     placeholder="e.g. Sustainable Fashion, Tech, Vegan"
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black/5"
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black/5 text-gray-900 placeholder:text-gray-400"
                     value={formData.topics === "any" ? "" : formData.topics}
                     onChange={(e) => setFormData({ ...formData, topics: e.target.value || "any" })}
                   />
@@ -301,7 +297,7 @@ function CreatorRequestContent() {
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Location</label>
                   <select
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black/5"
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black/5 text-gray-900"
                     value={formData.location}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                   >
@@ -321,7 +317,7 @@ function CreatorRequestContent() {
                     <input
                       type="number"
                       placeholder="1k"
-                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black/5"
+                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black/5 text-gray-900 placeholder:text-gray-400"
                       value={formData.followersMin}
                       onChange={(e) => setFormData({ ...formData, followersMin: e.target.value })}
                     />
@@ -331,7 +327,7 @@ function CreatorRequestContent() {
                     <input
                       type="number"
                       placeholder="Any"
-                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black/5"
+                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black/5 text-gray-900 placeholder:text-gray-400"
                       value={formData.followersMax}
                       onChange={(e) => setFormData({ ...formData, followersMax: e.target.value })}
                     />
@@ -342,7 +338,7 @@ function CreatorRequestContent() {
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Business Intent</label>
                   <select
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black/5"
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black/5 text-gray-900"
                     value={formData.businessIntent}
                     onChange={(e) => setFormData({ ...formData, businessIntent: e.target.value })}
                   >
@@ -428,54 +424,95 @@ function CreatorRequestContent() {
             ) : (
               <div className="space-y-6">
                 {/* Placeholder / Value Prop when no search active */}
-                <div className="bg-gradient-to-br from-purple-700 to-indigo-900 rounded-3xl p-10 text-white shadow-xl relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-                  <div className="relative z-10">
-                    <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-bold mb-4 border border-white/10">AI-POWERED SEARCH</span>
-                    <h1 className="text-4xl font-black mb-4 tracking-tight">Find Your Perfect Creators</h1>
-                    <p className="text-white/80 text-lg max-w-xl mb-8 leading-relaxed">
-                      Don't waste hours scrolling. Our AI scans millions of profiles to find creators with high engagement, authentic audiences, and contactable emails match your brand.
-                    </p>
+                {/* Placeholder / Value Prop - Shown only in Demo */}
+                {isDemo && (
+                  <div className="bg-gradient-to-br from-purple-700 to-indigo-900 rounded-3xl p-10 text-white shadow-xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                    <div className="relative z-10">
+                      <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-bold mb-4 border border-white/10">AI-POWERED SEARCH</span>
+                      <h1 className="text-4xl font-black mb-4 tracking-tight">Find Your Perfect Creators</h1>
+                      <p className="text-white/80 text-lg max-w-xl mb-8 leading-relaxed">
+                        Don&apos;t waste hours scrolling. Our AI scans millions of profiles to find creators with high engagement, authentic audiences, and contactable emails match your brand.
+                      </p>
 
-                    <div className="grid grid-cols-3 gap-6 max-w-2xl">
-                      <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/5">
-                        <div className="text-2xl mb-1">🎯</div>
-                        <div className="font-bold">Niche Targeting</div>
-                        <div className="text-xs text-white/60">Precise topic matching</div>
-                      </div>
-                      <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/5">
-                        <div className="text-2xl mb-1">📧</div>
-                        <div className="font-bold">Verified Emails</div>
-                        <div className="text-xs text-white/60">Direct contact info</div>
-                      </div>
-                      <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/5">
-                        <div className="text-2xl mb-1">📊</div>
-                        <div className="font-bold">Analyze ROI</div>
-                        <div className="text-xs text-white/60">Predict performance</div>
+                      <div className="grid grid-cols-3 gap-6 max-w-2xl">
+                        <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/5">
+                          <div className="text-2xl mb-1">🎯</div>
+                          <div className="font-bold">Niche Targeting</div>
+                          <div className="text-xs text-white/60">Precise topic matching</div>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/5">
+                          <div className="text-2xl mb-1">📧</div>
+                          <div className="font-bold">Verified Emails</div>
+                          <div className="text-xs text-white/60">Direct contact info</div>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/5">
+                          <div className="text-2xl mb-1">📊</div>
+                          <div className="font-bold">Analyze ROI</div>
+                          <div className="text-xs text-white/60">Predict performance</div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
 
 
-                {/* Mock Results Preview (if filters selected but not submitted) */}
-                {potentialMatches !== null && (
+                {/* Mock Results Preview (if filters selected but not submitted) - Only for Demo */}
+                {isDemo && potentialMatches !== null && (
                   <div className="mt-8">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-bold text-gray-900">Live Preview <span className="text-gray-400 font-normal ml-2">(Mock Data)</span></h3>
+                      <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
+                        {potentialMatches.toLocaleString()} Potential Matches
+                      </span>
                     </div>
-                    <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4 opacity-70">
-                          <div className="w-12 h-12 bg-gray-200 rounded-full flex-shrink-0"></div>
-                          <div className="space-y-2 w-full">
-                            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                            <div className="h-3 bg-gray-100 rounded w-1/2"></div>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
+                          <tr>
+                            <th className="px-6 py-4">Creator</th>
+                            <th className="px-6 py-4">Niche</th>
+                            <th className="px-6 py-4">Followers</th>
+                            <th className="px-6 py-4">Engagement</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {[
+                            { name: "Sarah Jenkins", handle: "@sarah.social", niche: "Lifestyle", followers: "45K", engagement: "4.2%" },
+                            { name: "Tech Daily", handle: "@techdaily", niche: "Technology", followers: "120K", engagement: "2.1%" },
+                            { name: "Eco Living", handle: "@ecoliving_us", niche: "Sustainability", followers: "85K", engagement: "3.8%" },
+                            { name: "Foodie Finds", handle: "@sf_foodie", niche: "Food & Drink", followers: "22K", engagement: "5.5%" },
+                          ].map((mock, i) => (
+                            <tr key={i} className="hover:bg-gray-50/50 transition-colors">
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-200 to-gray-300"></div>
+                                  <div>
+                                    <div className="font-bold text-gray-900">{mock.name}</div>
+                                    <div className="text-gray-400 text-xs">{mock.handle}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                                  {mock.niche}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 font-mono text-gray-600">{mock.followers}</td>
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-1.5 text-green-600 font-medium">
+                                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M12 7a1 1 0 110-2 1 1 0 010 2zm1 2a1 1 0 10-2 0v7a1 1 0 102 0V9zm-1 8a1 1 0 100 2 1 1 0 000-2z" clipRule="evenodd" /></svg>
+                                  {mock.engagement}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 text-center text-xs text-gray-500">
+                        + {potentialMatches > 4 ? potentialMatches - 4 : 0} more potential matches found
+                      </div>
                     </div>
-                    <p className="text-center text-sm text-gray-500 mt-4">Calculated based on your criteria. Submit to see real profiles.</p>
                   </div>
                 )}
 
@@ -491,11 +528,22 @@ function CreatorRequestContent() {
                 <h3 className="font-bold text-lg mb-1">Search Credits</h3>
                 <p className="text-gray-400 text-sm mb-4">Searches remaining today</p>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-black">5</span>
-                  <span className="text-gray-500">/ 5</span>
+                  <span className="text-4xl font-black">
+                    {userAccount ? Math.max(0, userAccount.email_quota_daily - userAccount.email_used_today) : "-"}
+                  </span>
+                  <span className="text-gray-500">
+                    / {userAccount ? userAccount.email_quota_daily : "-"}
+                  </span>
                 </div>
                 <div className="w-full bg-gray-800 h-1.5 rounded-full mt-3 overflow-hidden">
-                  <div className="bg-white h-full w-full"></div>
+                  <div
+                    className="bg-white h-full transition-all duration-500"
+                    style={{
+                      width: userAccount && userAccount.email_quota_daily > 0
+                        ? `${Math.max(0, Math.min(100, ((userAccount.email_quota_daily - userAccount.email_used_today) / userAccount.email_quota_daily) * 100))}%`
+                        : "0%"
+                    }}
+                  ></div>
                 </div>
               </div>
             </div>

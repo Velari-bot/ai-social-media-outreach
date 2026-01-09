@@ -39,6 +39,30 @@ export interface UserStats {
   total_creators_contacted: number;
 }
 
+export interface AffiliateAccount {
+  id: string; // Same as user_id
+  referral_code: string;
+  commission_rate: number; // 0.25 (25%)
+  commission_type: 'recurring' | 'one_time';
+  total_earnings: number;
+  pending_earnings: number;
+  clicks: number;
+  conversions: number;
+  payout_details?: string;
+  created_at: Timestamp | string;
+  updated_at: Timestamp | string;
+}
+
+export interface AffiliateReferral {
+  id: string;
+  affiliate_id: string;
+  referred_user_id?: string;
+  visitor_ip?: string; // Hashed for privacy
+  status: 'click' | 'signup' | 'conversion' | 'paid';
+  commission_amount: number;
+  created_at: Timestamp | string;
+}
+
 // Helper to convert Firestore timestamps to ISO strings
 function toISODate(value: any): string {
   if (value?.toDate) {
@@ -195,3 +219,72 @@ export async function incrementEmailQuota(userId: string): Promise<boolean> {
     return false;
   }
 }
+
+// --- Affiliate System Functions ---
+
+export async function getAffiliateAccount(userId: string): Promise<AffiliateAccount | null> {
+  try {
+    const doc = await db.collection('affiliates').doc(userId).get();
+    if (!doc.exists) return null;
+    return docToObject<AffiliateAccount>(doc, userId);
+  } catch (error) {
+    console.error('Error fetching affiliate account:', error);
+    return null;
+  }
+}
+
+export async function createAffiliateAccount(userId: string, email: string): Promise<AffiliateAccount | null> {
+  try {
+    // Generate unique referral code (simplified)
+    const referralCode = email.split('@')[0] + Math.floor(Math.random() * 1000);
+    const now = Timestamp.now();
+
+    const affiliateData = {
+      referral_code: referralCode,
+      commission_rate: 0.25,
+      commission_type: 'recurring',
+      total_earnings: 0,
+      pending_earnings: 0,
+      clicks: 0,
+      conversions: 0,
+      created_at: now,
+      updated_at: now
+    };
+
+    await db.collection('affiliates').doc(userId).set(affiliateData);
+    return { id: userId, ...affiliateData } as unknown as AffiliateAccount;
+  } catch (error) {
+    console.error('Error creating affiliate account:', error);
+    return null;
+  }
+}
+
+export async function trackAffiliateClick(referralCode: string, ipHash: string): Promise<void> {
+  try {
+    const affiliatesRef = db.collection('affiliates');
+    const snapshot = await affiliatesRef.where('referral_code', '==', referralCode).limit(1).get();
+
+    if (snapshot.empty) return;
+
+    const affiliateDoc = snapshot.docs[0];
+    const affiliateId = affiliateDoc.id;
+
+    // Increment click count
+    await affiliateDoc.ref.update({
+      clicks: (affiliateDoc.data().clicks || 0) + 1,
+      updated_at: Timestamp.now()
+    });
+
+    // Log referral click
+    await db.collection('affiliate_referrals').add({
+      affiliate_id: affiliateId,
+      visitor_ip: ipHash, // Simple tracking
+      status: 'click',
+      commission_amount: 0,
+      created_at: Timestamp.now()
+    });
+  } catch (error) {
+    console.error('Error tracking affiliate click:', error);
+  }
+}
+

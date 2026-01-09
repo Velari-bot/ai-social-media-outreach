@@ -8,11 +8,11 @@
  */
 async function getIdToken(): Promise<string | null> {
   if (typeof window === 'undefined') return null;
-  
+
   try {
     const { auth } = await import('./firebase');
     if (!auth?.currentUser) return null;
-    
+
     return auth.currentUser.getIdToken();
   } catch (error) {
     console.error('Error getting auth token:', error);
@@ -28,7 +28,7 @@ async function apiRequest<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const token = await getIdToken();
-  
+
   if (!token) {
     throw new Error('Not authenticated');
   }
@@ -191,3 +191,19 @@ export async function disconnectGmail(): Promise<{ success: boolean; error?: str
   return response.json();
 }
 
+/**
+ * Get affiliate account
+ */
+export async function fetchAffiliateAccount() {
+  return apiRequest<{ success: boolean; account: any }>('/api/affiliates/account');
+}
+
+/**
+ * Create affiliate account
+ */
+export async function createAffiliateAccountApi(email: string) {
+  return apiRequest<{ success: boolean; account: any }>('/api/affiliates/account', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}

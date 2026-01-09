@@ -38,7 +38,7 @@ export interface UsageCounters {
 
 export interface ApiCallLog {
   id: number;
-  api_provider: 'modash' | 'clay';
+  api_provider: 'modash' | 'clay' | 'influencer_club';
   api_action: string;
   reason: string;
   creator_id: number | null;
