@@ -26,33 +26,12 @@ export default function CreatorRequestPage({ searchParams }: { searchParams: { d
   const [isDemo, setIsDemo] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState<"Instagram" | "TikTok" | "YouTube" | null>(null);
   const [formData, setFormData] = useState({
-    creatorInput: "",
-    emailAvailable: false,
-    hideSaved: false,
+    topics: "any", // Niche/topic
     location: "any",
-    gender: "any",
-    ageMin: "any",
-    ageMax: "any",
-    language: "any",
     followersMin: "",
     followersMax: "",
-    engagementRate: "",
-    viewsMin: "",
-    viewsMax: "",
-    topics: "any",
-    hashtags: "",
-    mentions: "",
-    captions: "",
-    collaborations: "",
-    bio: "",
-    lastPosted: "any",
-    categories: "any",
-    followersGrowthMin: "",
-    followersGrowthMax: "",
-    hasSponsoredPosts: false,
-    accountType: "any",
-    fakeFollowers: false,
-    verifiedOnly: false,
+    creatorType: "any",
+    businessIntent: "any",
   });
 
   const [submitted, setSubmitted] = useState(false);
@@ -65,10 +44,12 @@ export default function CreatorRequestPage({ searchParams }: { searchParams: { d
   useEffect(() => {
     // If no platform and no major filters, show nothing
     const hasActiveFilters = selectedPlatform ||
-      formData.creatorInput ||
-      formData.hashtags ||
-      formData.categories !== "any" ||
-      formData.location !== "any";
+      formData.topics !== "any" ||
+      formData.location !== "any" ||
+      formData.creatorType !== "any" ||
+      formData.businessIntent !== "any" ||
+      formData.followersMin ||
+      formData.followersMax;
 
     if (!hasActiveFilters) {
       setPotentialMatches(null);
@@ -309,9 +290,10 @@ export default function CreatorRequestPage({ searchParams }: { searchParams: { d
     if (isDemo) {
       setTimeout(() => {
         // Update local state to mimic new request
+        const requestName = formData.topics !== "any" ? formData.topics : `${selectedPlatform} Creators`;
         const newRequest = {
           id: Date.now(),
-          name: formData.creatorInput || `${selectedPlatform} Creators`,
+          name: requestName,
           platform: [selectedPlatform],
           status: "processing" as any, // Visual temporary status
           dateSubmitted: new Date().toISOString().split('T')[0],
@@ -338,7 +320,7 @@ export default function CreatorRequestPage({ searchParams }: { searchParams: { d
 
     try {
       // Create request in database
-      const requestName = formData.creatorInput || `${selectedPlatform} Creators`;
+      const requestName = formData.topics !== "any" ? formData.topics : `${selectedPlatform} Creators`;
       const requestResponse = await createRequest({
         name: requestName,
         platforms: [selectedPlatform],
@@ -401,33 +383,12 @@ export default function CreatorRequestPage({ searchParams }: { searchParams: { d
 
   const handleReset = () => {
     setFormData({
-      creatorInput: "",
-      emailAvailable: false,
-      hideSaved: false,
+      topics: "any",
       location: "any",
-      gender: "any",
-      ageMin: "any",
-      ageMax: "any",
-      language: "any",
       followersMin: "",
       followersMax: "",
-      engagementRate: "",
-      viewsMin: "",
-      viewsMax: "",
-      topics: "any",
-      hashtags: "",
-      mentions: "",
-      captions: "",
-      collaborations: "",
-      bio: "",
-      lastPosted: "any",
-      categories: "any",
-      followersGrowthMin: "",
-      followersGrowthMax: "",
-      hasSponsoredPosts: false,
-      accountType: "any",
-      fakeFollowers: false,
-      verifiedOnly: false,
+      creatorType: "any",
+      businessIntent: "any",
     });
     setSelectedPlatform(null);
     setSubmitted(false);
@@ -511,210 +472,28 @@ export default function CreatorRequestPage({ searchParams }: { searchParams: { d
               </div>
             </div>
 
-            {/* Search Bar */}
+            {/* Creator Type */}
             <div>
-              <input
-                type="text"
-                placeholder="ex. lifestyle influencer posting fashion and beauty content"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
-              />
-            </div>
-
-            {/* @creator or email */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">@creator or email</label>
-              <input
-                type="text"
-                name="creatorInput"
-                value={formData.creatorInput}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
-              />
-            </div>
-
-            {/* Email Available Toggle */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Email Available</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-2">Creator Type</label>
               <select
-                name="emailAvailable"
-                value={formData.emailAvailable ? "yes" : "no"}
-                onChange={(e) => setFormData((prev) => ({ ...prev, emailAvailable: e.target.value === "yes" }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
-              >
-                <option value="no">No</option>
-                <option value="yes">Yes</option>
-              </select>
-            </div>
-
-            {/* Hide Saved Profiles Toggle */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Hide Saved Profiles</label>
-              <select
-                name="hideSaved"
-                value={formData.hideSaved ? "yes" : "no"}
-                onChange={(e) => setFormData((prev) => ({ ...prev, hideSaved: e.target.value === "yes" }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
-              >
-                <option value="no">No</option>
-                <option value="yes">Yes</option>
-              </select>
-            </div>
-
-            {/* Location */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Location</label>
-              <select
-                name="location"
-                value={formData.location}
+                name="creatorType"
+                value={formData.creatorType}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
               >
                 <option value="any">Any</option>
-                <option value="usa">United States</option>
-                <option value="canada">Canada</option>
-                <option value="europe">Europe</option>
-                <option value="asia">Asia</option>
-                <option value="australia">Australia</option>
-                <option value="other">Other</option>
+                <option value="influencer">Influencer</option>
+                <option value="ugc_creator">UGC Creator</option>
+                <option value="affiliate">Affiliate Marketer</option>
+                <option value="brand_ambassador">Brand Ambassador</option>
+                <option value="nano_influencer">Nano Influencer (1k-10k)</option>
+                <option value="micro_influencer">Micro Influencer (10k-50k)</option>
               </select>
             </div>
 
-            {/* Gender */}
+            {/* Niche / Topic */}
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Gender</label>
-              <select
-                name="gender"
-                value={formData.gender}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
-              >
-                <option value="any">Any</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="non-binary">Non-binary / Other</option>
-              </select>
-            </div>
-
-            {/* Age */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Age</label>
-              <div className="flex gap-2">
-                <select
-                  name="ageMin"
-                  value={formData.ageMin}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
-                >
-                  <option value="any">Any</option>
-                  <option value="13-17">13-17</option>
-                  <option value="18-24">18-24</option>
-                  <option value="25-34">25-34</option>
-                  <option value="35-44">35-44</option>
-                  <option value="45-54">45-54</option>
-                  <option value="55+">55+</option>
-                </select>
-                <select
-                  name="ageMax"
-                  value={formData.ageMax}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
-                >
-                  <option value="any">Any</option>
-                  <option value="13-17">13-17</option>
-                  <option value="18-24">18-24</option>
-                  <option value="25-34">25-34</option>
-                  <option value="35-44">35-44</option>
-                  <option value="45-54">45-54</option>
-                  <option value="55+">55+</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Language */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Language</label>
-              <select
-                name="language"
-                value={formData.language}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
-              >
-                <option value="any">Any</option>
-                <option value="english">English</option>
-                <option value="spanish">Spanish</option>
-                <option value="french">French</option>
-                <option value="german">German</option>
-                <option value="portuguese">Portuguese</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-
-            {/* Followers */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Followers</label>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  name="followersMin"
-                  value={formData.followersMin}
-                  onChange={handleInputChange}
-                  placeholder="-"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
-                />
-                <input
-                  type="number"
-                  name="followersMax"
-                  value={formData.followersMax}
-                  onChange={handleInputChange}
-                  placeholder="-"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
-                />
-              </div>
-            </div>
-
-            {/* Engagement rate */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Engagement Rate</label>
-              <select
-                name="engagementRate"
-                value={formData.engagementRate}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
-              >
-                <option value="">Any</option>
-                <option value="≥1%">≥1%</option>
-                <option value="≥3%">≥3%</option>
-                <option value="≥5%">≥5%</option>
-                <option value="≥10%">≥10%</option>
-              </select>
-            </div>
-
-            {/* Views */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Views</label>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  name="viewsMin"
-                  value={formData.viewsMin}
-                  onChange={handleInputChange}
-                  placeholder="-"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
-                />
-                <input
-                  type="number"
-                  name="viewsMax"
-                  value={formData.viewsMax}
-                  onChange={handleInputChange}
-                  placeholder="-"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
-                />
-              </div>
-            </div>
-
-            {/* Topics */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Topics</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-2">Niche / Topic</label>
               <select
                 name="topics"
                 value={formData.topics}
@@ -730,187 +509,69 @@ export default function CreatorRequestPage({ searchParams }: { searchParams: { d
                 <option value="travel">Travel</option>
                 <option value="technology">Technology</option>
                 <option value="music">Music</option>
-                <option value="other">Other</option>
+                <option value="business-finance">Business & Finance</option>
+                <option value="parenting">Parenting</option>
               </select>
             </div>
 
-            {/* Hashtags */}
+            {/* Location */}
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Hashtags</label>
-              <input
-                type="text"
-                name="hashtags"
-                value={formData.hashtags}
-                onChange={handleInputChange}
-                placeholder="#hashtag1 #hashtag2"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
-              />
-            </div>
-
-            {/* Mentions */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Mentions</label>
-              <input
-                type="text"
-                name="mentions"
-                value={formData.mentions}
-                onChange={handleInputChange}
-                placeholder="@username"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
-              />
-            </div>
-
-            {/* Captions */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Captions</label>
-              <input
-                type="text"
-                name="captions"
-                value={formData.captions}
-                onChange={handleInputChange}
-                placeholder="keyword in captions"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
-              />
-            </div>
-
-            {/* Collaborations */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Collaborations</label>
-              <input
-                type="text"
-                name="collaborations"
-                value={formData.collaborations}
-                onChange={handleInputChange}
-                placeholder="brand name"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
-              />
-            </div>
-
-            {/* Bio */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Bio</label>
-              <input
-                type="text"
-                name="bio"
-                value={formData.bio}
-                onChange={handleInputChange}
-                placeholder="keywords in bio"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
-              />
-            </div>
-
-            {/* Last posted */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Last Posted</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-2">Location</label>
               <select
-                name="lastPosted"
-                value={formData.lastPosted}
+                name="location"
+                value={formData.location}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
               >
                 <option value="any">Any</option>
-                <option value="1">1 day ago</option>
-                <option value="3">3 days ago</option>
-                <option value="7">7 days ago</option>
-                <option value="14">14 days ago</option>
-                <option value="30">30 days ago</option>
+                <option value="usa">United States</option>
+                <option value="canada">Canada</option>
+                <option value="uk">United Kingdom</option>
+                <option value="europe">Europe</option>
+                <option value="asia">Asia</option>
+                <option value="australia">Australia</option>
               </select>
             </div>
 
-            {/* Categories */}
+            {/* Followers */}
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Categories</label>
-              <select
-                name="categories"
-                value={formData.categories}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
-              >
-                <option value="any">Any</option>
-                <option value="influencer">Influencer</option>
-                <option value="creator">Creator</option>
-                <option value="brand">Brand</option>
-                <option value="business">Business</option>
-              </select>
-            </div>
-
-            {/* Followers growth */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Followers Growth</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-2">Follower Range</label>
               <div className="flex gap-2">
                 <input
                   type="number"
-                  name="followersGrowthMin"
-                  value={formData.followersGrowthMin}
+                  name="followersMin"
+                  value={formData.followersMin}
                   onChange={handleInputChange}
-                  placeholder="-"
+                  placeholder="Min"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
                 />
                 <input
                   type="number"
-                  name="followersGrowthMax"
-                  value={formData.followersGrowthMax}
+                  name="followersMax"
+                  value={formData.followersMax}
                   onChange={handleInputChange}
-                  placeholder="-"
+                  placeholder="Max"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
                 />
               </div>
             </div>
 
-            {/* Has Sponsored Posts Toggle */}
+            {/* Business Intent */}
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Has Sponsored Posts</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-2">Business Intent</label>
               <select
-                name="hasSponsoredPosts"
-                value={formData.hasSponsoredPosts ? "yes" : "no"}
-                onChange={(e) => setFormData((prev) => ({ ...prev, hasSponsoredPosts: e.target.value === "yes" }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
-              >
-                <option value="no">No</option>
-                <option value="yes">Yes</option>
-              </select>
-            </div>
-
-            {/* Account Type */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Account Type</label>
-              <select
-                name="accountType"
-                value={formData.accountType}
+                name="businessIntent"
+                value={formData.businessIntent}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
               >
                 <option value="any">Any</option>
-                <option value="personal">Personal</option>
-                <option value="business">Business / Brand</option>
+                <option value="sponsored_posts">Has done Sponsored Posts</option>
+                <option value="affiliate_links">Uses Affiliate Links</option>
+                <option value="email_in_bio">Email in Bio</option>
+                <option value="open_to_collabs">Open to Collabs</option>
+                <option value="agency_managed">Agency Managed</option>
               </select>
-            </div>
-
-            {/* Fake Followers Toggle */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Fake Followers</label>
-              <select
-                name="fakeFollowers"
-                value={formData.fakeFollowers ? "yes" : "no"}
-                onChange={(e) => setFormData((prev) => ({ ...prev, fakeFollowers: e.target.value === "yes" }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white text-gray-900 text-sm"
-              >
-                <option value="no">No</option>
-                <option value="yes">Yes</option>
-              </select>
-            </div>
-
-            {/* Show only verified creators */}
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="verifiedOnly"
-                name="verifiedOnly"
-                checked={formData.verifiedOnly}
-                onChange={handleInputChange}
-                className="w-4 h-4 text-black border-gray-300 rounded focus:ring-2 focus:ring-black"
-              />
-              <label htmlFor="verifiedOnly" className="text-sm text-gray-700">Show only verified creators</label>
             </div>
 
             {/* Submit and Reset Buttons */}
@@ -999,7 +660,22 @@ export default function CreatorRequestPage({ searchParams }: { searchParams: { d
                     bio: "Quick tech tips and gadget hacks. 📱",
                     imgColor: "bg-black"
                   }
-                ].map((profile) => (
+                ].filter(profile => {
+                  // Filter by Platform if selected
+                  if (selectedPlatform && profile.platform !== selectedPlatform) return false;
+
+                  // Filter by Topic (Simple match for demo)
+                  if (formData.topics !== 'any') {
+                    const topic = formData.topics;
+                    const bio = profile.bio.toLowerCase();
+                    if (topic === 'gaming' && !bio.includes('game') && !bio.includes('gaming')) return false;
+                    if (topic === 'technology' && !bio.includes('tech')) return false;
+                    if (topic === 'lifestyle' && !bio.includes('lifestyle')) return false;
+                    // Add more mappings if needed, or default to true to show something
+                  }
+
+                  return true;
+                }).map((profile) => (
                   <div key={profile.id} className="flex items-start gap-4 p-4 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all bg-white group">
                     <div className={`w-12 h-12 rounded-full ${profile.imgColor} flex items-center justify-center text-white font-bold text-lg`}>
                       {profile.name.charAt(0)}
@@ -1013,8 +689,8 @@ export default function CreatorRequestPage({ searchParams }: { searchParams: { d
                             <span>•</span>
                             <span className="flex items-center gap-1">
                               <span className={`w-2 h-2 rounded-full ${profile.platform === 'YouTube' ? 'bg-red-500' :
-                                  profile.platform === 'Twitch' ? 'bg-purple-500' :
-                                    profile.platform === 'TikTok' ? 'bg-black' : 'bg-pink-500'
+                                profile.platform === 'Twitch' ? 'bg-purple-500' :
+                                  profile.platform === 'TikTok' ? 'bg-black' : 'bg-pink-500'
                                 }`}></span>
                               {profile.platform}
                             </span>
