@@ -185,17 +185,17 @@ function NavbarContent() {
         <div className="absolute top-[88px] left-4 right-4 pointer-events-auto bg-white border border-gray-200 rounded-3xl shadow-xl p-4 flex flex-col gap-2 z-40 transform origin-top animate-in fade-in slide-in-from-top-4 duration-200">
           {isAuthenticated ? (
             <>
-              <Link href={getLink("/dashboard")} onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium">Dashboard</Link>
-              <Link href={getLink("/creator-request")} onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium">Find Creators</Link>
-              <Link href={getLink("/inbox")} onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium">Inbox</Link>
-              <Link href={getLink("/settings")} onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium">Settings</Link>
+              <Link href={getLink("/dashboard")} onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium text-black">Dashboard</Link>
+              <Link href={getLink("/creator-request")} onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium text-black">Find Creators</Link>
+              <Link href={getLink("/inbox")} onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium text-black">Inbox</Link>
+              <Link href={getLink("/settings")} onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium text-black">Settings</Link>
               <button onClick={() => { handleLogout(); setMobileMenuOpen(false); }} className="p-4 hover:bg-gray-50 rounded-xl font-medium text-left text-red-600">Log out</button>
             </>
           ) : (
             <>
-              <Link href="/" onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium">Home</Link>
-              <Link href="/pricing" onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium">Pricing</Link>
-              <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium">Log in</Link>
+              <Link href="/" onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium text-black">Home</Link>
+              <Link href="/pricing" onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium text-black">Pricing</Link>
+              <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium text-black">Log in</Link>
               <Link href="/book" onClick={() => setMobileMenuOpen(false)} className="p-4 bg-black text-white rounded-xl font-bold text-center mt-2">Book a call</Link>
             </>
           )}
