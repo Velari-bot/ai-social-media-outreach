@@ -89,10 +89,12 @@ export default function BookingWizard() {
                     <CheckCircle2 className="w-10 h-10 text-green-600" />
                 </div>
                 <h1 className="text-3xl font-black text-gray-900 mb-4">Booking Confirmed!</h1>
-                <p className="text-gray-600 text-lg mb-8">
-                    We've sent a confirmation email to <strong>{selectedSlot?.date}</strong> at <strong>{format(parseISO(selectedSlot!.startTime), 'h:mm a')}</strong>.
+                <p className="text-gray-600 text-lg mb-4">
+                    We've scheduled your call for <strong>{selectedSlot?.date}</strong> at <strong>{format(parseISO(selectedSlot!.startTime), 'h:mm a')}</strong>.
                 </p>
-                <p className="text-sm text-gray-500">Please check your email for the calendar invite.</p>
+                <p className="text-gray-600 mb-8">
+                    You'll receive an email from <strong>benderaiden826</strong> for confirmations and reminders automatically. This same system will be set up for your email sending with creators.
+                </p>
 
                 <button
                     onClick={() => window.location.href = '/'}
