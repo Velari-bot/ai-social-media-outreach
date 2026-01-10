@@ -175,7 +175,9 @@ export default function LoginPage() {
         <div className="hidden md:flex md:w-[40%] bg-gradient-to-b from-[#FFD4A3] via-[#FF9EC5] to-[#D4A3FF] rounded-l-3xl relative overflow-hidden">
           {/* Logo */}
           <div className="absolute top-8 left-8">
-            <div className="text-2xl font-black text-black">ve</div>
+            <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center overflow-hidden shadow-lg rotate-3 transition-transform hover:rotate-6 hover:scale-110">
+              <img src="/v-nav.png" alt="Verality" className="w-full h-full object-contain p-1" />
+            </div>
           </div>
         </div>
 

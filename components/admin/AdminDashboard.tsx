@@ -78,11 +78,11 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             {/* Sidebar - Desktop */}
             <aside className="hidden lg:flex flex-col w-64 bg-[#1A1A1A] text-white border-r border-white/10 h-screen sticky top-0 overflow-y-auto">
                 <div className="p-6 border-b border-white/10">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-black font-bold text-lg rotate-3">
-                            V
+                    <div className="flex items-center gap-2 group cursor-pointer">
+                        <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center overflow-hidden transition-all duration-300 rotate-3 group-hover:rotate-6 group-hover:scale-110 border border-white/10">
+                            <img src="/v-nav.png" alt="V" className="w-full h-full object-contain p-0.5" />
                         </div>
-                        <span className="text-xl font-bold tracking-tight">Verality Admin</span>
+                        <span className="text-xl font-bold tracking-tight group-hover:text-white transition-colors">Verality Admin</span>
                     </div>
                 </div>
 

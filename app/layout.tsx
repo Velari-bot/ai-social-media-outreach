@@ -7,11 +7,44 @@ import { ErrorBoundary } from "./error-boundary";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "AI Creator Outreach Assistant",
-  description: "An AI assistant that finds creators, emails them from your inbox, handles the replies, and builds your creator list automatically.",
+  title: "Verality | AI Creator Outreach & Social Media Automation",
+  description: "Automate your creator outreach with AI. Find creators, send personalized emails, handle replies, and scale your social media presence automatically with Verality.",
+  keywords: ["AI social media outreach", "creator marketing automation", "auto-reply AI", "social media influencer tool", "Verality AI"],
+  authors: [{ name: "Verality Team" }],
+  metadataBase: new URL('https://verality.io'),
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: "Verality | AI Creator Outreach & Social Media Automation",
+    description: "Scale your creator partnerships automatically. AI handles the search, outreach, and replies.",
+    url: 'https://verality.io',
+    siteName: 'Verality',
+    images: [
+      {
+        url: '/v-nav.png',
+        width: 800,
+        height: 800,
+        alt: 'Verality AI Logo',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Verality | AI Creator Outreach Automation',
+    description: 'Scale your creator partnerships automatically with AI.',
+    images: ['/v-nav.png'],
+  },
+  icons: {
+    icon: '/V.png',
+    apple: '/V.png',
+  }
 };
 
 import AffiliateTracker from "@/components/AffiliateTracker";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
 import { Suspense } from "react";
 
 export default function RootLayout({
@@ -22,6 +55,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
+        <GoogleAnalytics GA_MEASUREMENT_ID={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || ''} />
         <ErrorBoundary>
           <Suspense fallback={null}>
             <AffiliateTracker />

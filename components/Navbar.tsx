@@ -99,8 +99,8 @@ function NavbarContent() {
         {/* Center Section: Logo (Desktop: Center, Mobile: Left) */}
         <div className="flex-1 lg:flex-none flex justify-start lg:justify-center pl-4 lg:pl-0">
           <Link href={isAuthenticated ? getLink("/dashboard") : "/"} className="flex items-center gap-2 group">
-            <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold text-lg rotate-3 group-hover:rotate-6 transition-transform">
-              V
+            <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center overflow-hidden transition-all duration-300 rotate-3 group-hover:rotate-6 group-hover:scale-110 shadow-sm">
+              <img src="/v-nav.png" alt="V" className="w-full h-full object-contain p-0.5" />
             </div>
             <span className="text-xl font-black tracking-tight text-black">verality.io</span>
           </Link>

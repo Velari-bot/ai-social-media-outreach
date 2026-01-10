@@ -1,0 +1,133 @@
+﻿  Γû▓ Next.js 14.2.5
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully
+   Linting and checking validity of types ...
+node.exe :  Γ¿» ESLint: 
+Invalid Options: - Unknown 
+options: useEslintrc, 
+extensions - 'extensions' 
+has been removed.
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: ( Γ¿» ES  
+  Lint: In...s been remove   
+ d.:String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+   Collecting page data ...
+FIREBASE_SERVICE_ACCOUNT found. Length: 2384 characters.
+FIREBASE_SERVICE_ACCOUNT found. Length: 2384 characters.
+Firebase Admin initialized successfully using Service Account.
+FIREBASE_SERVICE_ACCOUNT found. Length: 2384 characters.
+Firebase Admin initialized successfully using Service Account.
+FIREBASE_SERVICE_ACCOUNT found. Length: 2384 characters.
+Firebase Admin initialized successfully using Service Account.
+Firebase Admin initialized successfully using Service Account.
+FIREBASE_SERVICE_ACCOUNT found. Length: 2384 characters.
+FIREBASE_SERVICE_ACCOUNT found. Length: 2384 characters.
+FIREBASE_SERVICE_ACCOUNT found. Length: 2384 characters.
+FIREBASE_SERVICE_ACCOUNT found. Length: 2384 characters.
+FIREBASE_SERVICE_ACCOUNT found. Length: 2384 characters.
+Firebase Admin initialized successfully using Service Account.
+Firebase Admin initialized successfully using Service Account.
+FIREBASE_SERVICE_ACCOUNT found. Length: 2384 characters.
+Firebase Admin initialized successfully using Service Account.
+Firebase Admin initialized successfully using Service Account.
+Firebase Admin initialized successfully using Service Account.
+FIREBASE_SERVICE_ACCOUNT found. Length: 2384 characters.
+FIREBASE_SERVICE_ACCOUNT found. Length: 2384 characters.
+FIREBASE_SERVICE_ACCOUNT found. Length: 2384 characters.
+Firebase Admin initialized successfully using Service Account.
+FIREBASE_SERVICE_ACCOUNT found. Length: 2384 characters.
+Firebase Admin initialized successfully using Service Account.
+Firebase Admin initialized successfully using Service Account.
+FIREBASE_SERVICE_ACCOUNT found. Length: 2384 characters.
+Firebase Admin initialized successfully using Service Account.
+Firebase Admin initialized successfully using Service Account.
+Firebase Admin initialized successfully using Service Account.
+   Generating static pages (0/36) ...
+   Generating static pages (9/36) 
+   Generating static pages (18/36) 
+   Generating static pages (27/36) 
+ Γ£ô Generating static pages (36/36)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+Γöî Γùï /                                    6.9 kB          145 kB
+Γö£ Γùï /_not-found                          871 B          88.1 kB
+Γö£ Γùï /admin                               15.5 kB         123 kB
+Γö£ Γùï /admin/demo                          3.87 kB         145 kB
+Γö£ Γùï /affiliates/dashboard                5.36 kB         204 kB
+Γö£ Γùï /affiliates/signup                   5.28 kB         203 kB
+Γö£ ╞Æ /api/admin/affiliates                0 B                0 B
+Γö£ ╞Æ /api/admin/auto-responder            0 B                0 B
+Γö£ ╞Æ /api/admin/billing                   0 B                0 B
+Γö£ ╞Æ /api/admin/bookings                  0 B                0 B
+Γö£ ╞Æ /api/admin/bookings/update           0 B                0 B
+Γö£ ╞Æ /api/admin/creators                  0 B                0 B
+Γö£ ╞Æ /api/admin/logs                      0 B                0 B
+Γö£ ╞Æ /api/admin/seed                      0 B                0 B
+Γö£ ╞Æ /api/admin/slots                     0 B                0 B
+Γö£ ╞Æ /api/admin/stats                     0 B                0 B
+Γö£ ╞Æ /api/admin/users                     0 B                0 B
+Γö£ ╞Æ /api/admin/users/create              0 B                0 B
+Γö£ ╞Æ /api/affiliates/account              0 B                0 B
+Γö£ ╞Æ /api/affiliates/track                0 B                0 B
+Γö£ ╞Æ /api/availability                    0 B                0 B
+Γö£ ╞Æ /api/book-call                       0 B                0 B
+Γö£ ╞Æ /api/campaign/validate               0 B                0 B
+Γö£ ╞Æ /api/checkout                        0 B                0 B
+Γö£ ╞Æ /api/creators/[id]                   0 B                0 B
+Γö£ ╞Æ /api/creators/[id]/enrich            0 B                0 B
+Γö£ ╞Æ /api/creators/[id]/select            0 B                0 B
+Γö£ ╞Æ /api/creators/search                 0 B                0 B
+Γö£ ╞Æ /api/gmail/callback                  0 B                0 B
+Γö£ ╞Æ /api/gmail/connect                   0 B                0 B
+Γö£ ╞Æ /api/gmail/disconnect                0 B                0 B
+Γö£ ╞Æ /api/gmail/messages                  0 B                0 B
+Γö£ ╞Æ /api/gmail/oauth-url                 0 B                0 B
+Γö£ ╞Æ /api/gmail/status                    0 B                0 B
+Γö£ ╞Æ /api/thread-status                   0 B                0 B
+Γö£ Γùï /api/usage/quota                     0 B                0 B
+Γö£ ╞Æ /api/user/account                    0 B                0 B
+Γö£ ╞Æ /api/user/create-account             0 B                0 B
+Γö£ ╞Æ /api/user/quota                      0 B                0 B
+Γö£ ╞Æ /api/user/requests                   0 B                0 B
+Γö£ ╞Æ /api/user/stats                      0 B                0 B
+Γö£ ╞Æ /api/user/update-account             0 B                0 B
+Γö£ ╞Æ /api/webhooks/stripe                 0 B                0 B
+Γö£ Γùï /book                                5.39 kB         152 kB
+Γö£ Γùï /check-email                         2.38 kB         201 kB
+Γö£ Γùï /creator-request                     7.51 kB         211 kB
+Γö£ Γùï /dashboard                           3.95 kB         210 kB
+Γö£ Γùï /export                              7.11 kB         210 kB
+Γö£ Γùï /inbox                               47.7 kB         251 kB
+Γö£ Γùï /login                               4.93 kB         203 kB
+Γö£ Γùï /onboarding                          5.31 kB         197 kB
+Γö£ Γùï /pricing                             5.52 kB         204 kB
+Γö£ Γùï /privacy-policy                      3.59 kB         142 kB
+Γö£ Γùï /settings                            6.74 kB         205 kB
+Γö£ Γùï /signup                              470 B          87.7 kB
+Γö£ Γùï /tos                                 3.67 kB         142 kB
+Γöö Γùï /validation-demo                     7.51 kB         146 kB
++ First Load JS shared by all            87.2 kB
+  Γö£ chunks/23-0a1105b62cbe90d4.js        31.5 kB
+  Γö£ chunks/fd9d1056-c1839fab0e80cf0c.js  53.6 kB
+  Γöö other shared chunks (total)          2.06 kB
+
+
+Γùï  (Static)   prerendered as static content
+╞Æ  (Dynamic)  server-rendered on demand
+

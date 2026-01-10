@@ -236,10 +236,12 @@ export default function Home() {
 
       <footer className="py-10 border-t border-gray-200 text-gray-400">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-black rounded-lg flex items-center justify-center text-white font-bold text-md rotate-3">V</div>
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="w-7 h-7 bg-black rounded-lg flex items-center justify-center overflow-hidden transition-all duration-300 rotate-3 group-hover:rotate-6 group-hover:scale-110">
+              <img src="/v-nav.png" alt="V" className="w-full h-full object-contain p-0.5" />
+            </div>
             <span className="text-lg font-bold tracking-tight text-black">verality.io</span>
-          </div>
+          </Link>
           <div className="flex gap-8 text-xs font-bold">
             <Link href="/terms" className="hover:text-black transition-colors">Terms</Link>
             <Link href="/privacy" className="hover:text-black transition-colors">Privacy</Link>
