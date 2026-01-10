@@ -41,13 +41,13 @@ export default function AdminEmails() {
         setLogs(prev => [entry, ...prev].slice(0, 50));
     };
 
-    const runProcessor = async () => {
-        addLog(`Running auto-responder for ${targetEmail}...`);
+    const runProcessor = async (bypassDelay?: boolean) => {
+        addLog(`Running auto-responder for ${targetEmail}${bypassDelay ? ' (No Delay)' : ''}...`);
         try {
             const res = await fetch('/api/admin/auto-responder', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'process', targetEmail })
+                body: JSON.stringify({ action: 'process', targetEmail, skipDelay: !!bypassDelay })
             });
             const data = await res.json();
 
@@ -61,6 +61,8 @@ export default function AdminEmails() {
                 if (data.replied > 0) {
                     addLog(`Success: Replied to ${data.replied} message(s).`, 'success');
                     toast.success(`Sent ${data.replied} AI replies`);
+                } else if (data.pending > 0) {
+                    addLog(`Check complete. ${data.pending} messages pending (waiting for human-like delay).`);
                 } else {
                     addLog(`Check complete. No new messages needing AI reply.`);
                 }
@@ -151,7 +153,7 @@ export default function AdminEmails() {
                 </div>
                 <div className="flex gap-3">
                     <button
-                        onClick={runProcessor}
+                        onClick={() => runProcessor(true)}
                         className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-sm font-bold text-black"
                     >
                         <RefreshCcw className="w-4 h-4" />

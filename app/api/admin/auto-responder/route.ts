@@ -16,7 +16,8 @@ export async function POST(req: NextRequest) {
         const { action, targetEmail } = payload;
 
         if (action === 'process') {
-            const result = await processAllThreads(targetEmail || 'benderaiden826@gmail.com');
+            const { skipDelay } = payload;
+            const result = await processAllThreads(targetEmail || 'benderaiden826@gmail.com', skipDelay);
             return NextResponse.json({ success: true, ...result });
         }
 
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
     }
 }
 
-async function processAllThreads(targetEmail: string) {
+async function processAllThreads(targetEmail: string, skipDelay: boolean = false) {
     console.log(`[Auto-Responder] Processing threads for ${targetEmail}`);
 
     // 1. User Lookup
@@ -75,6 +76,7 @@ async function processAllThreads(targetEmail: string) {
     const threads = listRes.data.threads || [];
     let processedCount = 0;
     let repliedCount = 0;
+    let pendingCount = 0;
 
     for (const th of threads) {
         try {
@@ -105,11 +107,17 @@ async function processAllThreads(targetEmail: string) {
             const nowTime = Date.now();
             const elapsedMinutes = (nowTime - lastMsgInternalDate) / (1000 * 60);
 
-            // Random delay between 5 and 15 minutes
-            const randomDelay = Math.floor(Math.random() * 10) + 5;
+            // Deterministic delay (5-15 mins) based on message ID
+            // This ensures the delay doesn't keep changing on every poll
+            let randomDelay = 0;
+            if (!skipDelay) {
+                const seed = (lastMsg.id || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                randomDelay = (seed % 11) + 5; // 5 to 15 minutes
+            }
 
             if (elapsedMinutes < randomDelay) {
                 console.log(`[Auto-Responder] Skipping thread ${th.id} - too soon (elapsed: ${elapsedMinutes.toFixed(1)}m, delay: ${randomDelay}m)`);
+                pendingCount++;
                 continue;
             }
 
@@ -135,12 +143,12 @@ async function processAllThreads(targetEmail: string) {
                 messages: [
                     {
                         role: "system",
-                        content: `You are ${userName} from Verality. You are reaching out to creators. 
+                        content: `You are ${userName} from Verality. You are reaching out to creators. My email is ${targetEmail}.
                         Tone: Casual, professional, like a real person. 
                         IMPORTANT: Sign off ONLY as "Best, \n${userName}". Do not say you are an AI.
                         Goal: ${userProfile.outreach_intent || "Get their rates or phone number"}. 
                         If they seem uninterested 2+ times, reply "IGNORE". 
-                        Keep it short.`
+                        Keep it short. NEVER use placeholders like "[Creator]", "[Name]" or "(insert email)". If name unknown, use "Hi". Never include instructions in parentheses.`
                     },
                     {
                         role: "user",
@@ -195,7 +203,7 @@ async function processAllThreads(targetEmail: string) {
         }
     }
 
-    return { threadsChecked: threads.length, processed: processedCount, replied: repliedCount };
+    return { threadsChecked: threads.length, processed: processedCount, replied: repliedCount, pending: pendingCount };
 }
 
 async function simulateOutreach(targetEmail: string, creatorEmail: string) {
@@ -230,7 +238,8 @@ async function simulateOutreach(targetEmail: string, creatorEmail: string) {
         messages: [
             {
                 role: "system",
-                content: `You are ${userName} from Verality. Write a concise (under 50 words) outreach email to a creator asking for a sponsorship. Sign off ONLY as "Best, \nVerality Team ${userName}".`
+                content: `You are ${userName} from Verality. My email is ${targetEmail}. Write a concise (under 50 words) outreach email to a creator asking for a sponsorship. Sign off ONLY as "Best, \nVerality Team ${userName}".
+                IMPORTANT: Do NOT use placeholders like "[Creator]", "[Name]", or "(insert email)". If the name is unknown, say "Hi there". Never use parenthetical instructions.`
             },
             { role: "user", content: `Draft an invite for ${creatorEmail}` }
         ]

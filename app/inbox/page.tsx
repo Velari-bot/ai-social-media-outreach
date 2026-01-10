@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 import Navbar from "@/components/Navbar";
 import SubscriptionGuard from "@/components/SubscriptionGuard";
+import { RefreshCcw } from "lucide-react";
 
 interface EmailMessage {
   id: string;
@@ -55,188 +56,171 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [showThread, setShowThread] = useState(false);
 
-  useEffect(() => {
+  // Moved out of useEffect to allow manual refresh
+  const loadUserAndReplies = useCallback(async () => {
     // Check for demo mode
     const demoMode = searchParams?.demo === "true";
+    setLoading(true);
 
-    async function loadUserAndReplies() {
-      if (demoMode) {
-        setUserId("demo-user");
-        // Mock replies
-        const mockReplies: Reply[] = [
-          {
-            id: "1",
-            creatorName: "Sarah Jenkins",
-            creatorEmail: "sarah.content@gmail.com",
-            platform: "Instagram",
-            subject: "Re: Collaboration Proposal",
-            snippet: "Hi! I'd love to hear more about your product. It fits my audience perfectly...",
-            fullBody: "Hi,\n\nThanks for reaching out! I've taken a look at your website and I think your product would be a great fit for my audience. I typically work with brands in the lifestyle space.\n\nCould you send over more details about the campaign requirements and budget?\n\nBest,\nSarah",
-            tag: "interested",
-            receivedAt: new Date().toISOString(),
-            campaignName: "Lifestyle Q1",
-            isNew: true,
-            isUnread: true,
-            thread: [
-              {
-                id: "msg1",
-                from: "AI Assistant",
-                fromEmail: "ai@verality.io",
-                subject: "Collaboration Proposal",
-                body: "Hi Sarah,\n\nI love the content you're creating on Instagram! Your recent post about sustainable living really resonated with what we're building at Verality.\n\nWe'd love to chat about a potential partnership for our upcoming launch. Are you open to collaborations right now?\n\nBest,\nVerality Team",
-                timestamp: new Date(Date.now() - 86400000 * 2).toISOString(),
-                isAI: true,
-                isUser: false
-              },
-              {
-                id: "msg2",
-                from: "Sarah Jenkins",
-                fromEmail: "sarah.content@gmail.com",
-                subject: "Re: Collaboration Proposal",
-                body: "Hi,\n\nThanks for reaching out! I've taken a look at your website and I think your product would be a great fit for my audience. I typically work with brands in the lifestyle space.\n\nCould you send over more details about the campaign requirements and budget?\n\nBest,\nSarah",
-                timestamp: new Date(Date.now() - 86400000).toISOString(),
-                isAI: false,
-                isUser: false
-              },
-              {
-                id: "msg3",
-                from: "AI Assistant",
-                fromEmail: "ai@verality.io",
-                subject: "Re: Collaboration Proposal",
-                body: "Hi Sarah,\n\nThat's great to hear! We're looking for 1 Reel and 3 Stories highlighting the product's daily use.\n\nOur budget for this campaign is in the range of $1,500 - $2,000. Does that align with your rates?\n\nBest,\nVerality Team",
-                timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
-                isAI: true,
-                isUser: false
-              },
-              {
-                id: "msg4",
-                from: "Sarah Jenkins",
-                fromEmail: "sarah.content@gmail.com",
-                subject: "Re: Collaboration Proposal",
-                body: "Yes, that fits within my rate card! I can send over my media kit. When are you looking to start?",
-                timestamp: new Date().toISOString(),
-                isAI: false,
-                isUser: false
-              }
-            ]
-          },
-          {
-            id: "2",
-            creatorName: "TechReviews Daily",
-            creatorEmail: "contact@techreviews.com",
-            platform: "YouTube",
-            subject: "Re: Partnership Inquiry",
-            snippet: "What are your rates for a dedicated video vs integration?",
-            fullBody: "Hello,\n\nWe are interested. Do you have a budget in mind? We usually charge $1500 for a dedicated review.\n\nThanks,\nMike",
-            tag: "needs_followup",
-            receivedAt: new Date(Date.now() - 3600000).toISOString(),
-            campaignName: "Tech Launch",
-            isNew: false,
-            isUnread: false,
-            thread: [
-              {
-                id: "msg2",
-                from: "TechReviews Daily",
-                fromEmail: "contact@techreviews.com",
-                subject: "Re: Partnership Inquiry",
-                body: "Hello,\n\nWe are interested. Do you have a budget in mind? We usually charge $1500 for a dedicated review.\n\nThanks,\nMike",
-                timestamp: new Date(Date.now() - 3600000).toISOString(),
-                isUser: false
-              }
-            ]
-          }
-        ];
-        setReplies(mockReplies);
-        setLoading(false);
+    if (demoMode) {
+      setUserId("demo-user");
+      // Mock replies
+      const mockReplies: Reply[] = [
+        {
+          id: "1",
+          creatorName: "Sarah Jenkins",
+          creatorEmail: "sarah.content@gmail.com",
+          platform: "Instagram",
+          subject: "Re: Collaboration Proposal",
+          snippet: "Hi! I'd love to hear more about your product. It fits my audience perfectly...",
+          fullBody: "Hi,\n\nThanks for reaching out! I've taken a look at your website and I think your product would be a great fit for my audience. I typically work with brands in the lifestyle space.\n\nCould you send over more details about the campaign requirements and budget?\n\nBest,\nSarah",
+          tag: "interested",
+          receivedAt: new Date().toISOString(),
+          campaignName: "Lifestyle Q1",
+          isNew: true,
+          isUnread: true,
+          thread: [
+            {
+              id: "msg1",
+              from: "AI Assistant",
+              fromEmail: "ai@verality.io",
+              subject: "Collaboration Proposal",
+              body: "Hi Sarah,\n\nI love the content you're creating on Instagram! Your recent post about sustainable living really resonated with what we're building at Verality.\n\nWe'd love to chat about a potential partnership for our upcoming launch. Are you open to collaborations right now?\n\nBest,\nVerality Team",
+              timestamp: new Date(Date.now() - 86400000 * 2).toISOString(),
+              isAI: true,
+              isUser: false
+            },
+            {
+              id: "msg2",
+              from: "Sarah Jenkins",
+              fromEmail: "sarah.content@gmail.com",
+              subject: "Re: Collaboration Proposal",
+              body: "Hi,\n\nThanks for reaching out! I've taken a look at your website and I think your product would be a great fit for my audience. I typically work with brands in the lifestyle space.\n\nCould you send over more details about the campaign requirements and budget?\n\nBest,\nSarah",
+              timestamp: new Date(Date.now() - 86400000).toISOString(),
+              isAI: false,
+              isUser: false
+            },
+            {
+              id: "msg3",
+              from: "AI Assistant",
+              fromEmail: "ai@verality.io",
+              subject: "Re: Collaboration Proposal",
+              body: "Hi Sarah,\n\nThat's great to hear! We're looking for 1 Reel and 3 Stories highlighting the product's daily use.\n\nOur budget for this campaign is in the range of $1,500 - $2,000. Does that align with your rates?\n\nBest,\nVerality Team",
+              timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
+              isAI: true,
+              isUser: false
+            },
+            {
+              id: "msg4",
+              from: "Sarah Jenkins",
+              fromEmail: "sarah.content@gmail.com",
+              subject: "Re: Collaboration Proposal",
+              body: "Yes, that fits within my rate card! I can send over my media kit. When are you looking to start?",
+              timestamp: new Date().toISOString(),
+              isAI: false,
+              isUser: false
+            }
+          ]
+        },
+        {
+          id: "2",
+          creatorName: "TechReviews Daily",
+          creatorEmail: "contact@techreviews.com",
+          platform: "YouTube",
+          subject: "Re: Partnership Inquiry",
+          snippet: "What are your rates for a dedicated video vs integration?",
+          fullBody: "Hello,\n\nWe are interested. Do you have a budget in mind? We usually charge $1500 for a dedicated review.\n\nThanks,\nMike",
+          tag: "needs_followup",
+          receivedAt: new Date(Date.now() - 3600000).toISOString(),
+          campaignName: "Tech Launch",
+          isNew: false,
+          isUnread: false,
+          thread: [
+            {
+              id: "msg2",
+              from: "TechReviews Daily",
+              fromEmail: "contact@techreviews.com",
+              subject: "Re: Partnership Inquiry",
+              body: "Hello,\n\nWe are interested. Do you have a budget in mind? We usually charge $1500 for a dedicated review.\n\nThanks,\nMike",
+              timestamp: new Date(Date.now() - 3600000).toISOString(),
+              isUser: false
+            }
+          ]
+        }
+      ];
+      setReplies(mockReplies);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        toast.error("Please log in to continue");
+        router.push("/login");
         return;
       }
 
-      try {
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
+      setUserId(user.id);
 
-        if (authError || !user) {
-          toast.error("Please log in to continue");
-          router.push("/login");
-          return;
+      // Fetch real messages
+      // DEBUG: Using TEST_TOKEN for immediate visualization during this session
+      const response = await fetch('/api/gmail/messages', {
+        headers: {
+          'Authorization': `Bearer TEST_TOKEN`
         }
+      });
 
-        setUserId(user.id);
-
-        // Fetch real messages
-        // DEBUG: Using TEST_TOKEN for immediate visualization during this session
-        const response = await fetch('/api/gmail/messages', {
-          headers: {
-            'Authorization': `Bearer TEST_TOKEN`
-          }
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && Array.isArray(data.messages)) {
-            // Map Gmail messages to UI Reply format
-            const mappedReplies: Reply[] = data.messages.map((msg: any) => ({
-              id: msg.id,
-              creatorName: msg.from.split('<')[0].replace(/"/g, '').trim(),
-              creatorEmail: msg.from.match(/<([^>]+)>/)?.[1] || msg.from,
-              platform: "Gmail",
-              subject: msg.subject,
-              snippet: msg.snippet,
-              fullBody: msg.snippet,
-              tag: "needs_followup",
-              receivedAt: msg.timestamp,
-              isNew: msg.isUnread,
-              isUnread: msg.isUnread,
-              threadId: msg.threadId,
-              thread: msg.fullThread?.map((bm: any) => ({
-                id: bm.id,
-                from: bm.from,
-                fromEmail: bm.fromEmail,
-                subject: bm.subject,
-                body: bm.body,
-                timestamp: bm.timestamp,
-                // Check if the sender is "me" or the AI (assuming the user email is benderaiden826@gmail.com)
-                // If fromEmail includes 'benderaiden826', it's us/AI.
-                isUser: !bm.fromEmail?.includes('benderaiden826'),
-                isAI: bm.fromEmail?.includes('benderaiden826')
-                // Note: 'isUser' in UI means "The User who is receiving the email" (Creator)? 
-                // Wait, in previous mock data:
-                // 'isAI': true -> Purple Bubble (Us/AI)
-                // 'isUser': false -> Gray/Blue Bubble?
-
-                // Let's re-read the UI component:
-                // isAI ? purple : isUser ? blue : gray
-                // message.from is the Sender Name.
-
-                // Logic:
-                // If sender is ME (benderaiden826), mark as isAI (or isUser=false)
-                // If sender is CREATOR, mark as isUser=true ??
-
-                // Let's look at mock data:
-                // msg1 (AI Assistant) -> isAI: true
-                // msg2 (Sarah/Creator) -> isAI: false, isUser: false (Wait, mock had isUser false for creator?)
-
-                // Let's settle on:
-                // Sender = Me/AI => isAI = true
-                // Sender = Creator => isAI = false
-              })) || []
-            }));
-            setReplies(mappedReplies);
-          }
-        } else {
-          console.error("Failed to fetch inbox");
-          toast.error("Inbox sync failed");
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && Array.isArray(data.messages)) {
+          // Map Gmail messages to UI Reply format
+          const mappedReplies: Reply[] = data.messages.map((msg: any) => ({
+            id: msg.id,
+            creatorName: msg.from.split('<')[0].replace(/"/g, '').trim(),
+            creatorEmail: msg.from.match(/<([^>]+)>/)?.[1] || msg.from,
+            platform: "Gmail",
+            subject: msg.subject,
+            snippet: msg.snippet,
+            fullBody: msg.snippet,
+            tag: "needs_followup",
+            receivedAt: msg.timestamp,
+            isNew: msg.isUnread,
+            isUnread: msg.isUnread,
+            threadId: msg.threadId,
+            thread: msg.fullThread?.map((bm: any) => ({
+              id: bm.id,
+              from: bm.from,
+              fromEmail: bm.fromEmail,
+              subject: bm.subject,
+              body: bm.body,
+              timestamp: bm.timestamp,
+              // Check if the sender is "me" or the AI (assuming the user email is benderaiden826@gmail.com)
+              // If fromEmail includes 'benderaiden826', it's us/AI.
+              isUser: !bm.fromEmail?.includes('benderaiden826'),
+              isAI: bm.fromEmail?.includes('benderaiden826')
+            })) || []
+          }));
+          setReplies(mappedReplies);
+          // toast.success("Inbox refreshed");
         }
-
-      } catch (error: any) {
-        console.error("Error loading inbox:", error);
-        toast.error("Failed to load inbox");
-      } finally {
-        setLoading(false);
+      } else {
+        console.error("Failed to fetch inbox");
+        toast.error("Inbox sync failed");
       }
-    }
 
-    loadUserAndReplies();
+    } catch (error: any) {
+      console.error("Error loading inbox:", error);
+      toast.error("Failed to load inbox");
+    } finally {
+      setLoading(false);
+    }
   }, [router, searchParams]);
+
+  useEffect(() => {
+    loadUserAndReplies();
+  }, [loadUserAndReplies]);
 
   const filteredReplies = useMemo(() => {
     let result = [...replies];
@@ -443,12 +427,24 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
                     Review and manage replies from creators
                   </p>
                 </div>
-                <Link
-                  href="/dashboard"
-                  className="px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-sm font-medium text-black"
-                >
-                  Back to Dashboard
-                </Link>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      // Allow manual refresh
+                      loadUserAndReplies();
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-sm font-medium text-black"
+                  >
+                    <RefreshCcw className="w-4 h-4" />
+                    Refresh
+                  </button>
+                  <Link
+                    href="/dashboard"
+                    className="px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-sm font-medium text-black"
+                  >
+                    Back to Dashboard
+                  </Link>
+                </div>
               </div>
 
               {/* Filters */}

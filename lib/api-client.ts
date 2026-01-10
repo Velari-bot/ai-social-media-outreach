@@ -79,7 +79,7 @@ export async function createRequest(data: {
   platforms: string[];
   criteria: Record<string, any>;
 }) {
-  return apiRequest<{ success: boolean; request: any }>('/api/user/requests', {
+  return apiRequest<{ success: boolean; request: any; creators?: any[]; meta?: any }>('/api/user/requests', {
     method: 'POST',
     body: JSON.stringify(data),
   });

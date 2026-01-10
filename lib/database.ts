@@ -215,6 +215,7 @@ export async function createCreatorRequest(
 
 // Update email quota usage
 export async function incrementEmailQuota(userId: string, amount: number = 1): Promise<boolean> {
+  if (amount <= 0) return true; // No charge needed
   try {
     // Get current account
     const account = await getUserAccount(userId);

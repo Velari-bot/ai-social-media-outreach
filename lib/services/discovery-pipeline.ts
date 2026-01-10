@@ -22,7 +22,25 @@ export class DiscoveryPipeline {
         const { userId, filters, requestedCount, platform } = params;
 
         // 1. Query Internal Database first
-        const internalCreators = await this.queryInternalDb(platform, filters, requestedCount);
+        let internalCreators = await this.queryInternalDb(platform, filters, requestedCount);
+        console.log(`[Discovery] Internal DB found ${internalCreators.length} potential matches`);
+
+        // Post-filter internal results in memory for location/topic strictness
+        internalCreators = internalCreators.filter(c => {
+            // Filter by Location if specified
+            if (filters.location && filters.location !== 'any') {
+                const cLoc = (c.basic_profile_data?.location || c.basic_profile_data?.geo_country || '').toLowerCase();
+                if (!cLoc.includes(filters.location.toLowerCase())) return false;
+            }
+            // Filter by Topic if specified (basic check)
+            if (filters.topics && filters.topics !== 'any' && c.basic_profile_data?.category) {
+                // thorough topic check could be complex, simple string match for now
+                // or skip if overly restrictive
+            }
+            return true;
+        });
+        console.log(`[Discovery] Internal DB filtered to ${internalCreators.length} matches`);
+
         let foundCount = internalCreators.length;
 
         let externalFetches = 0;
@@ -31,6 +49,7 @@ export class DiscoveryPipeline {
 
         // 2. Fallback to Influencers.club if needed
         if (foundCount < requestedCount) {
+            console.log(`[Discovery] Need ${requestedCount - foundCount} more creators. calling external API...`);
             try {
                 const remaining = requestedCount - foundCount;
                 const externalResults = await influencerClubClient.discoverCreators({
@@ -39,14 +58,24 @@ export class DiscoveryPipeline {
                     limit: remaining,
                 });
 
+                console.log(`[Discovery] External API returned ${externalResults.length} creators`);
+
                 externalFetches = externalResults.length;
-                creditsConsumed = externalFetches * 0.01; // As per requirements
+
+                // Cost Calculation (Influencer Club charges 1 credit per batch of 50)
+                // If we fetched 0, we still paid 1 credit for the attempt.
+                // If we fetched 1-50, we paid 1 credit.
+                // If we fetched 51-100, we paid 2 credits.
+                const batches = Math.ceil(externalFetches / 50);
+                creditsConsumed = batches > 0 ? batches : 1;
 
                 // 3. Deduplication Logic
                 const newCreators = await this.processExternalResults(externalResults, internalCreators, platform);
+                console.log(`[Discovery] New unique creators to save: ${newCreators.length}`);
 
                 // 4. database Insert (status = 'pending')
                 const savedCreators = await this.bulkSaveCreators(newCreators);
+                console.log(`[Discovery] Saved ${savedCreators.length} creators to DB`);
 
                 // 5. Clay Enrichment Pipeline
                 // Only enrich the NEW creators we just found
@@ -83,14 +112,16 @@ export class DiscoveryPipeline {
         let query = db.collection('creators')
             .where('platform', '==', platform);
 
-        // Apply basic filters if provided (Firestore has limitations with inequality on multiple fields)
+        // Note: We only filter by platform and min followers at DB level
+        // Detailed filtering (Location, Niche) happens in memory in discover()
+        // This is to avoid missing potential matches due to schema variations
+        // and excessive composite index requirements.
+
         if (filters.minFollowers) {
             query = query.where('basic_profile_data.followers', '>=', filters.minFollowers);
         }
 
-        // Note: In a production environment, you might use Algolia or ElasticSearch for complex filtering.
-        // For now, we fetch and partial filter in memory if needed, but aim for DB filtering.
-        const snapshot = await query.limit(limit).get();
+        const snapshot = await query.limit(limit * 5).get(); // Over-fetch to allow for in-memory filtering
         return snapshot.docs.map(doc => this.docToCreator(doc));
     }
 

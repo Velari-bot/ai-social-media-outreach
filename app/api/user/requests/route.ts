@@ -107,22 +107,36 @@ export async function POST(request: NextRequest) {
     if (platforms.length > 0) {
       try {
         const { discoveryPipeline } = await import('@/lib/services/discovery-pipeline');
-        await discoveryPipeline.discover({
+        // Return valid results
+        const results = await discoveryPipeline.discover({
           userId,
           platform: platforms[0].toLowerCase() as any, // Cast to Platform type
           filters: criteria,
           requestedCount: finalBatchSize,
         });
 
-        // Update request status to in_progress or delivered?
-        // Ideally searchCreators would update the request status, or we do it here.
-        // But searchCreators returns creators.
+        // Update request status to delivered as we have results
+        // In a clearer implementation, we would update the DB doc status here
+        // await db.collection('creator_requests').doc(newRequest.id).update({ 
+        //   status: 'delivered', 
+        //   results_count: results.creators.length 
+        // });
 
-        // We can update the request status here
-        // await db.collection('creator_requests').doc(newRequest.id).update({ status: 'delivered', results_count: results.length });
+        // Charge only for found creators
+        const chargeAmount = results.creators.length;
+        if (chargeAmount > 0) {
+          const { incrementEmailQuota } = await import('@/lib/database');
+          await incrementEmailQuota(userId, chargeAmount);
+        }
 
-        // For now, just logging
-        console.log(`Search triggered for request ${newRequest.id}`);
+        console.log(`Search triggered for request ${newRequest.id}, found ${results.creators.length} creators`);
+
+        return NextResponse.json({
+          success: true,
+          request: newRequest,
+          creators: results.creators, // Return the creators immediately
+          meta: results.meta
+        });
       } catch (searchError: any) {
         console.error('Error triggering creator search:', searchError);
         // We log the detailed error server-side, but return a generic message to the user 
@@ -130,13 +144,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Increment quota usage
-    const { incrementEmailQuota } = await import('@/lib/database');
-    await incrementEmailQuota(userId, finalBatchSize);
+    // Do NOT increment quota here if search failed or 0 results found via fallback
 
     return NextResponse.json({
       success: true,
       request: newRequest,
+      creators: [] // Return empty if search failed but request created
     });
   } catch (error: any) {
     console.error('Error creating request:', error);
