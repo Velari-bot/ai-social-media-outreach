@@ -6,7 +6,11 @@ export interface UserAccount {
   id: string;
   email: string;
   name?: string;
-  plan: 'free' | 'pro' | 'enterprise';
+  first_name?: string;
+  last_name?: string;
+  plan: 'free' | 'basic' | 'pro' | 'growth' | 'scale' | 'enterprise';
+  role?: 'user' | 'admin' | 'affiliate';
+  outreach_intent?: string; // What are they asking for?
   email_quota_daily: number;
   email_quota_monthly: number;
   email_used_today: number;
@@ -94,7 +98,17 @@ export async function getUserAccount(userId: string): Promise<UserAccount | null
     if (!doc.exists) {
       return null;
     }
-    return docToObject<UserAccount>(doc, userId);
+    const data = docToObject<UserAccount>(doc, userId);
+
+    // Admin Override (Enterprise access for all admins)
+    if (data.role === 'admin') {
+      data.plan = 'enterprise';
+      data.email_quota_daily = 500;
+      data.email_quota_monthly = 15000;
+      // We use 500 as requested by the user
+    }
+
+    return data;
   } catch (error) {
     console.error('Error fetching user account:', error);
     return null;

@@ -3,7 +3,7 @@ import { logApiCall } from './api-logger';
 
 // These should be set as environment variables
 const INFLUENCER_CLUB_API_KEY = process.env.INFLUENCER_CLUB_API_KEY || '';
-const INFLUENCER_CLUB_BASE_URL = 'https://api.influencer.club/v1';
+const INFLUENCER_CLUB_BASE_URL = 'https://api-dashboard.influencers.club';
 
 interface InfluencerClubClientConfig {
     apiKey: string;
@@ -42,11 +42,11 @@ export class InfluencerClubClient {
     ): Promise<T> {
         const url = `${this.baseUrl}${endpoint}`;
 
-        // Assuming API key via header 'x-api-key' or 'Authorization'. 
-        // Usually 'x-api-key' for these types of services. I'll use that as default.
+        // Header: 'Authorization' seems to be widely used. 
+        // The key provided by user is a JWT, so 'Bearer' prefix is standard.
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
-            'x-api-key': this.apiKey,
+            'Authorization': this.apiKey.includes('Bearer') ? this.apiKey : `Bearer ${this.apiKey}`,
             ...((options.headers as Record<string, string>) || {}),
         };
 
@@ -57,6 +57,7 @@ export class InfluencerClubClient {
 
         if (!response.ok) {
             const errorText = await response.text();
+            console.error(`Influencer Club API Error (${response.status}): ${errorText}`);
             throw new Error(`Influencer Club API error: ${response.status} - ${errorText}`);
         }
 
@@ -76,14 +77,13 @@ export class InfluencerClubClient {
 
         // Log the call
         await logApiCall({
-            api_provider: 'influencer_club' as any, // Cast until type is updated
+            api_provider: 'influencer_club' as any,
             api_action: 'discovery',
             reason: `Searching for ${params.limit} creators on ${params.platform} via Influencer Club`,
         });
 
         try {
-            // Map filters to Influencer Club query format
-            // Note: This mapping is hypothetical and should be adjusted based on real API docs
+            // Map filters to query format
             const queryBody = {
                 platform: params.platform,
                 limit: params.limit,
@@ -91,10 +91,9 @@ export class InfluencerClubClient {
                 filters: params.filters,
             };
 
-            // Hypothetical endpoint
-            // Adjust endpoint if needed (e.g., /search/creators or /profiles)
+            // Using the api-dashboard domain and public discovery path
             const results = await this.request<{ profiles: any[] }>(
-                '/search/profiles',
+                '/public/v1/discovery/',
                 {
                     method: 'POST',
                     body: JSON.stringify(queryBody),

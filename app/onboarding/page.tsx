@@ -13,6 +13,8 @@ function OnboardingContent() {
   const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
   const [purpose, setPurpose] = useState<PurposeType>(null);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
 
@@ -141,16 +143,19 @@ function OnboardingContent() {
       toast.dismiss('gmail-connect');
       toast.success(`Gmail connected: ${result.email}`);
 
-      // Save purpose to user profile if needed
-      if (purpose) {
-        const user = getCurrentUser();
-        if (user) {
-          try {
-            await updateUserAccount({ purpose });
-            console.log('Purpose saved:', purpose);
-          } catch (error) {
-            console.error('Error saving purpose:', error);
-          }
+      // Save data back to profile
+      const user = await getCurrentUser();
+      if (user) {
+        try {
+          await updateUserAccount({
+            purpose: purpose || 'other',
+            first_name: firstName,
+            last_name: lastName,
+            name: `${firstName} ${lastName}`.trim()
+          });
+          console.log('Account data saved');
+        } catch (error) {
+          console.error('Error saving account data:', error);
         }
       }
 
@@ -197,23 +202,72 @@ function OnboardingContent() {
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${step >= 2 ? "bg-[#FF6B9C] text-white" : "bg-gray-200 text-gray-500"}`}>
                   2
                 </div>
+                <div className={`flex-1 h-1 ${step >= 3 ? "bg-[#FF6B9C]" : "bg-gray-200"}`}></div>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${step >= 3 ? "bg-[#FF6B9C] text-white" : "bg-gray-200 text-gray-500"}`}>
+                  3
+                </div>
               </div>
             </div>
 
-            {/* Step 1: Welcome & Purpose */}
+            {/* Step 1: Personal Details */}
             {step === 1 && (
               <div>
                 <h1 className="text-2xl sm:text-3xl font-black text-black text-center mb-3">
-                  👋 Welcome to mo
+                  Let's get started
                 </h1>
                 <p className="text-gray-600 text-center mb-8 text-sm">
-                  We'll help you find creators and run fully-automated outreach in minutes.
+                  Please provide your real name. We use this for professional email signatures in your outreach.
+                </p>
+
+                <div className="space-y-4 mb-8">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">First Name</label>
+                    <input
+                      type="text"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      placeholder="e.g. John"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 text-black font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Last Name</label>
+                    <input
+                      type="text"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      placeholder="e.g. Smith"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 text-black font-medium"
+                    />
+                  </div>
+                  <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl flex gap-3">
+                    <div className="text-blue-500 pt-0.5 font-bold">ⓘ</div>
+                    <p className="text-[11px] text-blue-700 font-medium leading-normal">
+                      This is optional, but highly recommended for better reply rates. If left blank, we will use a professional generic signature.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setStep(2)}
+                  className="btn-primary w-full"
+                >
+                  Continue
+                </button>
+              </div>
+            )}
+
+            {/* Step 2: Welcome & Purpose */}
+            {step === 2 && (
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-black text-black text-center mb-3">
+                  What's your goal?
+                </h1>
+                <p className="text-gray-600 text-center mb-8 text-sm">
+                  We'll customize your experience based on what you're building.
                 </p>
 
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    What are you trying to do?
-                  </label>
                   <div className="space-y-3">
                     <button
                       onClick={() => handlePurposeSelect("brand")}
@@ -272,15 +326,28 @@ function OnboardingContent() {
                       </div>
                     </button>
                   </div>
-                  <p className="mt-3 text-xs text-gray-500">
-                    📌 This only personalizes copy later — don't overthink it.
-                  </p>
+                </div>
+
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setStep(1)}
+                    className="flex-1 px-4 py-3 bg-gray-100 text-black font-bold rounded-xl hover:bg-gray-200 transition-all"
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    onClick={() => setStep(3)}
+                    disabled={!purpose}
+                    className="flex-[2] btn-primary disabled:opacity-50"
+                  >
+                    Continue
+                  </button>
                 </div>
               </div>
             )}
 
-            {/* Step 2: Connect Gmail */}
-            {step === 2 && (
+            {/* Step 3: Connect Gmail */}
+            {step === 3 && (
               <div>
                 <h1 className="text-2xl sm:text-3xl font-black text-black text-center mb-3">
                   Connect your Gmail
@@ -333,11 +400,11 @@ function OnboardingContent() {
                   )}
                 </button>
 
-                {step === 2 && (
+                {step === 3 && (
                   <button
                     type="button"
                     onClick={() => {
-                      setStep(1);
+                      setStep(2);
                     }}
                     className="w-full px-4 py-2.5 text-sm text-gray-600 hover:text-gray-900 transition-colors font-medium"
                   >

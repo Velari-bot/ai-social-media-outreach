@@ -26,11 +26,9 @@ interface DailyLimits {
 
 export default function SettingsPage() {
   return (
-    <SubscriptionGuard>
-      <Suspense fallback={<div className="min-h-screen bg-[#F3F1EB] flex items-center justify-center">Loading settings...</div>}>
-        <SettingsContent />
-      </Suspense>
-    </SubscriptionGuard>
+    <Suspense fallback={<div className="min-h-screen bg-[#F3F1EB] flex items-center justify-center">Loading settings...</div>}>
+      <SettingsContent />
+    </Suspense>
   );
 }
 
@@ -40,10 +38,12 @@ function SettingsContent() {
   const isDemo = searchParams?.get("demo") === "true";
 
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [gmailStatus, setGmailStatus] = useState<GmailConnection>({ connected: false });
   const [limits, setLimits] = useState<DailyLimits | null>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [intent, setIntent] = useState("");
 
   useEffect(() => {
     async function loadSettings() {
@@ -57,6 +57,7 @@ function SettingsContent() {
           remaining_daily: 88,
           remaining_monthly: 2550
         });
+        setIntent("rates and phone number");
         setLoading(false);
         return;
       }
@@ -90,6 +91,7 @@ function SettingsContent() {
             remaining_daily: (acc.email_quota_daily || 100) - (acc.email_used_today || 0),
             remaining_monthly: 3000 - (acc.email_used_this_month || 0)
           });
+          setIntent(acc.outreach_intent || "");
         }
 
       } catch (error) {
@@ -102,6 +104,27 @@ function SettingsContent() {
 
     loadSettings();
   }, [router, isDemo]);
+
+  const handleSaveIntent = async () => {
+    if (isDemo) {
+      toast.success("Settings saved (Demo)");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { updateUserAccount } = await import("@/lib/api-client");
+      const res = await updateUserAccount({ outreach_intent: intent });
+      if (res.success) {
+        toast.success("Outreach intent updated");
+      } else {
+        toast.error(res.error || "Failed to save");
+      }
+    } catch (e) {
+      toast.error("Error saving settings");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleConnectGmail = async () => {
     setConnecting(true);
@@ -152,10 +175,16 @@ function SettingsContent() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F3F1EB] pb-20">
+    <main className="min-h-screen bg-[#F3F1EB] pb-20 relative overflow-hidden">
       <Navbar />
 
-      <div className="max-w-[1000px] mx-auto px-4 sm:px-6 pt-28">
+      {/* Background Gradients */}
+      <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-60">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[60%] bg-gradient-to-br from-purple-100 via-pink-100 to-transparent blur-[100px]" />
+        <div className="absolute top-[20%] right-[-10%] w-[40%] h-[50%] bg-gradient-to-bl from-blue-100 via-teal-50 to-transparent blur-[100px]" />
+      </div>
+
+      <div className="max-w-[1000px] mx-auto px-4 sm:px-6 pt-36 relative z-10">
         <div className="mb-8">
           <h1 className="text-3xl font-black text-[#1A1A1A]">Settings</h1>
           <p className="text-gray-500 font-medium mt-1">Manage your account and integrations.</p>
@@ -239,6 +268,39 @@ function SettingsContent() {
                   </button>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Outreach Configuration */}
+          <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100/60">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-bold text-black">Outreach AI Behavior</h2>
+                <p className="text-sm text-gray-500 mt-1">Customize what the AI asks creators for during outreach.</p>
+              </div>
+              <button
+                onClick={handleSaveIntent}
+                disabled={saving}
+                className="px-6 py-2 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-800 transition-all disabled:opacity-50 flex items-center gap-2"
+              >
+                {saving ? "Saving..." : "Save Settings"}
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <label className="block">
+                <span className="text-sm font-bold text-gray-700 uppercase tracking-wider block mb-2">Intent / Goal</span>
+                <input
+                  type="text"
+                  placeholder="e.g. asking for phone number and rate"
+                  value={intent}
+                  onChange={(e) => setIntent(e.target.value)}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 text-black placeholder:text-gray-400 font-medium"
+                />
+              </label>
+              <p className="text-xs text-gray-400 italic">
+                {intent.trim() === "" ? "Leave blank to ask for Phone Number and Rate by default." : `AI will prioritize: ${intent}`}
+              </p>
             </div>
           </div>
 

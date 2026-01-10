@@ -222,10 +222,16 @@ export async function resetPassword(email: string): Promise<void> {
 /**
  * Get current user
  */
-export function getCurrentUser(): User | null {
-  if (!auth) {
-    return null;
-  }
-  return auth.currentUser;
+export function getCurrentUser(): Promise<User | null> {
+  return new Promise((resolve) => {
+    if (!auth) {
+      resolve(null);
+      return;
+    }
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      unsubscribe();
+      resolve(user);
+    });
+  });
 }
 

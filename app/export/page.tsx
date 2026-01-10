@@ -259,7 +259,7 @@ function ExportContent({ searchParams }: { searchParams: { demo?: string } }) {
       }
 
       try {
-        const user = getCurrentUser();
+        const user = await getCurrentUser();
 
         if (!user) {
           toast.error("Please log in to continue");

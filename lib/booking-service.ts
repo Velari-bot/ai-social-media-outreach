@@ -63,6 +63,32 @@ export async function seedAvailability(daysToSeed = 14) {
 
 export async function getAvailability(startDate: string, endDate: string) {
     if (!db) {
+        // Fallback for development if Firebase is not configured
+        if (process.env.NODE_ENV === 'development') {
+            console.warn('Firebase not initialized. Returning mock availability data for development.');
+            const mockSlots: AvailabilitySlot[] = [];
+            const today = new Date();
+
+            // Create 3 days of mock slots
+            for (let i = 0; i < 3; i++) {
+                const date = addDays(today, i + 1);
+                const dateStr = format(date, 'yyyy-MM-dd');
+
+                for (let hour = 10; hour < 15; hour++) {
+                    const startTime = set(date, { hours: hour, minutes: 0 }).toISOString();
+                    const endTime = set(date, { hours: hour, minutes: 30 }).toISOString();
+
+                    mockSlots.push({
+                        id: `mock-${dateStr}-${hour}`,
+                        date: dateStr,
+                        startTime,
+                        endTime,
+                        isBooked: false
+                    });
+                }
+            }
+            return mockSlots;
+        }
         throw new Error('Database not initialized. Check FIREBASE_SERVICE_ACCOUNT environment variable.');
     }
     // Ensure seeded - REMOVED to prevent "zombie slots" when admin deletes all slots.

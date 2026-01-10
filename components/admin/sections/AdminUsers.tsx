@@ -41,6 +41,31 @@ export default function AdminUsers() {
         u.displayName?.toLowerCase().includes(search.toLowerCase())
     );
 
+    async function handleUpdateUser(userId: string, updates: { role?: string, plan?: string }) {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/admin/users', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, ...updates }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                // Refresh list
+                const newRes = await fetch('/api/admin/users');
+                const newData = await newRes.json();
+                if (newData.success) setUsers(newData.users);
+            } else {
+                alert("Update failed: " + data.error);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error updating user");
+        } finally {
+            setLoading(false);
+        }
+    }
+
     async function handleAddUser() {
         const email = prompt("Enter new user email:");
         if (!email) return;
@@ -155,9 +180,23 @@ export default function AdminUsers() {
                                         {format(new Date(user.createdAt), 'MMM d, yyyy')}
                                     </td>
                                     <td className="px-6 py-4">
-                                        <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-black">
-                                            <MoreVertical className="w-4 h-4" />
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            {user.role !== 'admin' ? (
+                                                <button
+                                                    onClick={() => handleUpdateUser(user.id, { role: 'admin', plan: 'enterprise' })}
+                                                    className="text-[10px] font-bold uppercase tracking-wider text-purple-600 hover:text-purple-800 bg-purple-50 px-2 py-1 rounded"
+                                                >
+                                                    Make Admin
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleUpdateUser(user.id, { role: 'user', plan: 'free' })}
+                                                    className="text-[10px] font-bold uppercase tracking-wider text-gray-600 hover:text-gray-800 bg-gray-50 px-2 py-1 rounded"
+                                                >
+                                                    Demote
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             ))

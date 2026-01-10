@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import toast from "react-hot-toast";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 const tiers = [
     {
@@ -99,6 +102,68 @@ export default function PricingPage() {
 }
 
 function PricingContent() {
+    const router = useRouter();
+    const [userId, setUserId] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!auth) return;
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setUserId(user ? user.uid : null);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    const handleCheckout = async (tier: any) => {
+        if (tier.isCustom) {
+            window.location.href = "/book";
+            return;
+        }
+
+        if (!userId) {
+            toast.error("Please log in to choose a plan");
+            router.push("/login?returnTo=/pricing");
+            return;
+        }
+
+        // Next.js requires static access to process.env variables (dynamic access like process.env[key] won't work in client bundles)
+        const priceIds: Record<string, string | undefined> = {
+            "Basic": process.env.NEXT_PUBLIC_STRIPE_PRICE_BASIC,
+            "Pro": process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,
+            "Growth": process.env.NEXT_PUBLIC_STRIPE_PRICE_GROWTH,
+            "Scale": process.env.NEXT_PUBLIC_STRIPE_PRICE_SCALE,
+        };
+
+        const priceId = priceIds[tier.name];
+
+        if (!priceId) {
+            // Fallback for demo/dev if keys aren't set
+            console.warn(`Price ID not found for ${tier.name}. Checked env var: NEXT_PUBLIC_STRIPE_PRICE_${tier.name.toUpperCase()}`);
+            toast.error(`Checkout not configured for ${tier.name} (Missing Price ID)`);
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    priceId,
+                    planName: tier.name,
+                    userId
+                }),
+            });
+
+            const data = await res.json();
+            if (data.url) {
+                window.location.href = data.url;
+            } else {
+                throw new Error(data.error || 'Failed to start checkout');
+            }
+        } catch (error: any) {
+            toast.error(error.message);
+        }
+    };
+
     return (
         <main className="min-h-screen bg-[#F3F1EB] relative overflow-hidden font-sans selection:bg-pink-200">
             <Navbar />
@@ -111,7 +176,7 @@ function PricingContent() {
                 <div className="absolute top-[20%] right-[-100px] w-[200px] h-[600px] bg-blue-400/20 blur-[100px]" />
             </div>
 
-            <div className="relative z-10 pt-32 pb-24 px-4 sm:px-6">
+            <div className="relative z-10 pt-40 pb-24 px-4 sm:px-6">
                 <div className="max-w-[1600px] mx-auto">
 
                     {/* Header */}
@@ -157,7 +222,7 @@ function PricingContent() {
                                     </div>
 
                                     <button
-                                        onClick={() => tier.isCustom ? window.location.href = "/book" : toast.error("Billing isn't ready yet (demo phase)")}
+                                        onClick={() => handleCheckout(tier)}
                                         className={`w-full py-3.5 rounded-full font-bold text-[15px] mb-8 transition-transform active:scale-95 text-center inline-block ${isDark
                                             ? "bg-white text-black hover:bg-gray-100"
                                             : "bg-[#0A0A0A] text-white hover:bg-gray-900"

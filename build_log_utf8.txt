@@ -1,0 +1,60 @@
+﻿  Γû▓ Next.js 14.2.5
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully
+   Linting and checking validity of types ...
+node.exe :  Γ¿» ESLint: 
+Invalid Options: - Unknown 
+options: useEslintrc, 
+extensions - 'extensions' 
+has been removed.
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: ( Γ¿» ES  
+  Lint: In...s been remove   
+ d.:String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+Failed to compile.
+
+./lib/stripe.ts:4:5
+Type error: Type 
+'"2024-06-20"' is not 
+assignable to type 
+'"2025-12-15.clover"'.
+
+[0m [90m 2 |[39m[0m
+[0m [90m 3 |[39m 
+[36mexport[39m 
+[36mconst[39m stripe 
+[33m=[39m [36mnew[39m [3
+3mStripe[39m(process[33m.[
+39menv[33m.[39m[33mSTRIPE_
+SECRET_KEY[39m[33m![39m[3
+3m,[39m {[0m
+[0m[31m[1m>[22m[39m[90m
+ 4 |[39m     
+apiVersion[33m:[39m [32m'2
+024-06-20'[39m[33m,[39m 
+[90m// Use the latest API 
+version you're comfortable 
+with, or strictly 
+'2023-10-16'[39m[0m
+[0m [90m   |[39m     
+[31m[1m^[22m[39m[0m
+[0m [90m 5 |[39m     
+typescript[33m:[39m 
+[36mtrue[39m[33m,[39m[0m
+[0m [90m 6 |[39m 
+})[33m;[39m[0m
+[0m [90m 7 |[39m[0m

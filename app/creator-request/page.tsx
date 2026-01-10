@@ -48,7 +48,6 @@ function CreatorRequestContent() {
     businessIntent: "any",
   });
   const [potentialMatches, setPotentialMatches] = useState<number | null>(null);
-  const [isCalculating, setIsCalculating] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
@@ -100,59 +99,12 @@ function CreatorRequestContent() {
     init();
   }, [demoParam]);
 
-  // Calculate potential matches based on filters
-  useEffect(() => {
-    // If no platform and no major filters, show nothing
-    const hasActiveFilters = selectedPlatform ||
-      formData.topics !== "any" ||
-      formData.location !== "any" ||
-      formData.creatorType !== "any" ||
-      formData.businessIntent !== "any" ||
-      formData.followersMin ||
-      formData.followersMax;
-
-    if (!hasActiveFilters) {
-      setPotentialMatches(null);
-      return;
-    }
-
-    setIsCalculating(true);
-    // Debounce simulation
-    const timer = setTimeout(() => {
-      // Logic to determine matches count based on specificity
-      let baseMatches = 12000;
-
-      if (selectedPlatform === "Instagram") baseMatches *= 0.6;
-      if (selectedPlatform === "TikTok") baseMatches *= 0.8;
-      if (selectedPlatform === "YouTube") baseMatches *= 0.3;
-
-      if (formData.topics !== "any") baseMatches *= 0.15; // Niche significantly reduces
-      if (formData.location !== "any") baseMatches *= 0.2; // Location significantly reduces
-      if (formData.creatorType !== "any") baseMatches *= 0.5;
-      if (formData.businessIntent === "contact") baseMatches *= 0.8;
-
-      if (formData.followersMin) baseMatches *= 0.7;
-      if (formData.followersMax) baseMatches *= 0.9;
-
-      // Add randomness
-      const randomFactor = 0.9 + Math.random() * 0.2; // +/- 10%
-
-      setPotentialMatches(Math.floor(baseMatches * randomFactor));
-      setIsCalculating(false);
-    }, 600);
-
-    return () => clearTimeout(timer);
-  }, [formData, selectedPlatform]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPlatform && formData.topics === "any") {
       toast.error("Please select a platform or niche");
       return;
-    }
-
-    if (potentialMatches !== null && potentialMatches < 10) {
-      if (!confirm("Potential matches are very low. Continue anyway?")) return;
     }
 
     setSubmitted(true);
@@ -227,10 +179,16 @@ function CreatorRequestContent() {
   };
 
   return (
-    <main className="min-h-screen bg-[#F3F1EB] pb-20">
+    <main className="min-h-screen bg-[#F3F1EB] pb-20 relative overflow-hidden">
       <Navbar />
 
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 pt-28">
+      {/* Background Gradients */}
+      <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-60">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[60%] bg-gradient-to-br from-purple-100 via-pink-100 to-transparent blur-[100px]" />
+        <div className="absolute top-[20%] right-[-10%] w-[40%] h-[50%] bg-gradient-to-bl from-blue-100 via-teal-50 to-transparent blur-[100px]" />
+      </div>
+
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 pt-40 relative z-10">
         <div className="flex flex-col lg:flex-row gap-8">
 
           {/* Left Sidebar - Filter Controls */}
@@ -352,25 +310,7 @@ function CreatorRequestContent() {
                 </div>
 
 
-                {/* Match Estimation */}
-                <div className="py-4 border-t border-gray-100">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm font-medium text-gray-600">Est. Pool Size</span>
-                    {isCalculating ? (
-                      <span className="inline-block w-4 h-4 border-2 border-gray-300 border-t-black rounded-full animate-spin"></span>
-                    ) : (
-                      <span className="text-lg font-black text-black">
-                        {potentialMatches !== null ? potentialMatches.toLocaleString() : "-"}
-                      </span>
-                    )}
-                  </div>
-                  <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${potentialMatches !== null && potentialMatches > 1000 ? "bg-green-500" : potentialMatches !== null && potentialMatches > 0 ? "bg-yellow-500" : "bg-gray-300"}`}
-                      style={{ width: potentialMatches !== null ? `${Math.min((potentialMatches / 20000) * 100, 100)}%` : "0%" }}
-                    ></div>
-                  </div>
-                </div>
+
 
                 <div className="pt-2 flex gap-3">
                   <button
@@ -382,7 +322,7 @@ function CreatorRequestContent() {
                   </button>
                   <button
                     type="submit"
-                    disabled={submitted || (potentialMatches === 0)}
+                    disabled={submitted}
                     className={`flex-1 py-3 bg-black text-white rounded-xl font-bold hover:bg-gray-900 transition-all shadow-lg shadow-black/10 flex items-center justify-center gap-2 ${submitted ? "opacity-75 cursor-wait" : ""}`}
                   >
                     {submitted ? (
@@ -565,7 +505,7 @@ function CreatorRequestContent() {
                         </span>
                       </div>
                       <div className="text-xs text-gray-500">
-                        {req.platform.join(", ")} • {new Date(req.dateSubmitted).toLocaleDateString()}
+                        {Array.isArray(req.platform) ? req.platform.join(", ") : "Any"} • {new Date(req.dateSubmitted).toLocaleDateString()}
                       </div>
                     </div>
                   ))

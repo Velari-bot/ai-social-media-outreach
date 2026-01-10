@@ -93,26 +93,34 @@ async function storeCreators(
   const creators: Creator[] = [];
 
   for (const result of discoveryResults) {
-    const platform = result.platform.toLowerCase() as Platform;
-    const handle = result.handle;
-
-    // Check if creator already exists (using platform + handle as unique key)
-    const existingQuery = await db.collection('creators')
-      .where('platform', '==', platform)
-      .where('handle', '==', handle)
-      .limit(1)
-      .get();
+    // Map Influencer Club fields to our schema
+    const safePlatform = (result.platform || 'instagram').toLowerCase() as Platform;
+    const safeHandle = result.username || result.handle || result.id; // Fallback to ID if no handle
 
     const creatorData = {
-      platform,
-      handle,
-      modash_creator_id: result.creator_id,
+      platform: safePlatform,
+      handle: safeHandle,
+      modash_creator_id: result.user_id || result.id || safeHandle, // Use their ID as "modash_creator_id" for now to maintain schema compatibility
       has_basic_profile: true,
       has_detailed_profile: false,
-      basic_profile_data: result,
+      // Store raw data for debugging/future use, but ensure key fields are top-level
+      basic_profile_data: {
+        ...result,
+        followers: result.followers_count || result.followers,
+        engagement_rate: result.engagement_rate,
+        fullname: result.full_name,
+        picture: result.profile_pic_url,
+      },
       created_at: now,
       updated_at: now,
     };
+
+    // Check if creator already exists (using platform + handle as unique key)
+    const existingQuery = await db.collection('creators')
+      .where('platform', '==', safePlatform)
+      .where('handle', '==', safeHandle)
+      .limit(1)
+      .get();
 
     if (existingQuery.empty) {
       // Create new creator

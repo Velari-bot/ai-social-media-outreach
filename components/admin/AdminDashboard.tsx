@@ -1,9 +1,7 @@
-
 "use client";
 
 import { useState } from "react";
 import {
-    Loader2,
     LayoutDashboard,
     Phone,
     Users,
@@ -22,17 +20,17 @@ import {
 import Link from "next/link";
 import { toast } from "react-hot-toast";
 
-// Sub-components (we'll implement these next)
+// Sub-components
 import AdminOverview from "./sections/AdminOverview";
 import AdminCalls from "./sections/AdminCalls";
 import AdminUsers from "./sections/AdminUsers";
 import AdminPricing from "./sections/AdminPricing";
-// ... other sections can be implemented incrementally
-
-interface AdminLayoutProps {
-    children?: React.ReactNode; // Flexible if we use it as a wrapper
-    onLogout: () => void;
-}
+import AdminEmails from "./sections/AdminEmails";
+import AdminStripe from "./sections/AdminStripe";
+import AdminAffiliates from "./sections/AdminAffiliates";
+import AdminCreators from "./sections/AdminCreators";
+import AdminSettings from "./sections/AdminSettings";
+import AdminLogs from "./sections/AdminLogs";
 
 type AdminSection = 'overview' | 'calls' | 'users' | 'pricing' | 'payments' | 'affiliates' | 'creators' | 'emails' | 'demo' | 'settings' | 'logs';
 
@@ -60,6 +58,12 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             case 'calls': return <AdminCalls />;
             case 'users': return <AdminUsers />;
             case 'pricing': return <AdminPricing />;
+            case 'payments': return <AdminStripe />;
+            case 'affiliates': return <AdminAffiliates />;
+            case 'creators': return <AdminCreators />;
+            case 'emails': return <AdminEmails />;
+            case 'settings': return <AdminSettings />;
+            case 'logs': return <AdminLogs />;
             default: return (
                 <div className="flex flex-col items-center justify-center h-[50vh] text-gray-400">
                     <Settings className="w-12 h-12 mb-4 opacity-20" />
@@ -105,8 +109,8 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                 key={item.id}
                                 onClick={() => setActiveSection(item.id as AdminSection)}
                                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeSection === item.id
-                                        ? "bg-white text-black shadow-lg shadow-white/10 translate-x-1"
-                                        : "text-gray-400 hover:text-white hover:bg-white/5"
+                                    ? "bg-white text-black shadow-lg shadow-white/10 translate-x-1"
+                                    : "text-gray-400 hover:text-white hover:bg-white/5"
                                     }`}
                             >
                                 <item.icon className="w-5 h-5" />
@@ -128,53 +132,61 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 min-w-0 bg-[#F3F1EB]">
-                {/* Mobile Header */}
-                <div className="lg:hidden bg-[#1A1A1A] text-white p-4 flex items-center justify-between sticky top-0 z-50">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-black font-bold text-lg rotate-3">
-                            V
-                        </div>
-                        <span className="text-xl font-bold tracking-tight">Verality Admin</span>
-                    </div>
-                    <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-                        {mobileMenuOpen ? <X /> : <Menu />}
-                    </button>
+            <main className="flex-1 min-w-0 bg-[#F3F1EB] relative overflow-hidden">
+                {/* Background Gradients */}
+                <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-40">
+                    <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[60%] bg-gradient-to-br from-purple-100 via-pink-100 to-transparent blur-[100px]" />
+                    <div className="absolute top-[20%] right-[-10%] w-[40%] h-[50%] bg-gradient-to-bl from-blue-100 via-teal-50 to-transparent blur-[100px]" />
                 </div>
 
-                {/* Mobile Menu */}
-                {mobileMenuOpen && (
-                    <div className="lg:hidden bg-[#1A1A1A] text-white fixed inset-0 z-40 pt-20 px-4 space-y-2 overflow-y-auto">
-                        {menuItems.map((item) => (
-                            <button
-                                key={item.id}
-                                onClick={() => {
-                                    setActiveSection(item.id as AdminSection);
-                                    setMobileMenuOpen(false);
-                                }}
-                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeSection === item.id
-                                    ? "bg-white text-black"
-                                    : "text-gray-400 hover:text-white"
-                                    }`}
-                            >
-                                <item.icon className="w-5 h-5" />
-                                {item.label}
-                            </button>
-                        ))}
-                        <button
-                            onClick={onLogout}
-                            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors mt-8"
-                        >
-                            <LogOut className="w-5 h-5" />
-                            Sign Out
+                <div className="relative z-10">
+                    {/* Mobile Header */}
+                    <div className="lg:hidden bg-[#1A1A1A] text-white p-4 flex items-center justify-between sticky top-0 z-50">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-black font-bold text-lg rotate-3">
+                                V
+                            </div>
+                            <span className="text-xl font-bold tracking-tight">Verality Admin</span>
+                        </div>
+                        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+                            {mobileMenuOpen ? <X /> : <Menu />}
                         </button>
                     </div>
-                )}
 
-                {/* Dynamic Content */}
-                <div className="p-6 lg:p-10 max-w-[1600px] mx-auto min-h-screen">
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        {renderContent()}
+                    {/* Mobile Menu */}
+                    {mobileMenuOpen && (
+                        <div className="lg:hidden bg-[#1A1A1A] text-white fixed inset-0 z-40 pt-20 px-4 space-y-2 overflow-y-auto">
+                            {menuItems.map((item) => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => {
+                                        setActiveSection(item.id as AdminSection);
+                                        setMobileMenuOpen(false);
+                                    }}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeSection === item.id
+                                        ? "bg-white text-black"
+                                        : "text-gray-400 hover:text-white"
+                                        }`}
+                                >
+                                    <item.icon className="w-5 h-5" />
+                                    {item.label}
+                                </button>
+                            ))}
+                            <button
+                                onClick={onLogout}
+                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors mt-8"
+                            >
+                                <LogOut className="w-5 h-5" />
+                                Sign Out
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Dynamic Content */}
+                    <div className="p-6 lg:p-10 max-w-[1600px] mx-auto min-h-screen">
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            {renderContent()}
+                        </div>
                     </div>
                 </div>
             </main>

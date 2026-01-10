@@ -25,6 +25,15 @@ NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=ai-social-media-outreach-4e66c.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id_here
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id_here
 
+# Firebase Admin (Service Account - REQUIRED for booking/availability)
+# You can use individual variables (easier):
+FIREBASE_PROJECT_ID=ai-social-media-outreach-4e66c
+FIREBASE_CLIENT_EMAIL=your_service_account_email
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+
+# OR the full JSON string:
+# FIREBASE_SERVICE_ACCOUNT='{"type": "service_account", ...}'
+
 # Optional: Modash & Clay API Keys (for production)
 MODASH_API_KEY=your_modash_key_here
 CLAY_API_KEY=your_clay_key_here
@@ -40,7 +49,18 @@ CLAY_API_KEY=your_clay_key_here
    - `localhost` (for development)
    - Your production domain
 
-### 4. Create Firestore Database
+### 4. Create Service Account (for Booking/Admin features)
+
+1. In Firebase Console → Click the gear icon ⚙️ → **Project Settings**
+2. Go to the **Service accounts** tab
+3. Click **Generate new private key**
+4. A JSON file will download. 
+5. Open this JSON file and copy the values into your `.env.local`:
+   - `project_id` → `FIREBASE_PROJECT_ID`
+   - `client_email` → `FIREBASE_CLIENT_EMAIL`
+   - `private_key` → `FIREBASE_PRIVATE_KEY` (Keep the quotes and make sure `\n` are preserved)
+
+### 5. Create Firestore Database
 
 1. In Firebase Console → **Firestore Database**
 2. Click **Create database**

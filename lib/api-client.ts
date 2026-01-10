@@ -110,7 +110,13 @@ export async function createUserAccount(data: {
 /**
  * Update user account
  */
-export async function updateUserAccount(updates: { purpose?: string; name?: string }): Promise<{ success: boolean; account?: any; error?: string }> {
+export async function updateUserAccount(updates: {
+  purpose?: string;
+  name?: string;
+  first_name?: string;
+  last_name?: string;
+  outreach_intent?: string;
+}): Promise<{ success: boolean; account?: any; error?: string }> {
   const token = await getIdToken();
   if (!token) {
     throw new Error('Not authenticated');

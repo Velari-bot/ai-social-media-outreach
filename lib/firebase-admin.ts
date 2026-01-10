@@ -5,12 +5,29 @@ import { getAuth, Auth } from 'firebase-admin/auth';
 function getServiceAccount() {
   const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT;
 
+  // 1. Try individual environment variables (preferred for ease of use)
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+
+  if (projectId && clientEmail && privateKey) {
+    return {
+      project_id: projectId,
+      client_email: clientEmail,
+      private_key: privateKey.replace(/\\n/g, '\n'),
+    };
+  }
+
+  // 2. Try the full JSON string
   if (serviceAccountVar) {
     try {
       // Debug info (safe for logs)
       console.log(`FIREBASE_SERVICE_ACCOUNT found. Length: ${serviceAccountVar.length} characters.`);
       if (serviceAccountVar.trim().startsWith('{')) {
         return JSON.parse(serviceAccountVar);
+      } else if (serviceAccountVar.length === 1) {
+        console.error('FIREBASE_SERVICE_ACCOUNT has length 1. It might be an empty string or a stray quote in .env.local.');
+        return null;
       } else {
         console.error('FIREBASE_SERVICE_ACCOUNT does not start with "{". It might be incorrectly copied.');
         return null;

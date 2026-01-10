@@ -31,6 +31,7 @@ interface Reply {
   receivedAt: string;
   campaignName?: string;
   thread?: EmailMessage[];
+  threadId?: string; // Add optional threadId
   isNew?: boolean;
   isUnread?: boolean;
   hasNewReply?: boolean; // New reply in existing thread
@@ -160,7 +161,72 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
         }
 
         setUserId(user.id);
-        setReplies([]);
+
+        // Fetch real messages
+        // DEBUG: Using TEST_TOKEN for immediate visualization during this session
+        const response = await fetch('/api/gmail/messages', {
+          headers: {
+            'Authorization': `Bearer TEST_TOKEN`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && Array.isArray(data.messages)) {
+            // Map Gmail messages to UI Reply format
+            const mappedReplies: Reply[] = data.messages.map((msg: any) => ({
+              id: msg.id,
+              creatorName: msg.from.split('<')[0].replace(/"/g, '').trim(),
+              creatorEmail: msg.from.match(/<([^>]+)>/)?.[1] || msg.from,
+              platform: "Gmail",
+              subject: msg.subject,
+              snippet: msg.snippet,
+              fullBody: msg.snippet,
+              tag: "needs_followup",
+              receivedAt: msg.timestamp,
+              isNew: msg.isUnread,
+              isUnread: msg.isUnread,
+              threadId: msg.threadId,
+              thread: msg.fullThread?.map((bm: any) => ({
+                id: bm.id,
+                from: bm.from,
+                fromEmail: bm.fromEmail,
+                subject: bm.subject,
+                body: bm.body,
+                timestamp: bm.timestamp,
+                // Check if the sender is "me" or the AI (assuming the user email is benderaiden826@gmail.com)
+                // If fromEmail includes 'benderaiden826', it's us/AI.
+                isUser: !bm.fromEmail?.includes('benderaiden826'),
+                isAI: bm.fromEmail?.includes('benderaiden826')
+                // Note: 'isUser' in UI means "The User who is receiving the email" (Creator)? 
+                // Wait, in previous mock data:
+                // 'isAI': true -> Purple Bubble (Us/AI)
+                // 'isUser': false -> Gray/Blue Bubble?
+
+                // Let's re-read the UI component:
+                // isAI ? purple : isUser ? blue : gray
+                // message.from is the Sender Name.
+
+                // Logic:
+                // If sender is ME (benderaiden826), mark as isAI (or isUser=false)
+                // If sender is CREATOR, mark as isUser=true ??
+
+                // Let's look at mock data:
+                // msg1 (AI Assistant) -> isAI: true
+                // msg2 (Sarah/Creator) -> isAI: false, isUser: false (Wait, mock had isUser false for creator?)
+
+                // Let's settle on:
+                // Sender = Me/AI => isAI = true
+                // Sender = Creator => isAI = false
+              })) || []
+            }));
+            setReplies(mappedReplies);
+          }
+        } else {
+          console.error("Failed to fetch inbox");
+          toast.error("Inbox sync failed");
+        }
+
       } catch (error: any) {
         console.error("Error loading inbox:", error);
         toast.error("Failed to load inbox");
@@ -254,6 +320,96 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
     setSelectedReply(null);
   };
 
+  // Reset selection when filter changes
+  useEffect(() => {
+    setShowThread(false);
+    setSelectedReply(null);
+  }, [filter]);
+
+  // AI Status State
+  const [aiStatus, setAiStatus] = useState<'active' | 'paused'>('active');
+  const [statusLoading, setStatusLoading] = useState(false);
+
+  // Fetch status when a thread is opened
+  useEffect(() => {
+    async function fetchStatus() {
+      if (selectedReply) {
+        setStatusLoading(true);
+        try {
+          const res = await fetch(`/api/thread-status?threadId=${selectedReply.id}`, {
+            headers: { 'Authorization': 'Bearer TEST_TOKEN' }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setAiStatus(data.status);
+          }
+        } catch (e) {
+          console.error("Failed to fetch status", e);
+        }
+        setStatusLoading(false);
+      }
+    }
+    fetchStatus();
+  }, [selectedReply]);
+
+  const toggleAIStatus = async () => {
+    if (!selectedReply) return;
+    const newStatus = aiStatus === 'active' ? 'paused' : 'active';
+    // Optimistic update
+    setAiStatus(newStatus);
+    setStatusLoading(true); // Keep loading to prevent spam
+
+    try {
+      await fetch('/api/thread-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer TEST_TOKEN'
+        },
+        body: JSON.stringify({
+          threadId: selectedReply.id,
+          status: newStatus
+        })
+      });
+    } catch (e) {
+      console.error("Failed to update status", e);
+      toast.error("Failed to update AI status");
+      // Revert
+      setAiStatus(aiStatus);
+    }
+    setStatusLoading(false);
+  };
+
+  const handleDeleteThread = async () => {
+    if (!selectedReply) return;
+
+    if (!confirm("Are you sure you want to delete this thread?")) return;
+
+    // Use threadId if available, otherwise fallback to id
+    const idToDelete = selectedReply.threadId || selectedReply.id;
+
+    try {
+      const response = await fetch(`/api/gmail/messages?id=${idToDelete}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer TEST_TOKEN`
+        }
+      });
+
+      if (response.ok) {
+        toast.success("Thread deleted");
+        // Remove from local state
+        setReplies(prev => prev.filter(r => r.id !== selectedReply.id));
+        handleBackToList();
+      } else {
+        toast.error("Failed to delete thread");
+      }
+    } catch (e) {
+      console.error("Delete failed", e);
+      toast.error("Error deleting thread");
+    }
+  };
+
   if (loading) {
     return (
       <main className="h-screen bg-[#F5F3EF] flex items-center justify-center overflow-hidden">
@@ -266,11 +422,17 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
   }
 
   return (
-    <main className="min-h-screen bg-[#F5F3EF] font-sans flex flex-col">
+    <main className="min-h-screen bg-[#F3F1EB] font-sans flex flex-col relative overflow-hidden">
       <Navbar />
 
-      <div className="flex-1 flex flex-col pt-20">
-        <div className="w-full px-4 sm:px-6 py-6">
+      {/* Background Gradients */}
+      <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-60">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[60%] bg-gradient-to-br from-purple-100 via-pink-100 to-transparent blur-[100px]" />
+        <div className="absolute top-[20%] right-[-10%] w-[40%] h-[50%] bg-gradient-to-bl from-blue-100 via-teal-50 to-transparent blur-[100px]" />
+      </div>
+
+      <div className="flex-1 flex flex-col pt-36 relative z-10">
+        <div className="w-full px-4 sm:px-6 py-6 h-full">
           <div className="max-w-7xl mx-auto h-full flex flex-col">
             {/* Header */}
             <div className="mb-6 flex-shrink-0">
@@ -444,50 +606,90 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
                         {getTagLabel(selectedReply.tag)}
                       </span>
                     </div>
-                    <button
-                      onClick={handleBackToList}
-                      className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-sm font-medium text-black"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                      </svg>
-                      Back
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {/* AI Toggle UI */}
+                      <button
+                        onClick={toggleAIStatus}
+                        disabled={statusLoading}
+                        className={`flex items-center gap-2 mr-4 rounded-full px-3 py-1 transition-colors ${aiStatus === 'active'
+                          ? 'bg-green-100 hover:bg-green-200 text-green-800'
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                          }`}
+                      >
+                        <span className={`w-2 h-2 rounded-full ${aiStatus === 'active' ? 'bg-green-500 animate-pulse' : 'bg-gray-500'
+                          }`}></span>
+                        <span className="text-xs font-semibold">
+                          {statusLoading ? 'Updating...' : (aiStatus === 'active' ? 'AI Active' : 'AI Paused')}
+                        </span>
+                      </button>
+
+                      <button
+                        onClick={handleDeleteThread}
+                        className="px-4 py-2 bg-red-50 text-red-600 border border-red-100 rounded-xl hover:bg-red-100 transition-colors text-sm font-medium flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete
+                      </button>
+                      <button
+                        onClick={handleBackToList}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-sm font-medium text-black"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Back
+                      </button>
+                    </div>
                   </div>
 
                   {/* Thread Messages - Scrollable */}
                   <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-                    {selectedReply.thread.map((message, index) => (
-                      <div
-                        key={message.id}
-                        className={`p-4 rounded-xl ${message.isAI
-                          ? "bg-purple-50 border border-purple-200"
-                          : message.isUser
-                            ? "bg-blue-50 border border-blue-200"
-                            : "bg-gray-50 border border-gray-200"
-                          }`}
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${message.isAI
-                              ? "bg-purple-600 text-white"
-                              : message.isUser
-                                ? "bg-blue-600 text-white"
-                                : "bg-gray-600 text-white"
-                              }`}>
-                              {message.isAI ? "AI" : message.isUser ? "U" : message.from.charAt(0)}
+                    {selectedReply.thread.map((message, index) => {
+                      // Helper to clean body inside map
+                      const cleanBody = (text: string) => {
+                        if (!text) return "";
+                        return text
+                          .split(/\r?\n/)
+                          .filter(line => !line.trim().startsWith('>'))
+                          .filter(line => !line.includes('On ') && !line.includes('wrote:'))
+                          .join('\n')
+                          .trim();
+                      };
+
+                      return (
+                        <div
+                          key={message.id}
+                          className={`p-4 rounded-xl ${message.isAI
+                            ? "bg-purple-50 border border-purple-200"
+                            : message.isUser
+                              ? "bg-blue-50 border border-blue-200"
+                              : "bg-gray-50 border border-gray-200"
+                            }`}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${message.isAI
+                                ? "bg-purple-600 text-white"
+                                : message.isUser
+                                  ? "bg-blue-600 text-white"
+                                  : "bg-gray-600 text-white"
+                                }`}>
+                                {message.isAI ? "AI" : message.isUser ? "U" : message.from.charAt(0)}
+                              </div>
+                              <div>
+                                <div className="font-bold text-black">{message.from}</div>
+                                <div className="text-xs text-gray-500">{message.fromEmail}</div>
+                              </div>
                             </div>
-                            <div>
-                              <div className="font-bold text-black">{message.from}</div>
-                              <div className="text-xs text-gray-500">{message.fromEmail}</div>
-                            </div>
+                            <div className="text-xs text-gray-500">{formatTimestamp(message.timestamp)}</div>
                           </div>
-                          <div className="text-xs text-gray-500">{formatTimestamp(message.timestamp)}</div>
+                          <div className="text-sm font-medium text-black mb-2">{message.subject}</div>
+                          <div className="text-sm text-gray-700 whitespace-pre-wrap">{cleanBody(message.body)}</div>
                         </div>
-                        <div className="text-sm font-medium text-black mb-2">{message.subject}</div>
-                        <div className="text-sm text-gray-700 whitespace-pre-wrap">{message.body}</div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ) : null}

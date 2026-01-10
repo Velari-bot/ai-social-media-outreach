@@ -19,8 +19,8 @@ export async function GET() {
         const sevenDaysAgoDateStr = sevenDaysAgo.toISOString().split('T')[0];
         const fourteenDaysAgoDateStr = fourteenDaysAgo.toISOString().split('T')[0];
 
-        // 1. Fetch data in bulk to avoid index requirements and excessive round-trips
-        const usersSnapshot = await db.collection('users').get();
+        // 1. Fetch data from 'user_accounts' as it's the source of truth for plans/roles
+        const usersSnapshot = await db.collection('user_accounts').get();
         const allUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         const bookingsSnapshot = await db.collection('bookings')
@@ -30,16 +30,20 @@ export async function GET() {
 
         // 2. Process Users in Memory
         const totalUsers = allUsers.length;
-        const totalUsersPrevious = allUsers.filter((u: any) => u.createdAt && u.createdAt < sevenDaysAgoStr).length;
+        const totalUsersPrevious = allUsers.filter((u: any) => {
+            const createdAt = u.createdAt || u.created_at;
+            if (!createdAt) return true;
+            const date = createdAt.toDate ? createdAt.toDate() : new Date(createdAt);
+            return date < sevenDaysAgo;
+        }).length;
+
         const totalUsersChange = totalUsersPrevious > 0
             ? ((totalUsers - totalUsersPrevious) / totalUsersPrevious) * 100
             : 0;
 
         const activeAffiliates = allUsers.filter((u: any) => u.role === 'affiliate').length;
-        const activeAffiliatesPrevious = allUsers.filter((u: any) => u.role === 'affiliate' && u.createdAt && u.createdAt < sevenDaysAgoStr).length;
-        const activeAffiliatesChange = activeAffiliatesPrevious > 0
-            ? ((activeAffiliates - activeAffiliatesPrevious) / activeAffiliatesPrevious) * 100
-            : 0;
+        const activeAffiliatesPrevious = 0; // Simplified as we don't track role changes over time easily
+        const activeAffiliatesChange = 0;
 
         const PLAN_PRICES: Record<string, number> = {
             'basic': 400,
@@ -52,6 +56,8 @@ export async function GET() {
 
         const calculateMRR = (users: any[]) => {
             return users.reduce((sum, user) => {
+                // Admins access for free, so don't count them in MRR
+                if (user.role === 'admin') return sum;
                 if (!user.plan || user.plan.toLowerCase() === 'free') return sum;
                 const plan = user.plan.toLowerCase();
                 return sum + (PLAN_PRICES[plan] || 0);
@@ -59,8 +65,13 @@ export async function GET() {
         };
 
         const mrr = calculateMRR(allUsers);
-        const previousPaidUsers = allUsers.filter((u: any) => u.createdAt && u.createdAt < sevenDaysAgoStr);
-        const mrrPrevious = calculateMRR(previousPaidUsers);
+        const previousUsers = allUsers.filter((u: any) => {
+            const createdAt = u.createdAt || u.created_at;
+            if (!createdAt) return true;
+            const date = createdAt.toDate ? createdAt.toDate() : new Date(createdAt);
+            return date < sevenDaysAgo;
+        });
+        const mrrPrevious = calculateMRR(previousUsers);
         const mrrChange = mrrPrevious > 0 ? ((mrr - mrrPrevious) / mrrPrevious) * 100 : 0;
 
         // 3. Process Bookings in Memory
@@ -77,7 +88,12 @@ export async function GET() {
             const dateStr = date.toISOString().split('T')[0];
 
             const dayBookings = recentBookings.filter(b => b.date === dateStr).length;
-            const daySignups = allUsers.filter((u: any) => u.createdAt && u.createdAt.startsWith(dateStr)).length;
+            const daySignups = allUsers.filter((u: any) => {
+                const createdAt = u.createdAt || u.created_at;
+                if (!createdAt) return false;
+                const d = createdAt.toDate ? createdAt.toDate() : new Date(createdAt);
+                return d.toISOString().split('T')[0] === dateStr;
+            }).length;
 
             dailyData.push({
                 date: dateStr,

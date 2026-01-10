@@ -51,3 +51,31 @@ export async function GET() {
         return NextResponse.json({ success: false, error: 'Failed to fetch users: ' + error.message }, { status: 500 });
     }
 }
+export async function PATCH(req: Request) {
+    try {
+        const { userId, role, plan } = await req.json();
+
+        if (!userId) {
+            return NextResponse.json({ success: false, error: 'User ID is required' }, { status: 400 });
+        }
+
+        const updates: any = {};
+        if (role) updates.role = role;
+        if (plan) {
+            updates.plan = plan;
+            // If setting to enterprise (admin free mode), set the requested quota
+            if (plan.toLowerCase() === 'enterprise') {
+                updates.email_quota_daily = 500;
+                updates.email_quota_monthly = 15000;
+            }
+        }
+
+        await db.collection('user_accounts').doc(userId).set(updates, { merge: true });
+
+        return NextResponse.json({ success: true });
+
+    } catch (error: any) {
+        console.error('Error updating user:', error);
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+}
