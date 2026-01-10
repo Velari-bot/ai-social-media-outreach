@@ -112,24 +112,65 @@ function CreatorRequestContent() {
       try {
         const platformParam = selectedPlatform.toLowerCase();
         const [locationsRes, topicsRes] = await Promise.all([
-          fetch(`/api/classifiers/locations?platform=${platformParam}`).then(r => r.json()),
-          fetch(`/api/classifiers/topics?platform=${platformParam}`).then(r => r.json()),
+          fetch(`/api/classifiers/locations?platform=${platformParam}`).then(r => r.json()).catch(() => ({ locations: [] })),
+          fetch(`/api/classifiers/topics?platform=${platformParam}`).then(r => r.json()).catch(() => ({ topics: [] })),
         ]);
 
-        if (locationsRes && Array.isArray(locationsRes.locations)) {
+        if (locationsRes && Array.isArray(locationsRes.locations) && locationsRes.locations.length > 0) {
           setAvailableLocations(locationsRes.locations);
+        } else {
+          // Fallback to common locations
+          setAvailableLocations([
+            { code: 'US', name: 'United States' },
+            { code: 'GB', name: 'United Kingdom' },
+            { code: 'CA', name: 'Canada' },
+            { code: 'AU', name: 'Australia' },
+            { code: 'DE', name: 'Germany' },
+            { code: 'FR', name: 'France' },
+          ]);
         }
-        if (topicsRes && Array.isArray(topicsRes.topics)) {
+
+        if (topicsRes && Array.isArray(topicsRes.topics) && topicsRes.topics.length > 0) {
           setAvailableTopics(topicsRes.topics);
+        } else {
+          // Fallback to common topics
+          setAvailableTopics([
+            { id: 'fashion', name: 'Fashion & Beauty' },
+            { id: 'tech', name: 'Technology' },
+            { id: 'gaming', name: 'Gaming' },
+            { id: 'fitness', name: 'Fitness & Health' },
+            { id: 'food', name: 'Food & Cooking' },
+            { id: 'travel', name: 'Travel' },
+            { id: 'business', name: 'Business & Finance' },
+            { id: 'entertainment', name: 'Entertainment' },
+          ]);
         }
       } catch (error) {
         console.error('Error fetching classifiers:', error);
+        // Set fallbacks on error
+        setAvailableLocations([
+          { code: 'US', name: 'United States' },
+          { code: 'GB', name: 'United Kingdom' },
+          { code: 'CA', name: 'Canada' },
+        ]);
+        setAvailableTopics([
+          { id: 'fashion', name: 'Fashion & Beauty' },
+          { id: 'tech', name: 'Technology' },
+          { id: 'gaming', name: 'Gaming' },
+        ]);
       } finally {
         setLoadingClassifiers(false);
       }
     }
     fetchClassifiers();
   }, [selectedPlatform, isDemo]);
+
+  // Set default platform on mount
+  useEffect(() => {
+    if (!selectedPlatform && !isDemo) {
+      setSelectedPlatform('YouTube');
+    }
+  }, []);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -272,14 +313,13 @@ function CreatorRequestContent() {
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Niche / Topic</label>
                   <select
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black/5 text-gray-900"
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black/5 text-gray-900 [&>option]:text-gray-900 [&>option]:bg-white"
                     value={formData.topics}
                     onChange={(e) => setFormData({ ...formData, topics: e.target.value })}
-                    disabled={!selectedPlatform || loadingClassifiers}
                   >
-                    <option value="any">Any Topic</option>
+                    <option key="any-topic" value="any" className="text-gray-900">Any Topic</option>
                     {availableTopics.map((topic) => (
-                      <option key={topic.id} value={topic.id}>
+                      <option key={topic.id} value={topic.id} className="text-gray-900">
                         {topic.name}
                       </option>
                     ))}
@@ -293,14 +333,13 @@ function CreatorRequestContent() {
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Location</label>
                   <select
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black/5 text-gray-900"
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black/5 text-gray-900 [&>option]:text-gray-900 [&>option]:bg-white"
                     value={formData.location}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    disabled={!selectedPlatform || loadingClassifiers}
                   >
-                    <option value="any">Anywhere</option>
+                    <option key="any-location" value="any" className="text-gray-900">Anywhere</option>
                     {availableLocations.map((loc) => (
-                      <option key={loc.code} value={loc.code}>
+                      <option key={loc.code} value={loc.code} className="text-gray-900">
                         {loc.name}
                       </option>
                     ))}

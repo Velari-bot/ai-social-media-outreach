@@ -46,7 +46,19 @@ export async function GET(request: NextRequest) {
         }
 
         const data = await response.json();
-        return NextResponse.json(data);
+        console.log('[Topics API] Raw response:', JSON.stringify(data, null, 2));
+
+        // Normalize response - handle different possible formats
+        let topics = [];
+        if (Array.isArray(data)) {
+            topics = data;
+        } else if (data.topics && Array.isArray(data.topics)) {
+            topics = data.topics;
+        } else if (data.data && Array.isArray(data.data)) {
+            topics = data.data;
+        }
+
+        return NextResponse.json({ topics });
 
     } catch (error: any) {
         console.error('Error fetching topics:', error);

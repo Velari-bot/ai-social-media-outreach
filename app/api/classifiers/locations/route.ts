@@ -39,7 +39,19 @@ export async function GET(request: NextRequest) {
         }
 
         const data = await response.json();
-        return NextResponse.json(data);
+        console.log('[Locations API] Raw response:', JSON.stringify(data, null, 2));
+
+        // Normalize response - handle different possible formats
+        let locations = [];
+        if (Array.isArray(data)) {
+            locations = data;
+        } else if (data.locations && Array.isArray(data.locations)) {
+            locations = data.locations;
+        } else if (data.data && Array.isArray(data.data)) {
+            locations = data.data;
+        }
+
+        return NextResponse.json({ locations });
 
     } catch (error: any) {
         console.error('Error fetching locations:', error);
