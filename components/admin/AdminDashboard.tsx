@@ -15,7 +15,8 @@ import {
     FileText,
     LogOut,
     Menu,
-    X
+    X,
+    TrendingDown
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
@@ -31,8 +32,9 @@ import AdminAffiliates from "./sections/AdminAffiliates";
 import AdminCreators from "./sections/AdminCreators";
 import AdminSettings from "./sections/AdminSettings";
 import AdminLogs from "./sections/AdminLogs";
+import AdminExpenses from "./AdminExpenses";
 
-type AdminSection = 'overview' | 'calls' | 'users' | 'pricing' | 'payments' | 'affiliates' | 'creators' | 'emails' | 'demo' | 'settings' | 'logs';
+type AdminSection = 'overview' | 'calls' | 'users' | 'pricing' | 'payments' | 'affiliates' | 'creators' | 'emails' | 'demo' | 'settings' | 'logs' | 'expenses';
 
 export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     const [activeSection, setActiveSection] = useState<AdminSection>('overview');
@@ -47,6 +49,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         { id: 'affiliates', label: 'Affiliates', icon: Share2 },
         { id: 'creators', label: 'Creator DB', icon: Database },
         { id: 'emails', label: 'Email System', icon: Mail },
+        { id: 'expenses', label: 'Expenses & Profit', icon: TrendingDown },
         { id: 'demo', label: 'Demo Mode', icon: TestTube, href: '/admin/demo' },
         { id: 'settings', label: 'Settings', icon: Settings },
         { id: 'logs', label: 'Logs & Audit', icon: FileText },
@@ -62,6 +65,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             case 'affiliates': return <AdminAffiliates />;
             case 'creators': return <AdminCreators />;
             case 'emails': return <AdminEmails />;
+            case 'expenses': return <AdminExpenses />;
             case 'settings': return <AdminSettings />;
             case 'logs': return <AdminLogs />;
             default: return (

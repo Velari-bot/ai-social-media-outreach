@@ -125,23 +125,8 @@ export async function POST(request: NextRequest) {
         console.log(`Search triggered for request ${newRequest.id}`);
       } catch (searchError: any) {
         console.error('Error triggering creator search:', searchError);
-
-        // If it's an integrity/auth error, we should probably fail the request to inform the user
-        // instead of silently failing the search.
-        if (searchError.message && (
-          searchError.message.includes('401') ||
-          searchError.message.includes('Token is invalid') ||
-          searchError.message.includes('authentication_failed')
-        )) {
-          // Clean up the created request since it's useless without results
-          // await db.collection('creator_requests').doc(newRequest.id).delete(); 
-          // (Optional: deleting might be better UX than leaving a stuck request)
-
-          return NextResponse.json(
-            { error: 'Search API Authentication Failed. Please check your API Key.' },
-            { status: 500 }
-          );
-        }
+        // We log the detailed error server-side, but return a generic message to the user 
+        // to avoid leaking internal API details as per requirements.
       }
     }
 

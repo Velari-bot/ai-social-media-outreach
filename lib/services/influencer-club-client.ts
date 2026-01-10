@@ -42,11 +42,19 @@ export class InfluencerClubClient {
     ): Promise<T> {
         const url = `${this.baseUrl}${endpoint}`;
 
-        // Header: 'Authorization' seems to be widely used. 
-        // The key provided by user is a JWT, so 'Bearer' prefix is standard.
+        const authHeader = this.apiKey.startsWith('Bearer ') ? this.apiKey : `Bearer ${this.apiKey}`;
+
+        // Debug logging for 401 troubleshooting (obfuscated)
+        if (!this.apiKey) {
+            console.error('Influencer Club API Key is EMPTY');
+        } else {
+            const maskedKey = `${this.apiKey.substring(0, 8)}...${this.apiKey.substring(this.apiKey.length - 4)}`;
+            console.log(`Influencer Club Request: ${url} (Key: ${maskedKey})`);
+        }
+
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
-            'Authorization': this.apiKey.includes('Bearer') ? this.apiKey : `Bearer ${this.apiKey}`,
+            'Authorization': authHeader,
             ...((options.headers as Record<string, string>) || {}),
         };
 
@@ -83,13 +91,49 @@ export class InfluencerClubClient {
         });
 
         try {
+            // Sanitize filters to match Influencer Club's expected format
+            const sanitizedFilters: Record<string, any> = {};
+
+            // Only include valid, non-'any' filters
+            Object.keys(params.filters).forEach(key => {
+                const value = params.filters[key];
+
+                // Skip 'any', empty strings, null, undefined, and internal fields
+                if (value === 'any' || value === '' || value == null || key === 'batchSize') {
+                    return;
+                }
+
+                // Include location if it's a valid code
+                if (key === 'location' && value) {
+                    sanitizedFilters.location = value;
+                    return;
+                }
+
+                // Include topics if it's a valid ID
+                if (key === 'topics' && value) {
+                    sanitizedFilters.topics = [value]; // API expects array
+                    return;
+                }
+
+                // Include follower ranges
+                if (key === 'followersMin' || key === 'followersMax') {
+                    const numValue = parseInt(value);
+                    if (!isNaN(numValue)) {
+                        sanitizedFilters[key] = numValue;
+                    }
+                }
+            });
+
             // Map filters to query format
             const queryBody = {
                 platform: params.platform,
                 limit: params.limit,
                 offset: params.offset || 0,
-                filters: params.filters,
+                // Only include filters if we have any valid ones
+                ...(Object.keys(sanitizedFilters).length > 0 ? { filters: sanitizedFilters } : {})
             };
+
+            console.log('[InfluencerClub] Sanitized query:', JSON.stringify(queryBody, null, 2));
 
             // Using the api-dashboard domain and public discovery path
             const results = await this.request<{ profiles: any[] }>(

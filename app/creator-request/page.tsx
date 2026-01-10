@@ -50,6 +50,9 @@ function CreatorRequestContent() {
   });
   const [potentialMatches, setPotentialMatches] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [availableLocations, setAvailableLocations] = useState<Array<{ code: string, name: string }>>([]);
+  const [availableTopics, setAvailableTopics] = useState<Array<{ id: string, name: string }>>([]);
+  const [loadingClassifiers, setLoadingClassifiers] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -99,6 +102,34 @@ function CreatorRequestContent() {
     }
     init();
   }, [demoParam]);
+
+  // Fetch classifiers when platform changes
+  useEffect(() => {
+    async function fetchClassifiers() {
+      if (!selectedPlatform || isDemo) return;
+
+      setLoadingClassifiers(true);
+      try {
+        const platformParam = selectedPlatform.toLowerCase();
+        const [locationsRes, topicsRes] = await Promise.all([
+          fetch(`/api/classifiers/locations?platform=${platformParam}`).then(r => r.json()),
+          fetch(`/api/classifiers/topics?platform=${platformParam}`).then(r => r.json()),
+        ]);
+
+        if (locationsRes && Array.isArray(locationsRes.locations)) {
+          setAvailableLocations(locationsRes.locations);
+        }
+        if (topicsRes && Array.isArray(topicsRes.topics)) {
+          setAvailableTopics(topicsRes.topics);
+        }
+      } catch (error) {
+        console.error('Error fetching classifiers:', error);
+      } finally {
+        setLoadingClassifiers(false);
+      }
+    }
+    fetchClassifiers();
+  }, [selectedPlatform, isDemo]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -240,19 +271,21 @@ function CreatorRequestContent() {
                 {/* 3. Niche / Topic */}
                 <div>
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Niche / Topic</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Sustainable Fashion, Tech, Vegan"
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black/5 text-gray-900 placeholder:text-gray-400"
-                    value={formData.topics === "any" ? "" : formData.topics}
-                    onChange={(e) => setFormData({ ...formData, topics: e.target.value || "any" })}
-                  />
-                  {formData.topics !== "any" && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
-                        #{formData.topics.replace(/\s+/g, '')}
-                      </span>
-                    </div>
+                  <select
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black/5 text-gray-900"
+                    value={formData.topics}
+                    onChange={(e) => setFormData({ ...formData, topics: e.target.value })}
+                    disabled={!selectedPlatform || loadingClassifiers}
+                  >
+                    <option value="any">Any Topic</option>
+                    {availableTopics.map((topic) => (
+                      <option key={topic.id} value={topic.id}>
+                        {topic.name}
+                      </option>
+                    ))}
+                  </select>
+                  {loadingClassifiers && selectedPlatform && (
+                    <p className="text-xs text-gray-400 mt-1">Loading topics...</p>
                   )}
                 </div>
 
@@ -263,14 +296,18 @@ function CreatorRequestContent() {
                     className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black/5 text-gray-900"
                     value={formData.location}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    disabled={!selectedPlatform || loadingClassifiers}
                   >
                     <option value="any">Anywhere</option>
-                    <option value="US">United States</option>
-                    <option value="UK">United Kingdom</option>
-                    <option value="EU">Europe</option>
-                    <option value="CA">Canada</option>
-                    <option value="AU">Australia</option>
+                    {availableLocations.map((loc) => (
+                      <option key={loc.code} value={loc.code}>
+                        {loc.name}
+                      </option>
+                    ))}
                   </select>
+                  {loadingClassifiers && selectedPlatform && (
+                    <p className="text-xs text-gray-400 mt-1">Loading locations...</p>
+                  )}
                 </div>
 
                 {/* 5. Followers */}

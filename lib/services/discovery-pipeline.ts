@@ -31,27 +31,33 @@ export class DiscoveryPipeline {
 
         // 2. Fallback to Influencers.club if needed
         if (foundCount < requestedCount) {
-            const remaining = requestedCount - foundCount;
-            const externalResults = await influencerClubClient.discoverCreators({
-                platform,
-                filters,
-                limit: remaining,
-            });
+            try {
+                const remaining = requestedCount - foundCount;
+                const externalResults = await influencerClubClient.discoverCreators({
+                    platform,
+                    filters,
+                    limit: remaining,
+                });
 
-            externalFetches = externalResults.length;
-            creditsConsumed = externalFetches * 0.01; // As per requirements
+                externalFetches = externalResults.length;
+                creditsConsumed = externalFetches * 0.01; // As per requirements
 
-            // 3. Deduplication Logic
-            const newCreators = await this.processExternalResults(externalResults, internalCreators, platform);
+                // 3. Deduplication Logic
+                const newCreators = await this.processExternalResults(externalResults, internalCreators, platform);
 
-            // 4. database Insert (status = 'pending')
-            const savedCreators = await this.bulkSaveCreators(newCreators);
+                // 4. database Insert (status = 'pending')
+                const savedCreators = await this.bulkSaveCreators(newCreators);
 
-            // 5. Clay Enrichment Pipeline
-            // Only enrich the NEW creators we just found
-            const enrichedCreators = await this.bulkEnrichWithClay(savedCreators, userId);
+                // 5. Clay Enrichment Pipeline
+                // Only enrich the NEW creators we just found
+                const enrichedCreators = await this.bulkEnrichWithClay(savedCreators, userId);
 
-            finalCreators = [...finalCreators, ...enrichedCreators];
+                finalCreators = [...finalCreators, ...enrichedCreators];
+            } catch (externalError: any) {
+                console.error('[DiscoveryPipeline] External discovery failed:', externalError.message);
+                // Don't throw - return what we have from internal DB
+                // Optionally mark the request as partially failed/limited
+            }
         }
 
         // 6. Response to User (exactly N)

@@ -6,9 +6,9 @@ import OpenAI from 'openai';
 
 export const dynamic = 'force-dynamic';
 
-const openai = new OpenAI({
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
-});
+}) : null;
 
 export async function POST(req: NextRequest) {
     try {
@@ -127,6 +127,9 @@ async function processAllThreads(targetEmail: string) {
             }).join('\n---\n');
 
             // 8. Generate AI Response
+            if (!openai) {
+                throw new Error('OpenAI API key not configured');
+            }
             const completion = await openai.chat.completions.create({
                 model: "gpt-4o",
                 messages: [
@@ -219,6 +222,9 @@ async function simulateOutreach(targetEmail: string, creatorEmail: string) {
     const userProfile = snapshot.docs[0].data();
     const userName = userProfile.first_name || userProfile.name || 'Outreach Manager';
 
+    if (!openai) {
+        throw new Error('OpenAI API key not configured');
+    }
     const completion = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
