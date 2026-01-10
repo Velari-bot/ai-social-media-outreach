@@ -18,8 +18,9 @@ export class DiscoveryPipeline {
         filters: CreatorSearchFilters;
         requestedCount: number;
         platform: Platform;
+        skipEnrichment?: boolean;
     }): Promise<DiscoveryPipelineResponse> {
-        const { userId, filters, requestedCount, platform } = params;
+        const { userId, filters, requestedCount, platform, skipEnrichment } = params;
 
         // 1. Query Internal Database first
         let internalCreators = await this.queryInternalDb(platform, filters, requestedCount);
@@ -29,8 +30,9 @@ export class DiscoveryPipeline {
         internalCreators = internalCreators.filter(c => {
             // Filter by Location if specified
             if (filters.location && filters.location !== 'any') {
-                const cLoc = (c.basic_profile_data?.location || c.basic_profile_data?.geo_country || '').toLowerCase();
-                if (!cLoc.includes(filters.location.toLowerCase())) return false;
+                const cLoc = (c.basic_profile_data?.location || c.basic_profile_data?.geo_country || c.location || '').toLowerCase();
+                // Leniency: If location is missing, we let it pass through to avoid 0 results
+                if (cLoc && !cLoc.includes(filters.location.toLowerCase())) return false;
             }
             // Filter by Topic if specified (basic check)
             if (filters.topics && filters.topics !== 'any' && c.basic_profile_data?.category) {
@@ -52,10 +54,13 @@ export class DiscoveryPipeline {
             console.log(`[Discovery] Need ${requestedCount - foundCount} more creators. calling external API...`);
             try {
                 const remaining = requestedCount - foundCount;
+                // API has a hard limit of 50 per request
+                const fetchLimit = Math.min(remaining, 50);
+
                 const externalResults = await influencerClubClient.discoverCreators({
                     platform,
                     filters,
-                    limit: remaining,
+                    limit: fetchLimit,
                 });
 
                 console.log(`[Discovery] External API returned ${externalResults.length} creators`);
@@ -79,9 +84,12 @@ export class DiscoveryPipeline {
 
                 // 5. Clay Enrichment Pipeline
                 // Only enrich the NEW creators we just found
-                const enrichedCreators = await this.bulkEnrichWithClay(savedCreators, userId);
-
-                finalCreators = [...finalCreators, ...enrichedCreators];
+                if (!skipEnrichment) {
+                    const enrichedCreators = await this.bulkEnrichWithClay(savedCreators, userId);
+                    finalCreators = [...finalCreators, ...enrichedCreators];
+                } else {
+                    finalCreators = [...finalCreators, ...savedCreators];
+                }
             } catch (externalError: any) {
                 console.error('[DiscoveryPipeline] External discovery failed:', externalError.message);
                 // Don't throw - return what we have from internal DB
@@ -163,13 +171,19 @@ export class DiscoveryPipeline {
                 platform: item.platform,
                 handle: item.handle,
                 modash_creator_id: item.creator_id || item.id || null,
+                name: item.fullname || item.full_name || item.name,
+                full_name: item.fullname || item.full_name || item.name,
+                followers: item.followers,
+                engagement_rate: item.engagement_rate,
+                picture: item.picture || item.profile_pic_url,
+                location: item.location || item.country || item.geo_country || null,
                 has_basic_profile: true,
                 has_detailed_profile: false,
                 enrichment_status: 'pending' as const,
                 source: 'influencers_club',
                 basic_profile_data: item,
-                email_found: false,
-                email: null,
+                email_found: item.emails && item.emails.length > 0,
+                email: item.emails && item.emails.length > 0 ? item.emails[0] : null,
                 clay_enriched_at: null,
                 detailed_profile_fetched_at: null,
                 detailed_profile_data: null
@@ -245,9 +259,20 @@ export class DiscoveryPipeline {
      */
     private docToCreator(doc: any): Creator {
         const data = doc.data();
+        const basic = data.basic_profile_data || {};
+        const profile = basic.profile || {};
+
         return {
             id: doc.id,
             ...data,
+            // Fallbacks for display fields (Legacy/Cache support)
+            name: data.name || basic.fullname || basic.full_name || profile.full_name || data.handle,
+            followers: data.followers || basic.followers || profile.followers || 0,
+            engagement_rate: data.engagement_rate || basic.engagement_rate || (profile.engagement_percent ? profile.engagement_percent / 100 : 0),
+            picture: data.picture || basic.picture || basic.profile_pic_url || profile.picture,
+            location: data.location || basic.location || basic.country || basic.geo_country,
+            email: data.email || basic.email || (basic.emails && basic.emails[0]) || null,
+
             created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at,
             updated_at: data.updated_at?.toDate?.()?.toISOString() || data.updated_at,
         } as Creator;

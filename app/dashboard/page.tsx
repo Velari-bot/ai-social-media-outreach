@@ -9,15 +9,18 @@ import toast from "react-hot-toast";
 import Navbar from "@/components/Navbar";
 import DemoDashboard from "@/components/demo/DemoDashboard";
 import SubscriptionGuard from "@/components/SubscriptionGuard";
+import { Eye, X, ExternalLink, Youtube, Instagram, Music, Globe, Mail, MapPin, Users, Info, Loader2 } from "lucide-react";
 
 interface DashboardMetrics {
-  emailsSentToday: number;
-  emailsSentMonth: number;
   repliesReceived: number;
   activeConversations: number;
   meetingsInterested: number;
   remainingQuota: number;
   replyRate: number;
+  totalCreatorsFound: number;
+  totalCredits: number;
+  creditsUsed: number;
+  creditsRemaining: number;
 }
 
 interface SystemStatus {
@@ -54,15 +57,18 @@ function DashboardContent() {
 
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState<DashboardMetrics>({
-    emailsSentToday: 0,
-    emailsSentMonth: 0,
     repliesReceived: 0,
     activeConversations: 0,
     meetingsInterested: 0,
     remainingQuota: 0,
     replyRate: 0,
+    totalCreatorsFound: 0,
+    totalCredits: 0,
+    creditsUsed: 0,
+    creditsRemaining: 0,
   });
 
   const [status, setStatus] = useState<SystemStatus>({
@@ -75,6 +81,9 @@ function DashboardContent() {
   const [outreachIntent, setOutreachIntent] = useState<string>("");
 
   const [recentCampaigns, setRecentCampaigns] = useState<Campaign[]>([]);
+  const [viewingCampaign, setViewingCampaign] = useState<any | null>(null);
+  const [viewingCreators, setViewingCreators] = useState<any[]>([]);
+  const [loadingCreators, setLoadingCreators] = useState(false);
 
   useEffect(() => {
     async function initDashboard() {
@@ -97,19 +106,34 @@ function DashboardContent() {
         if (statsRes.success && statsRes.stats) {
           const stats = statsRes.stats;
           setMetrics({
-            emailsSentToday: stats.emailsSentToday || 0,
-            emailsSentMonth: stats.emailsSentMonth || 0,
             repliesReceived: stats.repliesReceived || 0,
             activeConversations: stats.activeConversations || 0,
             meetingsInterested: stats.meetingsInterested || 0,
             remainingQuota: stats.remainingQuota || 0,
             replyRate: stats.replyRate || 0,
+            totalCreatorsFound: stats.total_creators_contacted || 0,
+            totalCredits: 0, // Will be updated from account
+            creditsUsed: 0, // Will be updated from account
+            creditsRemaining: 0, // Will be updated from account
           });
         }
 
         const accountRes = await fetchUserAccount();
         if (accountRes.success && accountRes.account) {
+          setUserName(accountRes.account.name || accountRes.account.first_name || accountRes.account.business_name || null);
           setOutreachIntent(accountRes.account.outreach_intent || "");
+
+          // Update credits info
+          const totalCredits = accountRes.account.email_quota_daily || 0;
+          const creditsUsed = accountRes.account.email_used_today || 0;
+          const creditsRemaining = totalCredits - creditsUsed;
+
+          setMetrics(prev => ({
+            ...prev,
+            totalCredits,
+            creditsUsed,
+            creditsRemaining
+          }));
         }
 
         const gmailRes = await getGmailStatus();
@@ -120,9 +144,10 @@ function DashboardContent() {
         const campaigns: Campaign[] = requests.map((req: any) => ({
           id: req.id,
           name: req.name,
-          platforms: Array.isArray(req.platform) ? req.platform : (req.platform ? [req.platform] : []),
+          platforms: req.platforms || (Array.isArray(req.platform) ? req.platform : (req.platform ? [req.platform] : [])),
+          criteria: req.criteria || req.filters_json || {},
           status: req.status === "delivered" ? "awaiting_replies" : req.status === "in_progress" ? "outreach_running" : "searching",
-          creatorsContacted: req.resultsCount || 0,
+          creatorsContacted: req.results_count || req.resultsCount || 0,
           replies: 0
         }));
         setRecentCampaigns(campaigns);
@@ -157,9 +182,12 @@ function DashboardContent() {
     if (!confirm("Are you sure you want to delete this campaign?")) return;
 
     try {
+      const user = await getCurrentUser();
+      const token = await user?.getIdToken();
+
       const res = await fetch(`/api/user/requests?id=${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': 'Bearer TEST_TOKEN' } // Using test token for now as per other parts
+        headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (res.ok) {
@@ -171,6 +199,46 @@ function DashboardContent() {
     } catch (e) {
       console.error("Delete failed", e);
       toast.error("Error deleting campaign");
+    }
+  };
+
+  const handleViewCampaignResults = async (campaign: any) => {
+    setViewingCampaign(campaign);
+    setLoadingCreators(true);
+    setViewingCreators([]);
+
+    try {
+      const user = await getCurrentUser();
+      const token = await user?.getIdToken();
+
+      const platform = (campaign.platforms?.[0] || 'youtube').toLowerCase();
+      const filters = campaign.criteria || {};
+
+      const res = await fetch(`/api/user/requests/results`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          requestId: campaign.id,
+          platform,
+          filters,
+          requestedCount: campaign.creatorsContacted || 50
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setViewingCreators(data.creators || []);
+      } else {
+        toast.error("Failed to load creators");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Error loading results");
+    } finally {
+      setLoadingCreators(false);
     }
   };
 
@@ -196,15 +264,15 @@ function DashboardContent() {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <h1 className="text-4xl sm:text-5xl font-black text-black tracking-tight mb-2">
-              {getTimeGreeting()}, {userEmail?.split('@')[0]}
+              {getTimeGreeting()}, {userName || userEmail?.split('@')[0]}
             </h1>
-            <p className="text-lg text-gray-900 font-medium flex items-center gap-2">
+            <p className="text-lg text-black font-medium flex items-center gap-2">
               Your automated outreach is <span className="font-bold text-green-600">active</span>.
               <Link
                 href="/settings"
-                className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-100 rounded-full text-xs font-black text-black border border-gray-200 uppercase tracking-widest hover:bg-gray-200 transition-colors group"
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-white rounded-full text-xs font-black text-black border border-gray-200 shadow-sm uppercase tracking-widest hover:bg-gray-50 transition-colors group"
               >
-                <span className="w-1.5 h-1.5 bg-black rounded-full animate-pulse group-hover:animate-none"></span>
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse group-hover:animate-none"></span>
                 Focus: {outreachIntent || "Phone Number & Rates"}
                 <svg className="w-3 h-3 ml-0.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M7 17L17 7M17 7H7M17 7V17" />
@@ -212,7 +280,13 @@ function DashboardContent() {
               </Link>
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 items-center">
+            <div className="px-4 py-2 bg-white rounded-xl border-2 border-gray-100 shadow-sm">
+              <div className="text-xs font-bold text-gray-400 uppercase tracking-wide">Credits</div>
+              <div className="text-lg font-black text-black">
+                {metrics.creditsRemaining.toLocaleString()} <span className="text-gray-400 text-sm font-medium">/ {metrics.totalCredits.toLocaleString()}</span>
+              </div>
+            </div>
             <Link
               href="/creator-request"
               className="px-6 py-3 bg-black text-white rounded-xl font-bold hover:bg-gray-800 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-black/10 flex items-center gap-2"
@@ -225,9 +299,9 @@ function DashboardContent() {
         {/* Stats Grid - High Contrast */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatTile
-            label="Emails Sent"
-            value={metrics.emailsSentToday}
-            suffix="today"
+            label="Creators Found"
+            value={metrics.totalCreatorsFound}
+            suffix="total"
             color="bg-white border-2 border-gray-100"
           />
           <StatTile
@@ -269,7 +343,7 @@ function DashboardContent() {
               <div className="space-y-3">
                 {recentCampaigns && recentCampaigns.length > 0 ? (
                   recentCampaigns.map((c) => (
-                    <CampaignCard key={c.id} campaign={c} onDelete={handleDeleteCampaign} />
+                    <CampaignCard key={c.id} campaign={c} onDelete={handleDeleteCampaign} onClick={() => handleViewCampaignResults(c)} />
                   ))
                 ) : (
                   <div className="p-8 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 text-center">
@@ -350,6 +424,121 @@ function DashboardContent() {
           </div>
         </div>
       </div>
+
+      {/* Results Modal */}
+      {viewingCampaign && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setViewingCampaign(null)} />
+          <div className="bg-white w-full max-w-5xl max-h-[85vh] rounded-3xl shadow-2xl relative z-10 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-gray-50 rounded-2xl">
+                  {getPlatformIcon(viewingCampaign.platforms?.[0] || 'any', "w-6 h-6")}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-black leading-tight">{viewingCampaign.name}</h2>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Campaign Results</span>
+                    <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+                    <span className="text-xs font-black text-black uppercase">{viewingCreators.length} Found</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewingCampaign(null)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-black"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Content Area */}
+            <div className="flex-1 overflow-y-auto min-h-0 bg-gray-50/30">
+              {loadingCreators ? (
+                <div className="h-64 flex flex-col items-center justify-center gap-4">
+                  <Loader2 className="w-10 h-10 animate-spin text-black" />
+                  <p className="text-gray-500 font-bold text-sm uppercase tracking-widest">Fetching Creators...</p>
+                </div>
+              ) : viewingCreators.length === 0 ? (
+                <div className="h-64 flex flex-col items-center justify-center gap-4">
+                  <p className="text-gray-400 font-medium">No results found for this campaign.</p>
+                </div>
+              ) : (
+                <div className="p-4 sm:p-6 pb-20">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {viewingCreators.map((c, i) => (
+                      <div key={i} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 bg-gray-50 rounded-2xl flex-shrink-0 border border-gray-100 flex items-center justify-center p-3 shadow-inner relative overflow-hidden group-hover:scale-110 transition-transform">
+                            {getPlatformIcon(c.platform || viewingCampaign.platforms?.[0], "h-full w-full")}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-black truncate pr-6">{c.fullname || c.name || c.username}</h3>
+                            <p className="text-xs text-gray-400 font-medium">@{String(c.handle || c.username || "").replace(/^@/, "")}</p>
+
+                            <div className="mt-4 grid grid-cols-2 gap-2">
+                              <div className="p-2 bg-gray-50 rounded-xl">
+                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                  {(c.platform || viewingCampaign.platforms?.[0]) === 'youtube' ? 'Subscribers' : 'Followers'}
+                                </div>
+                                <div className="text-sm font-black text-black tracking-tight">{Number(c.followers) > 0 ? new Intl.NumberFormat('en-US', { notation: "compact" }).format(c.followers) : "N/A"}</div>
+                              </div>
+                              <div className="p-2 bg-gray-50 rounded-xl">
+                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Engagement</div>
+                                <div className="text-sm font-black text-green-600 tracking-tight">{(Number(c.engagement_rate) * 100) > 0 ? `${(Number(c.engagement_rate) * 100).toFixed(1)}%` : "N/A"}</div>
+                              </div>
+                            </div>
+
+                            <div className="mt-4 flex items-center gap-3">
+                              {c.email ? (
+                                <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black uppercase overflow-hidden">
+                                  <Mail className="w-3 h-3" />
+                                  <span className="truncate">{c.email}</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5 px-3 py-1 bg-gray-100 text-gray-400 rounded-lg text-[10px] font-black uppercase tracking-wider">
+                                  No Email
+                                </div>
+                              )}
+                              <div className="flex items-center gap-1.5 px-3 py-1 bg-gray-50 text-gray-500 rounded-lg text-[10px] font-black uppercase tracking-wider truncate">
+                                <MapPin className="w-3 h-3 flex-shrink-0" />
+                                <span className="truncate">{c.location || "-"}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <a
+                          href={getPlatformUrl(c.platform || viewingCampaign.platforms?.[0], c.handle || c.username)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="absolute top-4 right-4 text-gray-300 hover:text-black transition-colors opacity-0 group-hover:opacity-100 p-2 hover:bg-gray-50 rounded-lg"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 bg-white border-t border-gray-100 flex items-center justify-between shrink-0">
+              <div className="text-xs text-gray-400 font-medium max-w-md">
+                Note: Detailed contact data and deep analytics are enriched during the campaign outreach process.
+              </div>
+              <button
+                onClick={() => setViewingCampaign(null)}
+                className="px-8 py-3 bg-black text-white rounded-xl font-bold shadow-lg shadow-black/10 hover:bg-gray-800 transition-all active:scale-95"
+              >
+                Close Results
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
@@ -366,21 +555,32 @@ function StatTile({ label, value, suffix, color, textColor = "text-black" }: any
   );
 }
 
-function CampaignCard({ campaign, onDelete }: { campaign: Campaign, onDelete: (id: number) => void }) {
+function CampaignCard({ campaign, onDelete, onClick }: { campaign: Campaign, onDelete: (id: number) => void, onClick: () => void }) {
   return (
-    <div className="bg-white p-6 rounded-2xl border-2 border-gray-100 hover:border-black transition-colors group">
-      <div className="flex justify-between items-start">
+    <div
+      onClick={onClick}
+      className="bg-white p-6 rounded-2xl border-2 border-gray-100 hover:border-black transition-all group cursor-pointer hover:shadow-xl hover:shadow-black/5 active:scale-[0.98] relative"
+    >
+      <div className="flex justify-between items-start relative z-10">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
+            <div className="p-1.5 bg-gray-50 rounded-lg group-hover:bg-black group-hover:text-white transition-colors">
+              {getPlatformIcon(campaign.platforms?.[0] || 'any', "w-4 h-4")}
+            </div>
             <h3 className="font-bold text-lg text-black">{campaign.name}</h3>
             <StatusBadge status={campaign.status} />
           </div>
-          <p className="text-sm text-gray-500 font-medium">Targeting {(campaign.platforms || []).join(', ')}</p>
+          <p className="text-sm text-gray-500 font-medium truncate max-w-[200px]">
+            Targeting {(campaign.platforms && campaign.platforms.length > 0) ? campaign.platforms.join(', ') : 'YouTube'}
+          </p>
         </div>
 
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-col items-end gap-2 shrink-0">
           <button
-            onClick={() => onDelete(campaign.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(campaign.id);
+            }}
             className="p-1.5 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             title="Delete Campaign"
           >
@@ -388,18 +588,43 @@ function CampaignCard({ campaign, onDelete }: { campaign: Campaign, onDelete: (i
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
           </button>
-          <div>
-            <span className="block text-2xl font-black text-black text-right">{campaign.creatorsContacted}</span>
-            <span className="text-xs text-gray-400 font-bold uppercase">Contacted</span>
+          <div className="text-right">
+            <span className="block text-2xl font-black text-black">{campaign.creatorsContacted}</span>
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest whitespace-nowrap">Found Creators</span>
           </div>
         </div>
       </div>
-      {/* Progress Bar - High Contrast */}
-      <div className="mt-5 w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-        <div className="h-full bg-black w-[45%] rounded-full"></div>
+      {/* Progress Bar & View Results Action */}
+      <div className="mt-5 flex items-center gap-4 h-6">
+        <div className="flex-1 bg-gray-100 h-2 rounded-full overflow-hidden relative">
+          <div className="h-full bg-black w-[65%] rounded-full transition-all group-hover:w-[100%] duration-1000"></div>
+        </div>
+        <div className="opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0 duration-300 w-24 flex-shrink-0">
+          <div className="flex justify-end items-center gap-1.5 text-[10px] font-black uppercase text-black">
+            Results <Eye className="w-3 h-3" />
+          </div>
+        </div>
       </div>
     </div>
   );
+}
+
+function getPlatformIcon(platform: string, className = "h-3 w-3") {
+  const p = platform?.toLowerCase();
+  if (p === 'youtube') return <Youtube className={`${className} text-red-600`} />;
+  if (p === 'instagram') return <Instagram className={`${className} text-pink-600`} />;
+  if (p === 'tiktok') return <Music className={`${className} text-black`} />;
+  return <Globe className={`${className} text-gray-400`} />;
+}
+
+function getPlatformUrl(platform: string, handle: string) {
+  const p = platform?.toLowerCase();
+  const h = handle?.replace(/^@/, "") || "";
+  if (!h) return "#";
+  if (p === 'youtube') return `https://youtube.com/@${h}`;
+  if (p === 'instagram') return `https://instagram.com/${h}`;
+  if (p === 'tiktok') return `https://tiktok.com/@${h}`;
+  return "#";
 }
 
 function StatusRow({ label, active }: { label: string, active: boolean }) {

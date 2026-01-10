@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRecentRequests, createCreatorRequest } from '@/lib/database';
-import { auth } from '@/lib/firebase-admin';
+import { auth, db as adminDb } from '@/lib/firebase-admin';
+import { Timestamp } from 'firebase-admin/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -102,54 +103,106 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+    console.log(`[RequestsAPI] Request ${newRequest.id} created successfully.`);
 
     // Trigger search for the first platform (primary support)
     if (platforms.length > 0) {
       try {
+        console.log(`[RequestsAPI] Initiating discovery for platform: ${platforms[0]}.`);
+        // 5. Run Discovery
         const { discoveryPipeline } = await import('@/lib/services/discovery-pipeline');
-        // Return valid results
         const results = await discoveryPipeline.discover({
           userId,
-          platform: platforms[0].toLowerCase() as any, // Cast to Platform type
+          platform: platforms[0].toLowerCase() as any,
           filters: criteria,
           requestedCount: finalBatchSize,
+          skipEnrichment: true, // Added to prevent timeouts during initial search
         });
 
-        // Update request status to delivered as we have results
-        // In a clearer implementation, we would update the DB doc status here
-        // await db.collection('creator_requests').doc(newRequest.id).update({ 
-        //   status: 'delivered', 
-        //   results_count: results.creators.length 
-        // });
+        const foundCount = results.creators?.length || 0;
+        const creatorIds = (results.creators || []).map((c: any) => c.id).filter(Boolean);
 
-        // Charge only for found creators
-        const chargeAmount = results.creators.length;
-        if (chargeAmount > 0) {
-          const { incrementEmailQuota } = await import('@/lib/database');
-          await incrementEmailQuota(userId, chargeAmount);
+        console.log(`[RequestsAPI] Discovery complete. Found ${foundCount} creators. IDs: ${creatorIds.length}`);
+
+        // 6. Check if zero results - delete request and return error
+        if (foundCount === 0) {
+          console.log(`[RequestsAPI] Zero creators found. Deleting request ${newRequest.id} and returning error.`);
+          try {
+            await adminDb.collection('creator_requests').doc(newRequest.id).delete();
+          } catch (deleteError: any) {
+            console.error(`[RequestsAPI] Failed to delete zero-result request:`, deleteError.message);
+          }
+
+          return NextResponse.json({
+            success: false,
+            error: 'No creators found matching your criteria. Try adjusting your filters (lower follower count, remove location filter, or try a different category).',
+            suggestions: [
+              'Lower the minimum follower count',
+              'Remove or change the location filter',
+              'Try a different category or use keywords instead',
+              'Set engagement to "Any Engagement"'
+            ]
+          }, { status: 400 });
         }
 
-        console.log(`Search triggered for request ${newRequest.id}, found ${results.creators.length} creators`);
+        // 7. Update Request Record (PIN results)
+        try {
+          console.log(`[RequestsAPI] Attempting to update request ${newRequest.id} in DB.`);
+          // Use the top-level adminDb directly
+          const requestRef = adminDb.collection('creator_requests').doc(newRequest.id);
+          await requestRef.update({
+            status: 'delivered',
+            results_count: foundCount,
+            creator_ids: creatorIds,
+            updated_at: Timestamp.now()
+          });
+          console.log(`[RequestsAPI] Updated request ${newRequest.id} with ${foundCount} results.`);
+        } catch (dbError: any) {
+          console.error(`[RequestsAPI] Failed to update request record ${newRequest.id}:`, dbError.message);
+          // We continue anyway so user gets their creators
+        }
 
+        // 8. Charge based on found creators
+        if (foundCount > 0) {
+          try {
+            console.log(`[RequestsAPI] Charging user ${userId} for ${foundCount} creators.`);
+            const { incrementEmailQuota } = await import('@/lib/database');
+            await incrementEmailQuota(userId, foundCount);
+            console.log(`[RequestsAPI] Charged user ${userId} for ${foundCount} creators.`);
+          } catch (quotaError: any) {
+            console.error(`[RequestsAPI] Failed to charge quota for user ${userId}:`, quotaError.message);
+          }
+        }
+
+        console.log(`[RequestsAPI] Returning successful response for request ${newRequest.id} with creators.`);
         return NextResponse.json({
           success: true,
-          request: newRequest,
-          creators: results.creators, // Return the creators immediately
+          request: {
+            ...newRequest,
+            status: 'delivered',
+            results_count: foundCount,
+            creator_ids: creatorIds
+          },
+          creators: results.creators,
           meta: results.meta
         });
       } catch (searchError: any) {
-        console.error('Error triggering creator search:', searchError);
-        // We log the detailed error server-side, but return a generic message to the user 
+        console.error('[RequestsAPI] Search internal error:', searchError);
+        // We log the detailed error server-side, but return a generic message to the user
         // to avoid leaking internal API details as per requirements.
+        return NextResponse.json({
+          success: true,
+          request: newRequest, // Returns 'pending' status
+          error: 'Search failed or timed out. Check results later.'
+        });
       }
     }
 
     // Do NOT increment quota here if search failed or 0 results found via fallback
-
+    console.log(`[RequestsAPI] No platforms specified or search skipped. Returning request ${newRequest.id} as pending.`);
     return NextResponse.json({
       success: true,
-      request: newRequest,
-      creators: [] // Return empty if search failed but request created
+      request: newRequest
     });
   } catch (error: any) {
     console.error('Error creating request:', error);

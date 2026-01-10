@@ -86,40 +86,42 @@ export class InfluencerClubClient {
         // 1. Prepare Filters Object
         const filters: any = {};
 
-        // Category (Required)
-        if (params.filters.category) {
-            filters.category = params.filters.category;
-        } else if (params.filters.topics && params.filters.topics !== 'any') {
-            filters.category = Array.isArray(params.filters.topics) ? params.filters.topics[0] : params.filters.topics;
+        // Category / Topics (Required or Keyword fallback)
+        const category = params.filters.category ||
+            (params.filters.topics && params.filters.topics !== 'any' ? (Array.isArray(params.filters.topics) ? params.filters.topics[0] : params.filters.topics) : null) ||
+            (params.filters.categories && params.filters.categories.length > 0 ? params.filters.categories[0] : null);
+
+        if (category) {
+            filters.category = category;
         }
 
         // Keywords (Optional) -> keywords_in_bio
-        if (params.filters.keywords && Array.isArray(params.filters.keywords) && params.filters.keywords.length > 0) {
-            filters.keywords_in_bio = params.filters.keywords;
+        const keywordInput = params.filters.keywords || params.filters.keyword;
+        if (keywordInput) {
+            filters.keywords_in_bio = Array.isArray(keywordInput) ? keywordInput : [keywordInput];
         }
 
         // Location (Optional) -> location array
-        const countryCode = this.getCountryCode(params.filters.location);
+        const locationInput = params.filters.location || params.filters.country || params.filters.geo_country;
+        const countryCode = this.getCountryCode(locationInput);
         if (countryCode) {
             filters.location = [countryCode];
-        } else if (params.filters.location && !['any', 'anywhere'].includes(params.filters.location.toLowerCase())) {
-            // If we have a location string that isn't a code, try sending it as is, or fallback to keyword if API strictly wants codes.
-            // Docs say "location": ["US"], suggesting codes. But let's try strict code separation.
-            // If unknown string, maybe don't send it to avoid 0 results, or log warning.
         }
 
-        // Numeric Filters (As per docs structure)
-        // We still adhere to safety: if user didn't specify, we omit or send broad defaults?
-        // User prompt says: "Don’t send filters that are too strict... otherwise you’ll get 0 results".
-        // BUT also says "Numeric filters should be applied after fetching if possible".
-        // HOWEVER, the API supports them. Let's send them ONLY if clearly specified, otherwise rely on broad search.
-        // Actually, for maximum safety (Post-Fetch Strategy), let's keep omitting them from the API call
-        // and filter locally, UNLESS the dataset is too huge.
-        // Given the new "Official" structure request, I will map them but comment out or keep them omitted 
-        // if we are sticking to the "Post-Fetch" strategy. 
-        // *Decision*: sticking to Post-Fetch for reliability as per previous success context, 
-        // BUT mapping the *structure* correctly so if we DO enable them later, it works.
-        // For now, I will NOT include them in the `filters` object sent to API to maintain the "Credit Firewall" safety.
+        // --- ADDED: Pass numeric filters to API to avoid "fetch and filter out everything" ---
+        const minFollowersVal = params.filters.minFollowers || params.filters.followersMin;
+        if (minFollowersVal) {
+            filters.followers_min = String(minFollowersVal);
+            filters.min_followers = Number(minFollowersVal);
+            filters.followers = { min: Number(minFollowersVal) };
+        }
+
+        const maxFollowersVal = params.filters.maxFollowers || params.filters.followersMax;
+        if (maxFollowersVal) {
+            filters.followers_max = String(maxFollowersVal);
+            filters.max_followers = Number(maxFollowersVal);
+        }
+        // ----------------------------------------------------------------------------------
 
         // 2. Prepare Payload (Official Structure)
         const body = {
@@ -166,6 +168,11 @@ export class InfluencerClubClient {
             // Response Structure: { total, limit, credits_left, accounts: [...] }
             const accounts = data.accounts || [];
 
+            if (accounts.length > 0 && accounts[0].profile) {
+                const sp = accounts[0].profile;
+                console.log(`[InfluencerClub] Debug Sample: ${sp.username} - followers: ${sp.followers}, ER: ${sp.engagement_percent}%`);
+            }
+
             if (data.credits_left) {
                 console.log(`[InfluencerClub] Credits Remaining: ${data.credits_left}`);
             }
@@ -178,33 +185,66 @@ export class InfluencerClubClient {
                     creator_id: p.user_id || profile.username,
                     handle: profile.username || p.user_id, // fallback
                     platform: params.platform,
-                    followers: profile.followers,
-                    engagement_rate: profile.engagement_percent ? (profile.engagement_percent / 100) : 0, // Convert 4.2 -> 0.042
-                    fullname: profile.full_name,
-                    picture: profile.picture,
-                    emails: profile.emails || []
+                    followers: profile.followers || profile.followers_count || p.followers || 0,
+                    engagement_rate: profile.engagement_percent ? (profile.engagement_percent / 100) : (profile.engagement_rate || p.engagement_rate || 0),
+                    fullname: profile.full_name || profile.name || profile.fullname || profile.username,
+                    picture: profile.picture || profile.profile_pic_url || profile.avatar_url,
+                    emails: profile.emails || p.emails || []
                 };
             });
 
             // Local Numeric Filtering
-            const minFollowers = params.filters.followersMin ? parseInt(params.filters.followersMin) : 1000;
-            const maxFollowers = params.filters.followersMax ? parseInt(params.filters.followersMax) : undefined;
-            const minEngagement = params.filters.engagementRateMin ? parseFloat(params.filters.engagementRateMin) : undefined;
+            const minFollowers = Number(params.filters.minFollowers || params.filters.followersMin || 1000);
+            const maxFollowers = params.filters.maxFollowers || params.filters.followersMax ? Number(params.filters.maxFollowers || params.filters.followersMax) : undefined;
+            const minEngagement = params.filters.minEngagementRate || params.filters.engagementRateMin ? Number(params.filters.minEngagementRate || params.filters.engagementRateMin) : undefined;
+
+            console.log(`[InfluencerClub] Filtering locally: minFollowers=${minFollowers}, minEngagement=${minEngagement}%`);
+
+            // Debug: Log first 3 creators before filtering
+            if (normalizedCreators.length > 0) {
+                console.log(`[InfluencerClub] Sample creators BEFORE filtering:`);
+                normalizedCreators.slice(0, 3).forEach((c: any, i: number) => {
+                    console.log(`  ${i + 1}. ${c.handle} - Followers: ${c.followers}, ER: ${(c.engagement_rate * 100).toFixed(2)}%`);
+                });
+            }
 
             const filteredCreators = normalizedCreators.filter((c: any) => {
                 const followers = c.followers || 0;
                 const er = c.engagement_rate || 0;
 
-                if (minFollowers && followers < minFollowers) return false;
-                if (maxFollowers && followers > maxFollowers) return false;
+                // Debug logging for first 3 creators
+                const debugIndex = normalizedCreators.indexOf(c);
+                const shouldDebug = debugIndex < 3;
 
-                // ER in app is 0-1 (0.01 = 1%). Profile returned 4.2 (percent). We divided by 100 above.
-                // minEngagement input is usually integer 1 (for 1%).
-                // Threshold: 1 -> 0.01. 
-                if (minEngagement) {
-                    const threshold = minEngagement > 1 ? minEngagement / 100 : minEngagement;
-                    if (er < threshold) return false;
+                // Leniency: If followers is 0, it often means 'missing data' in the API.
+                // We allow these through so the user doesn't get 0 results.
+                if (minFollowers && followers > 0 && followers < minFollowers) {
+                    if (shouldDebug) console.log(`  ❌ ${c.handle}: Followers ${followers} < ${minFollowers}`);
+                    return false;
                 }
+                if (maxFollowers && followers > maxFollowers) {
+                    if (shouldDebug) console.log(`  ❌ ${c.handle}: Followers ${followers} > ${maxFollowers}`);
+                    return false;
+                }
+
+                if (minEngagement) {
+                    // Logic: If user enters '1', they mean 0.01 (1%). 
+                    // If they enter '0.01', they also mean 0.01 (1%).
+                    const threshold = minEngagement >= 1 ? minEngagement / 100 : minEngagement;
+
+                    if (shouldDebug) {
+                        console.log(`  🔍 ${c.handle}: ER=${(er * 100).toFixed(2)}% (${er}), threshold=${(threshold * 100).toFixed(2)}% (${threshold}), minEngagement=${minEngagement}`);
+                    }
+
+                    // Leniency: If engagement is 0, it often means 'missing data' in the API.
+                    // We allow these through so the user doesn't get 0 results.
+                    if (er > 0 && er < threshold) {
+                        if (shouldDebug) console.log(`  ❌ ${c.handle}: ER ${(er * 100).toFixed(2)}% < ${(threshold * 100).toFixed(2)}%`);
+                        return false;
+                    }
+                }
+
+                if (shouldDebug) console.log(`  ✅ ${c.handle}: PASSED all filters`);
                 return true;
             });
 

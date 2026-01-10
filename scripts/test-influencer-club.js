@@ -32,12 +32,10 @@ if (!apiKey) {
 console.log('API Key found, length:', apiKey.length);
 
 const postData = JSON.stringify({
-    "platform": "YouTube",
+    "platform": "youtube",
     "limit": 50,
     "offset": 0,
-    "filters": {
-        "followers_min": "1000"
-    }
+    "filters": {}
 });
 
 const options = {

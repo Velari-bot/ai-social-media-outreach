@@ -52,16 +52,22 @@ async function processReplies() {
 
     // A. User Lookup
     const usersRef = db.collection('user_accounts');
-    let snapshot = await usersRef.where('email', '==', targetEmail).limit(1).get();
-    if (snapshot.empty) {
-        snapshot = await db.collection('users').where('email', '==', targetEmail).limit(1).get();
+    let userDocSnap = await usersRef.where('email', '==', targetEmail).limit(1).get();
+    if (userDocSnap.empty) {
+        userDocSnap = await db.collection('users').where('email', '==', targetEmail).limit(1).get();
     }
-    if (snapshot.empty) {
+    if (userDocSnap.empty) {
         console.error('User not found!');
         return;
     }
-    const userId = snapshot.docs[0].id;
-    console.log(`User ID: ${userId}`);
+    const userId = userDocSnap.docs[0].id;
+    const userData = userDocSnap.docs[0].data();
+
+    // CUSTOM BUSINESS NAME (or default to Verality)
+    const businessName = userData.business_name || "Verality";
+    const teamName = `${businessName} Team`;
+
+    console.log(`User ID: ${userId} | Business: ${businessName}`);
 
     // B. Get Tokens
     const connDoc = await db.collection('gmail_connections').doc(userId).get();
@@ -133,6 +139,22 @@ async function processReplies() {
 
         console.log(`\nProcessing Thread: ${lastSubject} (Last Msg From: ${lastFrom})`);
 
+        // --- HUMAN-LIKE DELAY CHECK ---
+        const lastMsgInternalDate = parseInt(lastMsg.internalDate || '0');
+        const nowTime = Date.now();
+        const elapsedMinutes = (nowTime - lastMsgInternalDate) / (1000 * 60);
+
+        // Deterministic delay (5-15 mins) based on message ID
+        // This ensures the delay doesn't keep changing on every poll
+        const seed = (lastMsg.id || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const randomDelay = (seed % 11) + 5; // 5 to 15 minutes
+
+        if (elapsedMinutes < randomDelay) {
+            console.log(`[Delay] Skipping thread ${th.id} - too soon. Received ${elapsedMinutes.toFixed(1)}m ago. Target delay: ${randomDelay}m.`);
+            continue;
+        }
+        // ------------------------------
+
         // Setup variables for AI context (using last message details)
         const details = await gmail.users.messages.get({ userId: 'me', id: lastMsg.id, format: 'full' }); // Redundant but consistent
         const from = lastFrom;
@@ -156,14 +178,92 @@ async function processReplies() {
             return body || payload.snippet || '';
         };
 
-        // Helper to clean quoted text for AI context (reduces noise)
+        // Helper to cleaning quoted text and strict legal footers
         const cleanBody = (text) => {
-            return text
-                .split(/\r?\n/)
-                .filter(line => !line.trim().startsWith('>')) // Remove quotes
-                .filter(line => !line.includes('On ') && !line.includes('wrote:')) // Remove headers
-                .join('\n')
-                .trim();
+            let lines = text.split(/\r?\n/);
+            const cleanLines = [];
+
+            // patterns that typically start a footer block to ignore
+            const footerTriggers = [
+                /^Sent from my/i,
+                /^Get Outlook for/i,
+                /^Registered in/i,
+                /^Company Number/i,
+                /^Unsubscribe/i,
+                /^Manage preferences/i,
+                /^--\s*$/, // Standard signature dash
+                /^__\s*$/,
+                /^Beyond Vision Ltd/i, // Specific catch from user example
+                /Limited is a company registered/i
+            ];
+
+            for (let line of lines) {
+                const trimmed = line.trim();
+
+                // standard quote removal
+                if (trimmed.startsWith('>')) continue;
+                if (line.includes('On ') && line.includes('wrote:')) continue;
+                if (line.includes('From:') && line.includes('To:') && line.includes('Subject:')) continue; // Forwarded headers
+
+                // check footer triggers - if hit, we might want to stop or skip
+                // For now, let's skip the line. If it's a block, usually they cluster at the end.
+                // A stronger heuristic: if we hit a "Registered in", stop everything? 
+                // Let's just filter out the noisy lines for now to be safe.
+                if (footerTriggers.some(regex => regex.test(trimmed))) {
+                    console.log(`(Stripping footer line: ${trimmed.substring(0, 20)}...)`);
+                    continue;
+                }
+
+                cleanLines.push(line);
+            }
+            return cleanLines.join('\n').trim();
+        };
+
+        // NEW: Data Extraction Helper
+        const extractCreatorData = async (text, fromEmail) => {
+            try {
+                const completion = await openai.chat.completions.create({
+                    model: "gpt-4o",
+                    messages: [
+                        {
+                            role: "system",
+                            content: `You are a data extraction assistant. Analyze the email body.
+                            Extract:
+                            1. **PhoneNumber**: Any phone number provided (e.g. +44..., (555)...).
+                            2. **Rate**: Any pricing or rate mentioned (e.g. "$500", "500 usd").
+                            
+                            Return valid JSON: { "phoneNumber": string | null, "rate": string | null }`
+                        },
+                        { role: "user", content: text }
+                    ],
+                    response_format: { type: "json_object" }
+                });
+
+                const data = JSON.parse(completion.choices[0].message.content);
+
+                if (data.phoneNumber || data.rate) {
+                    console.log(`[Extraction] Found Data for ${fromEmail}:`, data);
+
+                    // Update Firestore
+                    // 1. Find creator by email
+                    const creatorsRef = db.collection('creators');
+                    const q = await creatorsRef.where('email', '==', fromEmail).limit(1).get();
+
+                    if (!q.empty) {
+                        const docId = q.docs[0].id;
+                        const updateData = {};
+                        if (data.phoneNumber) updateData.phone_number = data.phoneNumber;
+                        if (data.rate) updateData.rate = data.rate;
+
+                        await creatorsRef.doc(docId).set(updateData, { merge: true });
+                        console.log(`[Extraction] Updated creator ${docId} in DB.`);
+                    } else {
+                        console.log(`[Extraction] Creator email ${fromEmail} not found in DB, skipping save.`);
+                    }
+                }
+            } catch (err) {
+                console.error("[Extraction Error]", err.message);
+            }
         };
 
         // Build Conversation History String
@@ -173,12 +273,19 @@ async function processReplies() {
             const mBody = getBody(m.payload);
             const clean = cleanBody(mBody); // Clean it up
 
-            const isMe = mFrom.includes('benderaiden826@gmail.com');
+            const isMe = mFrom.includes(botEmail) || mFrom.includes('Verality'); // simplified check
             const role = isMe ? "Verality AI (You)" : "Creator";
-            return `${role}: ${clean.substring(0, 500)}`; // limit length
+            return `${role}: ${clean.substring(0, 800)}`;
         }).join('\n---\n');
 
         console.log('Conversation History:\n', conversationLog);
+
+        // TRIGGER EXTRACTOR (Side Effect)
+        // We only extract from the LAST message (the new reply)
+        const lastMsgBody = getBody(lastMsg.payload);
+        const lastMsgClean = cleanBody(lastMsgBody);
+        await extractCreatorData(lastMsgClean, lastFromEmail);
+
 
         let aiResponseText;
         try {
@@ -187,25 +294,32 @@ async function processReplies() {
                 messages: [
                     {
                         role: "system",
-                        content: `You reach out to creators for sponsorships.
-                        
-                        TONE:
-                        - Professional but casual. Think "Founder reaching out", not "Corporate sales bot".
-                        - Be polite, respectful, and clear.
-                        - Use standard punctuation where appropriate, but keep it brief.
-                        - Avoid excessive fluff like "I hope this email finds you well", but don't be rude.
-                        - Example: "Hey [Name], thanks for getting back to me. We're big fans of your content and would love to discuss a paid collaboration."
+                        content: `You are a Campaign Manager at ${businessName}. You are negotiating with a Creator (or their manager).
 
-                        GOAL:
-                        - If they say "Sure", "Yes", or ask nicely -> Get their **rates** or **phone number** directly in this email.
-                        - Do NOT send any external links (no Calendly). Keep the conversation right here.
-                        - "Great! What are your rates for a dedicated video? And what's your best number to text?"
+                        **YOUR GOAL**: Secure the following info:
+                        1. **Flat Rate in USD** for a dedicated video. (If they give a range, ask for a specific flat rate. If they give a currency other than USD, ask for USD equivalent).
 
-                        REFUSALS:
-                        - Only return "IGNORE" if they say "Stop", "Unsubscribe", "Not interested", or "No" CLEARLY 2+ times.
-                        - "Sure" is a YES. "Okay" is a YES.
+                        **TONE & RULES**:
+                        - Friendly, professional, upbeat but persistent.
+                        - **STRICT RULE**: NEVER suggest a phone call, Zoom, or meeting. 
+                        - **STRICT RULE**: NEVER ask for a phone number. Keep 100% of the conversation in this email thread.
+                        - If they are confused about "rates", briefly explain it means their price for a sponsored post.
 
-                        Sign off: "Best, Verality Team" or just "Verality Team"`
+                        **SCENARIO HANDLING**:
+
+                        1. **THEY SAID YES (General Interest)**
+                           - Reply: "Great to hear! To move forward, could you let me know your **flat rate for a dedicated video in USD** so I can get the paperwork started?"
+
+                        2. **THEY ARE CONFUSED (What is a rate?)**
+                           - Reply: "No worries at all! By 'rate,' I just mean your pricing for a dedicated sponsored video on your channel. We like to have a flat USD figure for our records to keep things simple!"
+
+                        3. **GAVE RATE IN WRONG CURRENCY / RANGE**
+                           - Reply: "Thanks for that! To make sure I have everything correct for the contract, could you confirm a **single flat rate in USD**?"
+
+                        **SIGN OFF**:
+                        "Best,
+                        ${teamName}"
+                        `
                     },
                     {
                         role: "user",

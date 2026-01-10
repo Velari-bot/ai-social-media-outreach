@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
     if (body.name !== undefined) updates.name = body.name;
     if (body.first_name !== undefined) updates.first_name = body.first_name;
     if (body.last_name !== undefined) updates.last_name = body.last_name;
+    if (body.business_name !== undefined) updates.business_name = body.business_name;
     if (body.outreach_intent !== undefined) updates.outreach_intent = body.outreach_intent;
 
     if (Object.keys(updates).length === 0) {

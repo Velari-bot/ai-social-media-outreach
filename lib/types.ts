@@ -15,6 +15,12 @@ export interface Creator {
   basic_profile_data: Record<string, any> | null;
   detailed_profile_data: Record<string, any> | null;
   email: string | null;
+  name?: string | null;
+  full_name?: string | null;
+  followers?: number;
+  engagement_rate?: number;
+  picture?: string | null;
+  location?: string | null;
   phone?: string | null;
   bio?: string | null;
   website?: string | null;

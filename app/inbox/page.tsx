@@ -644,14 +644,40 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
                   <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
                     {selectedReply.thread.map((message, index) => {
                       // Helper to clean body inside map
+                      // Helper to clean body inside map
                       const cleanBody = (text: string) => {
                         if (!text) return "";
-                        return text
-                          .split(/\r?\n/)
-                          .filter(line => !line.trim().startsWith('>'))
-                          .filter(line => !line.includes('On ') && !line.includes('wrote:'))
-                          .join('\n')
-                          .trim();
+                        let lines = text.split(/\r?\n/);
+                        const cleanLines = [];
+
+                        const footerTriggers = [
+                          /^Sent from my/i,
+                          /^Get Outlook for/i,
+                          /^Registered in/i,
+                          /^Company Number/i,
+                          /^Unsubscribe/i,
+                          /^Manage preferences/i,
+                          /^--\s*$/,
+                          /^__\s*$/,
+                          /^Beyond Vision Ltd/i,
+                          /Limited is a company registered/i
+                        ];
+
+                        for (let line of lines) {
+                          const trimmed = line.trim();
+                          if (trimmed.startsWith('>')) continue;
+                          if (line.includes('On ') && line.includes('wrote:')) continue;
+                          if (line.includes('From:') && line.includes('To:') && line.includes('Subject:')) continue;
+
+                          // Stop visual noise if we hit a known footer line
+                          if (footerTriggers.some(regex => regex.test(trimmed))) {
+                            // For UI, we might want to verify if it's truly the end, 
+                            // but usually these are safe to hide to clean up the view.
+                            continue;
+                          }
+                          cleanLines.push(line);
+                        }
+                        return cleanLines.join('\n').trim();
                       };
 
                       return (

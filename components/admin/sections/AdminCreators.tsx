@@ -62,46 +62,48 @@ export default function AdminCreators() {
             </div>
 
             {/* Creator Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {loading ? (
-                    Array(4).fill(0).map((_, i) => (
-                        <div key={i} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm animate-pulse h-48" />
-                    ))
-                ) : creators.length === 0 ? (
-                    <div className="col-span-full py-20 text-center text-gray-400 font-bold bg-white rounded-3xl border border-gray-100">
-                        No creators found in database.
-                    </div>
-                ) : (
-                    creators.map((c) => (
-                        <div key={c.id} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="p-3 bg-gray-50 rounded-2xl group-hover:bg-black group-hover:text-white transition-colors">
-                                    {getPlatformIcon(c.platform)}
-                                </div>
-                                <button className="text-gray-300 hover:text-black transition-colors">
-                                    <MoreVertical className="w-5 h-5" />
-                                </button>
-                            </div>
-                            <div className="space-y-1">
-                                <h3 className="font-black text-lg text-black">{c.handle}</h3>
-                                <p className="text-sm text-gray-500 font-medium">{c.niche} • {c.followers} Followers</p>
-                            </div>
-                            <div className="mt-6 pt-6 border-t border-gray-50 space-y-3">
-                                <div className="flex items-center justify-between text-xs">
-                                    <span className="text-gray-400 font-bold uppercase tracking-wider">Email</span>
-                                    <span className="text-black font-medium">{c.email}</span>
-                                </div>
-                                <div className="flex items-center justify-between text-xs">
-                                    <span className="text-gray-400 font-bold uppercase tracking-wider">Status</span>
-                                    <span className={`px-2 py-0.5 rounded-full font-bold ${c.status === 'Verified' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                                        }`}>
-                                        {c.status}
-                                    </span>
-                                </div>
-                            </div>
+            <div className="max-h-[700px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-200">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {loading ? (
+                        Array(4).fill(0).map((_, i) => (
+                            <div key={i} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm animate-pulse h-48" />
+                        ))
+                    ) : creators.length === 0 ? (
+                        <div className="col-span-full py-20 text-center text-gray-400 font-bold bg-white rounded-3xl border border-gray-100">
+                            No creators found in database.
                         </div>
-                    ))
-                )}
+                    ) : (
+                        creators.map((c) => (
+                            <div key={c.id} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="p-3 bg-gray-50 rounded-2xl group-hover:bg-black group-hover:text-white transition-colors">
+                                        {getPlatformIcon(c.platform)}
+                                    </div>
+                                    <button className="text-gray-300 hover:text-black transition-colors">
+                                        <MoreVertical className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <div className="space-y-1">
+                                    <h3 className="font-black text-lg text-black">{c.handle}</h3>
+                                    <p className="text-sm text-gray-500 font-medium">{c.niche} • {c.followers} Followers</p>
+                                </div>
+                                <div className="mt-6 pt-6 border-t border-gray-50 space-y-3">
+                                    <div className="flex items-center justify-between text-xs">
+                                        <span className="text-gray-400 font-bold uppercase tracking-wider">Email</span>
+                                        <span className="text-black font-medium">{c.email}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs">
+                                        <span className="text-gray-400 font-bold uppercase tracking-wider">Status</span>
+                                        <span className={`px-2 py-0.5 rounded-full font-bold ${c.status === 'Verified' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                                            }`}>
+                                            {c.status}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
             </div>
         </div>
     );

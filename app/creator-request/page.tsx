@@ -8,7 +8,7 @@ import { fetchUserAccount, fetchUserStats, fetchRecentRequests, createRequest } 
 import type { UserAccount, UserStats } from "@/lib/database";
 import { useSearchParams } from "next/navigation";
 import SubscriptionGuard from "@/components/SubscriptionGuard";
-import { Search, MapPin, Hash, Globe, Users, Loader2, AlertCircle, Download, FileSpreadsheet } from "lucide-react";
+import { Search, MapPin, Hash, Globe, Users, Loader2, AlertCircle, Download, FileSpreadsheet, Instagram, Youtube, Music, Info, ExternalLink } from "lucide-react";
 
 // Fixed Categories List (Safe List)
 const CATEGORIES = [
@@ -41,6 +41,24 @@ const MOCK_CREATORS = [
   { fullname: "Dev Tips", username: "dev_tips_daily", handle: "dev_tips_daily", platform: "youtube", followers: 210000, engagement_rate: 0.028, picture: "", email: "hello@devtips.io", location: "Germany" },
 ];
 
+const getPlatformIcon = (platform: string, className = "h-3 w-3") => {
+  const p = platform?.toLowerCase();
+  if (p === 'youtube') return <Youtube className={`${className} text-red-600`} />;
+  if (p === 'instagram') return <Instagram className={`${className} text-pink-600`} />;
+  if (p === 'tiktok') return <Music className={`${className} text-black`} />;
+  return <Globe className={`${className} text-gray-400`} />;
+};
+
+const getPlatformUrl = (platform: string, handle: string) => {
+  const p = platform?.toLowerCase();
+  const h = handle?.replace(/^@/, "") || "";
+  if (!h) return "#";
+  if (p === 'youtube') return `https://youtube.com/@${h}`;
+  if (p === 'instagram') return `https://instagram.com/${h}`;
+  if (p === 'tiktok') return `https://tiktok.com/@${h}`;
+  return "#";
+};
+
 export default function CreatorRequestPage() {
   return (
     <SubscriptionGuard>
@@ -58,8 +76,8 @@ function CreatorRequestContent() {
   const [category, setCategory] = useState("");
   const [country, setCountry] = useState("");
   const [followersMin, setFollowersMin] = useState(1000);
-  const [followersMax, setFollowersMax] = useState(1000000);
-  const [engagementRateMin, setEngagementRateMin] = useState(1);
+  const [followersMax, setFollowersMax] = useState(100000000);
+  const [engagementRateMin, setEngagementRateMin] = useState(0);
   const [requestedCreators, setRequestedCreators] = useState(50);
 
   // App State
@@ -105,6 +123,46 @@ function CreatorRequestContent() {
     }
     init();
   }, []);
+
+  const handleLoadOldCampaign = async (req: any) => {
+    setLoading(true);
+    setSearchResults(null);
+    try {
+      const platformArr = req.platforms || (req.platform ? (Array.isArray(req.platform) ? req.platform : [req.platform]) : ['youtube']);
+      const platform = (platformArr[0] || 'youtube').toLowerCase();
+      const filters = req.filters_json || req.criteria || {};
+
+      const user = await getCurrentUser();
+      const userToken = await user?.getIdToken();
+
+      const res = await fetch(`/api/user/requests/results`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${userToken}`
+        },
+        body: JSON.stringify({
+          requestId: req.id,
+          platform,
+          filters,
+          requestedCount: req.requestedCount || req.results_count || 50
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setSearchResults(data.creators || []);
+        toast.success(`Loaded campaign: ${req.name}`);
+      } else {
+        toast.error("Failed to load campaign results");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Error loading results");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleExportCSV = () => {
     if (!searchResults || searchResults.length === 0) return;
@@ -227,10 +285,9 @@ function CreatorRequestContent() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
-
                 {/* 1. Platform */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Platform</label>
+                  <label className="block text-xs font-bold text-black uppercase tracking-wide mb-2">Platform</label>
                   <div className="grid grid-cols-3 gap-2">
                     {["youtube", "instagram", "tiktok"].map(p => (
                       <button
@@ -248,16 +305,15 @@ function CreatorRequestContent() {
                   </div>
                 </div>
 
-                {/* 2. Targeting (Strict) */}
+                {/* 2. Targeting */}
                 <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-4">
                   <div className="flex items-center justify-between">
-                    <label className="block text-xs font-bold text-gray-800 uppercase tracking-wide">
+                    <label className="block text-xs font-bold text-black uppercase tracking-wide">
                       Targeting <span className="text-red-500">*</span>
                     </label>
                     {!hasStrongTargeting && <span className="text-[10px] text-red-500 font-medium">Required</span>}
                   </div>
 
-                  {/* Keywords */}
                   <div>
                     <div className="relative">
                       <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -273,7 +329,6 @@ function CreatorRequestContent() {
 
                   <div className="text-center text-[10px] text-gray-400 font-bold uppercase tracking-widest">- OR -</div>
 
-                  {/* Category */}
                   <div>
                     <select
                       className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black/5 outline-none appearance-none cursor-pointer"
@@ -285,52 +340,44 @@ function CreatorRequestContent() {
                     </select>
                   </div>
 
-                  {/* Restrictive Filter Warnings */}
                   {(keywords.length > 0 && category !== "") && (
-                    <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-lg border border-amber-100 text-amber-800 text-xs">
+                    <div className="flex items-start gap-2 p-3 bg-red-50 rounded-lg border border-red-100 text-red-800 text-xs">
                       <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                       <span>
-                        <strong>Warning:</strong> Combining Keywords & Category often returns 0 results. Try using just one if your search fails.
+                        <strong>CRITICAL:</strong> Combining Keywords & Category usually returns 0 results. Use **ONLY ONE** for best results.
                       </span>
                     </div>
                   )}
 
-                  {/* Country (Optional) */}
                   <div className="pt-2 border-t border-gray-200/50">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Location</label>
+                    <label className="block text-xs font-bold text-black uppercase tracking-wide mb-2">Location</label>
                     <select
                       className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black/5 outline-none appearance-none cursor-pointer"
                       value={country}
                       onChange={e => setCountry(e.target.value)}
                     >
-                      {/* Force US default or explicit 'Worldwide' if allowed, but map 'Any' to Undefined in payload */}
                       <option value="">Anywhere (Best Results)</option>
                       {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
                     </select>
-                    {country !== "" && (
-                      <p className="text-[10px] text-gray-400 mt-1.5 ml-1">
-                        ⚠️ Country filter significantly reduces results.
-                      </p>
-                    )}
                   </div>
                 </div>
 
                 {/* 3. Metrics */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Min Followers</label>
+                    <label className="block text-xs font-bold text-black uppercase tracking-wide mb-2">Min Followers</label>
                     <input
                       type="number"
-                      className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black/5 outline-none"
+                      className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black/5 outline-none font-medium"
                       value={followersMin}
                       onChange={e => setFollowersMin(Number(e.target.value))}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Max Followers</label>
+                    <label className="block text-xs font-bold text-black uppercase tracking-wide mb-2">Max Followers</label>
                     <input
                       type="number"
-                      className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black/5 outline-none"
+                      className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black/5 outline-none font-medium"
                       value={followersMax}
                       onChange={e => setFollowersMax(Number(e.target.value))}
                     />
@@ -340,12 +387,13 @@ function CreatorRequestContent() {
                 {/* 4. Quality & Quantity */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Engagement</label>
+                    <label className="block text-xs font-bold text-black uppercase tracking-wide mb-2">Min Engagement</label>
                     <select
-                      className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black/5 outline-none"
+                      className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black/5 outline-none font-medium"
                       value={engagementRateMin}
                       onChange={e => setEngagementRateMin(Number(e.target.value))}
                     >
+                      <option value={0}>Any Engagement (Recommended)</option>
                       <option value={1}>1% (Normal)</option>
                       <option value={2}>2% (Good)</option>
                       <option value={3}>3% (High)</option>
@@ -353,25 +401,25 @@ function CreatorRequestContent() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Results</label>
+                    <label className="block text-xs font-bold text-black uppercase tracking-wide mb-2">Num Results</label>
                     <select
-                      className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black/5 outline-none"
+                      className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black/5 outline-none font-medium"
                       value={requestedCreators}
                       onChange={e => setRequestedCreators(Number(e.target.value))}
                     >
-                      <option value={50}>50</option>
-                      <option value={100}>100</option>
-                      <option value={150}>150</option>
+                      <option value={50}>50 Founders</option>
+                      <option value={100}>100 Founders</option>
+                      <option value={150}>150 Founders</option>
                     </select>
                   </div>
                 </div>
 
-                {/* Summary & Submit */}
                 <div className="pt-2">
                   <div className="flex justify-between items-center text-xs text-gray-500 mb-4 px-1">
                     <span>Cost:</span>
                     <div className="text-right">
                       <span className="font-bold text-black block">{creditsCost} Credit{creditsCost > 1 ? 's' : ''}</span>
+                      <span className="text-[10px] text-gray-400">{remainingQuota} remaining</span>
                     </div>
                   </div>
 
@@ -387,7 +435,6 @@ function CreatorRequestContent() {
                     {isTestMode ? "Run Test (Free)" : (isQuotaExceeded ? "Quota Exceeded" : "Find Creators")}
                   </button>
 
-                  {/* Test Mode Toggle */}
                   <div className="mt-4 flex items-center justify-center gap-2">
                     <label className="flex items-center gap-2 cursor-pointer select-none">
                       <div className="relative">
@@ -418,7 +465,7 @@ function CreatorRequestContent() {
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4">
                 <div className="p-6 border-b border-gray-100 flex justify-between items-center">
                   <div className="flex items-center gap-3">
-                    <h3 className="font-bold text-lg">Results</h3>
+                    <h3 className="font-bold text-black">Results</h3>
                     <span className="text-sm bg-green-100 text-green-700 font-bold px-3 py-1 rounded-full">{searchResults.length} Found</span>
                   </div>
                   <div className="flex gap-2">
@@ -430,45 +477,84 @@ function CreatorRequestContent() {
                     </button>
                   </div>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-gray-50 text-gray-500 font-medium uppercase tracking-wider text-xs">
+                <div className="max-h-[600px] overflow-y-auto overflow-x-auto relative scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
+                  <table className="w-full text-left text-sm border-separate border-spacing-0">
+                    <thead className="bg-gray-50 text-gray-500 font-medium uppercase tracking-wider text-xs sticky top-0 z-20">
                       <tr>
-                        <th className="px-6 py-4">Creator</th>
-                        <th className="px-6 py-4">Stats</th>
-                        <th className="px-6 py-4">Contact</th>
-                        <th className="px-6 py-4">Location</th>
+                        <th className="px-6 py-4 border-b border-gray-100 bg-gray-50">Creator</th>
+                        <th className="px-6 py-4 border-b border-gray-100 bg-gray-50">Reach & engagement</th>
+                        <th className="px-6 py-4 border-b border-gray-100 bg-gray-50">Contact</th>
+                        <th className="px-6 py-4 border-b border-gray-100 bg-gray-50">Location</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {searchResults.map((c, i) => (
-                        <tr key={i} className="hover:bg-gray-50/50">
+                        <tr key={i} className="hover:bg-gray-50/50 group transition-colors">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 bg-gray-100 rounded-full overflow-hidden flex-shrink-0">
-                                {c.picture || c.profile_pic_url || c.profileUrl ? (
-                                  <img src={c.picture || c.profile_pic_url || c.profileUrl} className="h-full w-full object-cover" />
-                                ) : (
-                                  <div className="h-full w-full flex items-center justify-center text-gray-400">?</div>
-                                )}
+                              <div className="h-10 w-10 bg-gray-50 rounded-xl flex-shrink-0 border border-gray-100 flex items-center justify-center p-2.5 shadow-inner">
+                                {getPlatformIcon(c.platform || platform, "h-full w-full")}
                               </div>
                               <div>
-                                <div className="font-bold text-gray-900 line-clamp-1">{c.fullname || c.name || c.username}</div>
-                                <div className="text-xs text-gray-500">@{c.handle || c.username}</div>
+                                <div className="font-bold text-gray-900 line-clamp-1 flex items-center gap-1.5">
+                                  {c.fullname || c.name || c.username}
+                                </div>
+                                <div className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
+                                  {getPlatformIcon(c.platform || platform)}
+                                  <a
+                                    href={getPlatformUrl(c.platform || platform, c.handle || c.username)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="hover:text-black hover:underline flex items-center gap-1 group/link"
+                                  >
+                                    @{String(c.handle || c.username || "").replace(/^@/, "")}
+                                    <ExternalLink className="h-2.5 w-2.5 opacity-0 group-hover/link:opacity-100 transition-opacity" />
+                                  </a>
+                                </div>
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="font-mono text-gray-700">{typeof c.followers === 'number' ? new Intl.NumberFormat('en-US', { notation: "compact" }).format(c.followers) : c.followers}</div>
-                            {c.engagement_rate && <div className="text-xs text-green-600 font-bold">{(c.engagement_rate * 100).toFixed(2)}% ER</div>}
+                            <div className="flex flex-col gap-0.5">
+                              <div className="font-mono font-bold text-gray-900 flex items-center gap-1">
+                                {Number(c.followers) > 0
+                                  ? new Intl.NumberFormat('en-US', { notation: "compact" }).format(c.followers)
+                                  : (c.followers || "N/A")}
+                                <span className="text-[10px] text-gray-400 font-bold uppercase">
+                                  {(c.platform || platform) === 'youtube' ? 'Subscribers' : 'Followers'}
+                                </span>
+                              </div>
+                              {c.engagement_rate ? (
+                                <div className="text-[10px] text-green-600 font-black uppercase tracking-wider">
+                                  {(Number(c.engagement_rate) * 100).toFixed(1)}% Engagement
+                                </div>
+                              ) : (
+                                <div className="text-[10px] text-gray-300 font-black uppercase tracking-wider">
+                                  Low Engagement
+                                </div>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4">
                             {c.email ? (
-                              <span className="text-blue-600 font-medium">{c.email}</span>
-                            ) : <span className="text-gray-300 italic">No Email</span>}
+                              <div className="flex items-center gap-2">
+                                <span className="text-blue-600 font-medium">{c.email}</span>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col group/tip relative">
+                                <span className="text-gray-300 italic flex items-center gap-1">
+                                  No Email <Info className="h-3 w-3 text-gray-200" />
+                                </span>
+                                <div className="absolute bottom-full left-0 mb-2 invisible group-hover/tip:visible bg-black text-white text-[10px] p-2 rounded w-32 z-30 shadow-xl">
+                                  Detailed contact discovery requires an Outreach Campaign.
+                                </div>
+                              </div>
+                            )}
                           </td>
                           <td className="px-6 py-4 text-gray-500">
-                            {c.location || c.geo_country || c.country || "-"}
+                            <div className="flex items-center gap-1.5 capitalize">
+                              {c.location || c.geo_country || c.country || "-"}
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -481,25 +567,32 @@ function CreatorRequestContent() {
             {/* Recent Requests List */}
             {!searchResults && (
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                <h3 className="font-bold text-lg mb-4">Your Recent Searches</h3>
+                <h3 className="font-bold text-lg mb-4 text-black">Your Recent Searches</h3>
                 {recentRequests.length === 0 ? (
                   <p className="text-gray-400 italic text-sm">No recent searches found.</p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {recentRequests.slice(0, 6).map((req, i) => (
-                      <div key={i} className="p-4 rounded-xl bg-gray-50 border border-gray-100 hover:border-gray-200 transition-all">
+                    {recentRequests.slice(0, 6).map((req: any, i) => (
+                      <div
+                        key={i}
+                        onClick={() => handleLoadOldCampaign(req)}
+                        className="p-4 rounded-xl bg-gray-50 border border-gray-100 hover:border-black hover:bg-white cursor-pointer transition-all group"
+                      >
                         <div className="flex justify-between items-start mb-2">
-                          <div className="font-bold text-sm text-gray-900 truncate pr-2">{req.name}</div>
+                          <div className="font-bold text-sm text-gray-900 truncate pr-2 group-hover:underline">{req.name}</div>
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${req.status === 'delivered' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
                             }`}>{req.status}</span>
                         </div>
-                        <div className="text-xs text-gray-500 flex flex-col gap-1">
-                          <div className="flex items-center gap-1.5">
-                            <Globe className="h-3 w-3" />
+                        <div className="text-xs text-black flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5 font-bold">
+                            {getPlatformIcon(Array.isArray(req.platform) ? req.platform[0] : req.platform)}
                             {Array.isArray(req.platform) ? req.platform.join(", ") : req.platform || "Any"}
                           </div>
-                          <div className="text-gray-400">
-                            {new Date(req.createdAt?.seconds * 1000 || req.createdAt || Date.now()).toLocaleDateString()}
+                          <div className="flex justify-between items-center mt-2 border-t border-gray-100 pt-2">
+                            <div className="text-black font-medium">
+                              {new Date(req.createdAt?.seconds * 1000 || req.createdAt || Date.now()).toLocaleDateString()}
+                            </div>
+                            <div className="font-bold text-black">{req.results_count || 0} Creators</div>
                           </div>
                         </div>
                       </div>

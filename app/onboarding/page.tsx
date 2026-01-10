@@ -15,6 +15,7 @@ function OnboardingContent() {
   const [purpose, setPurpose] = useState<PurposeType>(null);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [businessName, setBusinessName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
 
@@ -151,6 +152,7 @@ function OnboardingContent() {
             purpose: purpose || 'other',
             first_name: firstName,
             last_name: lastName,
+            business_name: businessName,
             name: `${firstName} ${lastName}`.trim()
           });
           console.log('Account data saved');
@@ -237,6 +239,16 @@ function OnboardingContent() {
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       placeholder="e.g. Smith"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 text-black font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Business Name (Optional)</label>
+                    <input
+                      type="text"
+                      value={businessName}
+                      onChange={(e) => setBusinessName(e.target.value)}
+                      placeholder="e.g. Verality AI"
                       className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 text-black font-medium"
                     />
                   </div>
