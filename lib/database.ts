@@ -214,7 +214,7 @@ export async function createCreatorRequest(
 }
 
 // Update email quota usage
-export async function incrementEmailQuota(userId: string): Promise<boolean> {
+export async function incrementEmailQuota(userId: string, amount: number = 1): Promise<boolean> {
   try {
     // Get current account
     const account = await getUserAccount(userId);
@@ -222,8 +222,8 @@ export async function incrementEmailQuota(userId: string): Promise<boolean> {
 
     // Update quota
     await db.collection('user_accounts').doc(userId).update({
-      email_used_today: account.email_used_today + 1,
-      email_used_this_month: account.email_used_this_month + 1,
+      email_used_today: account.email_used_today + amount,
+      email_used_this_month: account.email_used_this_month + amount,
       updated_at: Timestamp.now(),
     });
 

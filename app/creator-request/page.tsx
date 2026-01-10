@@ -46,6 +46,7 @@ function CreatorRequestContent() {
     followersMax: "",
     creatorType: "any",
     businessIntent: "any",
+    batchSize: "50", // Default batch size
   });
   const [potentialMatches, setPotentialMatches] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -173,6 +174,7 @@ function CreatorRequestContent() {
       followersMax: "",
       creatorType: "any",
       businessIntent: "any",
+      batchSize: "50",
     });
     setSelectedPlatform(null);
     setSubmitted(false);
@@ -309,6 +311,31 @@ function CreatorRequestContent() {
                   </select>
                 </div>
 
+                {/* 7. Batch Size */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wide">Batch Size</label>
+                    <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                      Max: {userAccount ? Math.max(0, userAccount.email_quota_daily - userAccount.email_used_today) : 50}
+                    </span>
+                  </div>
+                  <input
+                    type="number"
+                    min="1"
+                    max={userAccount ? Math.max(0, userAccount.email_quota_daily - userAccount.email_used_today) : 500}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black/5 text-gray-900"
+                    value={formData.batchSize}
+                    onChange={(e) => {
+                      const max = userAccount ? Math.max(0, userAccount.email_quota_daily - userAccount.email_used_today) : 500;
+                      const val = parseInt(e.target.value) || 0;
+                      setFormData({ ...formData, batchSize: Math.min(val, max).toString() });
+                    }}
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1.5 font-medium italic">
+                    How many creators do you want to find in this search?
+                  </p>
+                </div>
+
 
 
 
@@ -322,15 +349,15 @@ function CreatorRequestContent() {
                   </button>
                   <button
                     type="submit"
-                    disabled={submitted}
-                    className={`flex-1 py-3 bg-black text-white rounded-xl font-bold hover:bg-gray-900 transition-all shadow-lg shadow-black/10 flex items-center justify-center gap-2 ${submitted ? "opacity-75 cursor-wait" : ""}`}
+                    disabled={submitted || (userAccount !== null && (userAccount.email_quota_daily - userAccount.email_used_today) <= 0)}
+                    className={`flex-1 py-3 bg-black text-white rounded-xl font-bold hover:bg-gray-900 transition-all shadow-lg shadow-black/10 flex items-center justify-center gap-2 ${(submitted || (userAccount !== null && (userAccount.email_quota_daily - userAccount.email_used_today) <= 0)) ? "opacity-75 cursor-not-allowed" : ""}`}
                   >
                     {submitted ? (
                       <>
                         <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
                         Searching...
                       </>
-                    ) : "Find Creators"}
+                    ) : (userAccount !== null && (userAccount.email_quota_daily - userAccount.email_used_today) <= 0) ? "Quota Reached" : "Find Creators"}
                   </button>
                 </div>
 

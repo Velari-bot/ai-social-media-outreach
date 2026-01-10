@@ -71,26 +71,29 @@ export async function POST(request: NextRequest) {
     // --- Quota Check ---
     const { getUserAccount } = await import('@/lib/database');
     const account = await getUserAccount(userId);
+    let remaining = 999999;
 
     if (account) {
-      const remaining = account.email_quota_daily - account.email_used_today;
+      remaining = account.email_quota_daily - account.email_used_today;
       if (remaining <= 0 && account.plan !== 'enterprise') {
         return NextResponse.json(
           { error: 'Daily search limit reached. Please upgrade your plan for more searches.' },
           { status: 403 }
         );
       }
-    } else {
-      // Optional: Auto-create a free account if they don't have one? 
-      // For now, assume they need an account/plan.
-      return NextResponse.json({ error: 'User account not found' }, { status: 404 });
     }
+
+    // Extract batchSize and cap it at remaining if needed
+    const requestedBatchSize = criteria?.batchSize ? parseInt(criteria.batchSize) : 10;
+    const finalBatchSize = account && account.plan !== 'enterprise'
+      ? Math.min(requestedBatchSize, remaining)
+      : requestedBatchSize;
 
     // Create request in DB
     const newRequest = await createCreatorRequest(userId, {
       name,
       platforms,
-      criteria: criteria || {},
+      criteria: { ...criteria, batchSize: finalBatchSize },
     });
 
     if (!newRequest) {
@@ -102,17 +105,13 @@ export async function POST(request: NextRequest) {
 
     // Trigger search for the first platform (primary support)
     if (platforms.length > 0) {
-      // Don't await the search to keep UI responsive, or await?
-      // User wants "Verify data flows correctly", so maybe synchronous is better for debugging/reliability initially.
-      // But for production, async is better.
-      // Let's do it synchronously for now to ensure we catch errors.
       try {
-        const { searchCreators } = await import('@/lib/services/creator-service');
-        await searchCreators({
+        const { discoveryPipeline } = await import('@/lib/services/discovery-pipeline');
+        await discoveryPipeline.discover({
           userId,
           platform: platforms[0].toLowerCase() as any, // Cast to Platform type
           filters: criteria,
-          requestedCount: 10, // Default batch size
+          requestedCount: finalBatchSize,
         });
 
         // Update request status to in_progress or delivered?
@@ -148,7 +147,7 @@ export async function POST(request: NextRequest) {
 
     // Increment quota usage
     const { incrementEmailQuota } = await import('@/lib/database');
-    await incrementEmailQuota(userId);
+    await incrementEmailQuota(userId, finalBatchSize);
 
     return NextResponse.json({
       success: true,

@@ -2,7 +2,7 @@
 export type Platform = 'instagram' | 'tiktok' | 'youtube';
 
 export interface Creator {
-  id: number;
+  id: string | number;
   platform: Platform;
   handle: string;
   modash_creator_id: string | null;
@@ -11,11 +11,26 @@ export interface Creator {
   detailed_profile_fetched_at: string | null;
   email_found: boolean;
   clay_enriched_at: string | null;
+  enrichment_status?: 'pending' | 'processing' | 'enriched' | 'failed';
   basic_profile_data: Record<string, any> | null;
   detailed_profile_data: Record<string, any> | null;
   email: string | null;
+  phone?: string | null;
+  bio?: string | null;
+  website?: string | null;
+  source?: string | 'influencers_club';
   created_at: string;
   updated_at: string;
+}
+
+export interface DiscoveryPipelineResponse {
+  creators: Creator[];
+  meta: {
+    total_requested: number;
+    internal_hits: number;
+    external_fetches: number;
+    credits_consumed: number;
+  };
 }
 
 export interface SearchRequest {
@@ -82,6 +97,12 @@ export interface ModashDetailedProfile {
 // Clay API response types
 export interface ClayEnrichmentResult {
   email?: string;
+  phone?: string;
+  bio?: string;
+  website?: string;
+  full_name?: string;
+  location?: string;
+  social_links?: Record<string, string>;
   email_verified?: boolean;
   [key: string]: any;
 }
