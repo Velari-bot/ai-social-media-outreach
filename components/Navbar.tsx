@@ -91,9 +91,6 @@ function NavbarContent() {
               Dashboard
             </Link>
           )}
-          <Link href="/validation-demo" className="text-sm font-medium text-gray-600 hover:text-black transition-colors">
-            Validation Test
-          </Link>
         </div>
 
         {/* Center Section: Logo (Desktop: Center, Mobile: Left) */}
