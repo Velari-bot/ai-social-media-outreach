@@ -76,11 +76,11 @@ async function getTransporter() {
     });
 }
 
-export async function sendBookingEmails(booking: BookingDetails & { start: Date, end: Date }) {
+export async function sendBookingEmails(booking: BookingDetails & { start: Date, end: Date, meetLink?: string }) {
     const transporter = await getTransporter();
 
-    const MEETING_LOCATION = process.env.MEETING_LOCATION || 'Google Meet';
-    const MEETING_LINK = process.env.MEETING_LINK || 'https://meet.google.com/your-default-code';
+    const MEETING_LOCATION = 'Google Meet';
+    const MEETING_LINK = booking.meetLink || process.env.MEETING_LINK || 'https://meet.google.com/your-default-code';
 
     // 1. Generate ICS
     const event = {
