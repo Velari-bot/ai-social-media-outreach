@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CreditCard, DollarSign, ArrowUpRight, ArrowDownRight, RefreshCcw, ExternalLink, Loader2 } from "lucide-react";
+import { CreditCard, DollarSign, ArrowUpRight, ArrowDownRight, RefreshCcw, ExternalLink, Loader2, Trash2 } from "lucide-react";
 
 export default function AdminStripe() {
     const [revenueStats, setRevenueStats] = useState([
@@ -37,6 +37,28 @@ export default function AdminStripe() {
         }
         fetchBilling();
     }, []);
+
+    const handleDeleteTransaction = async (transactionId: string) => {
+        if (!confirm('Are you sure you want to delete this transaction? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/admin/billing/transaction?id=${transactionId}`, {
+                method: 'DELETE',
+            });
+
+            if (res.ok) {
+                // Remove from local state
+                setRecentTransactions(prev => prev.filter(tx => tx.id !== transactionId));
+            } else {
+                alert('Failed to delete transaction');
+            }
+        } catch (err) {
+            console.error('Error deleting transaction:', err);
+            alert('Error deleting transaction');
+        }
+    };
 
     return (
         <div className="space-y-8">
@@ -85,19 +107,20 @@ export default function AdminStripe() {
                                 <th className="px-6 py-4">Amount</th>
                                 <th className="px-6 py-4">Status</th>
                                 <th className="px-6 py-4 text-right">Time</th>
+                                <th className="px-6 py-4 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-12 text-center text-gray-400 font-bold">
+                                    <td colSpan={6} className="px-6 py-12 text-center text-gray-400 font-bold">
                                         <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                                         Loading transactions...
                                     </td>
                                 </tr>
                             ) : recentTransactions.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-12 text-center text-gray-400 font-bold">
+                                    <td colSpan={6} className="px-6 py-12 text-center text-gray-400 font-bold">
                                         No transactions found.
                                     </td>
                                 </tr>
@@ -114,6 +137,15 @@ export default function AdminStripe() {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-right text-xs text-gray-500 font-medium">{tx.date}</td>
+                                        <td className="px-6 py-4 text-right">
+                                            <button
+                                                onClick={() => handleDeleteTransaction(tx.id)}
+                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="Delete transaction"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))
                             )}
