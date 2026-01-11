@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Database, Search, Filter, Instagram, Youtube, Twitter, MoreVertical, Plus } from "lucide-react";
+import { Database, Search, Filter, Instagram, Youtube, Twitter, Plus, ExternalLink } from "lucide-react";
 
 export default function AdminCreators() {
     const [creators, setCreators] = useState<any[]>([]);
@@ -24,11 +24,22 @@ export default function AdminCreators() {
     }, []);
 
     const getPlatformIcon = (platform: string) => {
-        switch (platform) {
-            case 'Instagram': return <Instagram className="w-4 h-4 text-pink-500" />;
-            case 'YouTube': return <Youtube className="w-4 h-4 text-red-500" />;
-            case 'Twitter': return <Twitter className="w-4 h-4 text-blue-400" />;
+        switch (platform?.toLowerCase()) {
+            case 'instagram': return <Instagram className="w-4 h-4 text-pink-500" />;
+            case 'youtube': return <Youtube className="w-4 h-4 text-red-500" />;
+            case 'twitter': return <Twitter className="w-4 h-4 text-blue-400" />;
             default: return <Database className="w-4 h-4" />;
+        }
+    };
+
+    const getPlatformUrl = (platform: string, handle: string) => {
+        const cleanHandle = handle?.replace('@', '');
+        switch (platform?.toLowerCase()) {
+            case 'instagram': return `https://instagram.com/${cleanHandle}`;
+            case 'youtube': return `https://youtube.com/@${cleanHandle}`;
+            case 'twitter': return `https://twitter.com/${cleanHandle}`;
+            case 'tiktok': return `https://tiktok.com/@${cleanHandle}`;
+            default: return '#';
         }
     };
 
@@ -74,31 +85,57 @@ export default function AdminCreators() {
                         </div>
                     ) : (
                         creators.map((c) => (
-                            <div key={c.id} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="p-3 bg-gray-50 rounded-2xl group-hover:bg-black group-hover:text-white transition-colors">
-                                        {getPlatformIcon(c.platform)}
-                                    </div>
-                                    <button className="text-gray-300 hover:text-black transition-colors">
-                                        <MoreVertical className="w-5 h-5" />
-                                    </button>
+                            <div key={c.id} className="bg-white p-5 rounded-3xl border-2 border-gray-100 shadow-sm hover:shadow-xl hover:border-black transition-all group relative overflow-hidden">
+                                {/* Platform Badge - Top Left */}
+                                <div className="absolute top-4 left-4 px-3 py-1.5 bg-white border-2 border-gray-100 rounded-full shadow-sm flex items-center gap-2 z-10">
+                                    {getPlatformIcon(c.platform)}
+                                    <span className="text-xs font-black text-gray-900 uppercase">{c.platform || 'unknown'}</span>
                                 </div>
-                                <div className="space-y-1">
-                                    <h3 className="font-black text-lg text-black">{c.handle}</h3>
-                                    <p className="text-sm text-gray-500 font-medium">{c.niche} • {c.followers} Followers</p>
-                                </div>
-                                <div className="mt-6 pt-6 border-t border-gray-50 space-y-3">
-                                    <div className="flex items-center justify-between text-xs">
-                                        <span className="text-gray-400 font-bold uppercase tracking-wider">Email</span>
-                                        <span className="text-black font-medium">{c.email}</span>
+
+                                {/* Creator Info */}
+                                <div className="pt-12">
+                                    <h3 className="font-black text-xl text-black truncate">{c.handle}</h3>
+                                    <p className="text-sm text-gray-500 font-medium mt-1">{c.niche || 'General'}</p>
+
+                                    {/* Stats Grid */}
+                                    <div className="mt-6 grid grid-cols-2 gap-3">
+                                        <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-2xl border border-blue-200/50">
+                                            <div className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Followers</div>
+                                            <div className="text-2xl font-black text-blue-900">
+                                                {c.followers ? new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(c.followers) : "N/A"}
+                                            </div>
+                                        </div>
+                                        <div className="p-4 bg-gradient-to-br from-green-50 to-green-100/50 rounded-2xl border border-green-200/50">
+                                            <div className="text-xs font-bold text-green-600 uppercase tracking-wider mb-1">Status</div>
+                                            <div className={`text-lg font-black ${c.status === 'Verified' ? 'text-green-900' : 'text-amber-900'}`}>
+                                                {c.status || 'Pending'}
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center justify-between text-xs">
-                                        <span className="text-gray-400 font-bold uppercase tracking-wider">Status</span>
-                                        <span className={`px-2 py-0.5 rounded-full font-bold ${c.status === 'Verified' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                                            }`}>
-                                            {c.status}
-                                        </span>
+
+                                    {/* Email */}
+                                    <div className="mt-4">
+                                        {c.email ? (
+                                            <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-xl text-xs font-bold border border-blue-100">
+                                                <span className="truncate">{c.email}</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 text-gray-400 rounded-xl text-xs font-bold border border-gray-100">
+                                                <span>No Email Found</span>
+                                            </div>
+                                        )}
                                     </div>
+
+                                    {/* Go to Profile Button */}
+                                    <a
+                                        href={getPlatformUrl(c.platform, c.handle)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 bg-black text-white rounded-xl font-bold hover:bg-gray-800 transition-all group-hover:scale-105 active:scale-95 shadow-lg shadow-black/10"
+                                    >
+                                        <ExternalLink className="w-4 h-4" />
+                                        <span>Go to Profile</span>
+                                    </a>
                                 </div>
                             </div>
                         ))

@@ -134,6 +134,38 @@ function DashboardContent() {
             creditsUsed,
             creditsRemaining
           }));
+
+          // Try to link Stripe customer if not already linked
+          if (!accountRes.account.stripeCustomerId && user.email) {
+            try {
+              const token = await user.getIdToken();
+              const linkRes = await fetch('/api/user/link-stripe', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              const linkData = await linkRes.json();
+              if (linkData.success && linkData.customerId) {
+                console.log('Stripe customer linked:', linkData.customerId);
+                // Optionally refresh account data if plan was updated
+                if (linkData.plan) {
+                  const refreshedAccount = await fetchUserAccount();
+                  if (refreshedAccount.success && refreshedAccount.account) {
+                    const newCredits = refreshedAccount.account.email_quota_daily || 0;
+                    const newUsed = refreshedAccount.account.email_used_today || 0;
+                    setMetrics(prev => ({
+                      ...prev,
+                      totalCredits: newCredits,
+                      creditsUsed: newUsed,
+                      creditsRemaining: newCredits - newUsed
+                    }));
+                  }
+                }
+              }
+            } catch (linkError) {
+              console.error('Error linking Stripe customer:', linkError);
+              // Don't show error to user - this is a background operation
+            }
+          }
         }
 
         const gmailRes = await getGmailStatus();
@@ -468,55 +500,60 @@ function DashboardContent() {
                 <div className="p-4 sm:p-6 pb-20">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {viewingCreators.map((c, i) => (
-                      <div key={i} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-                        <div className="flex items-start gap-4">
-                          <div className="w-12 h-12 bg-gray-50 rounded-2xl flex-shrink-0 border border-gray-100 flex items-center justify-center p-3 shadow-inner relative overflow-hidden group-hover:scale-110 transition-transform">
-                            {getPlatformIcon(c.platform || viewingCampaign.platforms?.[0], "h-full w-full")}
-                          </div>
+                      <div key={i} className="bg-white p-5 rounded-3xl border-2 border-gray-100 shadow-sm hover:shadow-xl hover:border-black transition-all group relative overflow-hidden">
+                        {/* Platform Badge */}
+                        <div className="absolute top-4 left-4 px-3 py-1.5 bg-white border-2 border-gray-100 rounded-full shadow-sm flex items-center gap-2 z-10">
+                          {getPlatformIcon(c.platform || viewingCampaign.platforms?.[0], "w-4 h-4")}
+                          <span className="text-xs font-black text-gray-900 uppercase">{(c.platform || viewingCampaign.platforms?.[0] || 'unknown')}</span>
+                        </div>
+                        <div className="pt-8">
                           <div className="flex-1 min-w-0">
                             <h3 className="font-bold text-black truncate pr-6">{c.fullname || c.name || c.username}</h3>
                             <p className="text-xs text-gray-400 font-medium">@{String(c.handle || c.username || "").replace(/^@/, "")}</p>
 
-                            <div className="mt-4 grid grid-cols-2 gap-2">
-                              <div className="p-2 bg-gray-50 rounded-xl">
-                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                            <div className="mt-4 grid grid-cols-2 gap-3">
+                              <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-2xl border border-blue-200/50">
+                                <div className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">
                                   {(c.platform || viewingCampaign.platforms?.[0]) === 'youtube' ? 'Subscribers' : 'Followers'}
                                 </div>
-                                <div className="text-sm font-black text-black tracking-tight">{Number(c.followers) > 0 ? new Intl.NumberFormat('en-US', { notation: "compact" }).format(c.followers) : "N/A"}</div>
+                                <div className="text-2xl font-black text-blue-900">{Number(c.followers) > 0 ? new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(c.followers) : "N/A"}</div>
                               </div>
-                              <div className="p-2 bg-gray-50 rounded-xl">
-                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Engagement</div>
-                                <div className="text-sm font-black text-green-600 tracking-tight">{(Number(c.engagement_rate) * 100) > 0 ? `${(Number(c.engagement_rate) * 100).toFixed(1)}%` : "N/A"}</div>
+                              <div className="p-4 bg-gradient-to-br from-green-50 to-green-100/50 rounded-2xl border border-green-200/50">
+                                <div className="text-xs font-bold text-green-600 uppercase tracking-wider mb-1">Engagement</div>
+                                <div className="text-2xl font-black text-green-900">{(Number(c.engagement_rate) * 100) > 0 ? `${(Number(c.engagement_rate) * 100).toFixed(1)}%` : "N/A"}</div>
                               </div>
                             </div>
 
-                            <div className="mt-4 flex items-center gap-3">
+                            <div className="mt-4 space-y-2">
                               {c.email ? (
-                                <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black uppercase overflow-hidden">
-                                  <Mail className="w-3 h-3" />
+                                <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-xl text-xs font-bold border border-blue-100">
+                                  <Mail className="w-4 h-4 flex-shrink-0" />
                                   <span className="truncate">{c.email}</span>
                                 </div>
                               ) : (
-                                <div className="flex items-center gap-1.5 px-3 py-1 bg-gray-100 text-gray-400 rounded-lg text-[10px] font-black uppercase tracking-wider">
-                                  No Email
+                                <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 text-gray-400 rounded-xl text-xs font-bold border border-gray-100">
+                                  <Mail className="w-4 h-4 flex-shrink-0" />
+                                  <span>No Email Found</span>
                                 </div>
                               )}
-                              <div className="flex items-center gap-1.5 px-3 py-1 bg-gray-50 text-gray-500 rounded-lg text-[10px] font-black uppercase tracking-wider truncate">
-                                <MapPin className="w-3 h-3 flex-shrink-0" />
-                                <span className="truncate">{c.location || "-"}</span>
-                              </div>
+                              {c.location && (
+                                <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 text-gray-600 rounded-xl text-xs font-bold border border-gray-100">
+                                  <MapPin className="w-4 h-4 flex-shrink-0" />
+                                  <span className="truncate">{c.location}</span>
+                                </div>
+                              )}
                             </div>
+                            <a
+                              href={getPlatformUrl(c.platform || viewingCampaign.platforms?.[0], c.handle || c.username)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 bg-black text-white rounded-xl font-bold hover:bg-gray-800 transition-all group-hover:scale-105 active:scale-95 shadow-lg shadow-black/10"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              <span>Go to Profile</span>
+                            </a>
                           </div>
                         </div>
-
-                        <a
-                          href={getPlatformUrl(c.platform || viewingCampaign.platforms?.[0], c.handle || c.username)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="absolute top-4 right-4 text-gray-300 hover:text-black transition-colors opacity-0 group-hover:opacity-100 p-2 hover:bg-gray-50 rounded-lg"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </a>
                       </div>
                     ))}
                   </div>

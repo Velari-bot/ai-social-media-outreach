@@ -104,11 +104,13 @@ export default function PricingPage() {
 function PricingContent() {
     const router = useRouter();
     const [userId, setUserId] = useState<string | null>(null);
+    const [userEmail, setUserEmail] = useState<string | null>(null);
 
     useEffect(() => {
         if (!auth) return;
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             setUserId(user ? user.uid : null);
+            setUserEmail(user ? user.email : null);
         });
         return () => unsubscribe();
     }, []);
@@ -149,7 +151,8 @@ function PricingContent() {
                 body: JSON.stringify({
                     priceId,
                     planName: tier.name,
-                    userId
+                    userId,
+                    userEmail
                 }),
             });
 
