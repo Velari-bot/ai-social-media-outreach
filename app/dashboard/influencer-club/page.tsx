@@ -145,6 +145,43 @@ export default function InfluencerClubDashboard() {
         return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(num);
     };
 
+    const handleExportCSV = () => {
+        if (creators.length === 0) return;
+
+        // Create CSV headers
+        const headers = ["Name", "Handle", "Platform", "Followers", "Engagement Rate", "Location", "Country"];
+
+        // Create CSV rows
+        const rows = creators.map(c => [
+            c.name || "",
+            c.handle || "",
+            c.platform || "",
+            c.followers || 0,
+            c.engagementRate ? `${(c.engagementRate * 100).toFixed(2)}%` : "",
+            c.location || "",
+            c.country || ""
+        ]);
+
+        // Combine headers and rows
+        const csvContent = [
+            headers.join(","),
+            ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+        ].join("\n");
+
+        // Create blob and download
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+
+        link.setAttribute("href", url);
+        link.setAttribute("download", `influencer-club-results-${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = "hidden";
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <div className="min-h-screen bg-[#0f0f0f] text-white p-6 lg:p-12 font-sans">
             <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
