@@ -60,10 +60,19 @@ export class InfluencerClubClient {
      */
     private validateFilters(filters: any) {
         // Strict Validation: Keywords OR Category required.
-        const hasStrongTargeting =
-            (filters.keywords && filters.keywords.length > 0) ||
-            (filters.topics && filters.topics !== 'any' && filters.topics !== 'Any Topic') ||
-            filters.category;
+        const hasKeywords = filters.keywords &&
+            (Array.isArray(filters.keywords) ? filters.keywords.length > 0 : filters.keywords.trim() !== '');
+
+        const hasCategory = filters.category &&
+            filters.category !== '' &&
+            filters.category !== 'any';
+
+        const hasTopics = filters.topics &&
+            filters.topics !== 'any' &&
+            filters.topics !== 'Any Topic' &&
+            filters.topics !== '';
+
+        const hasStrongTargeting = hasKeywords || hasCategory || hasTopics;
 
         if (!hasStrongTargeting) {
             throw new Error("Influencer Club discovery requires keywords or a category to return results.");
@@ -81,24 +90,41 @@ export class InfluencerClubClient {
         offset?: number;
     }): Promise<ModashDiscoveryResult[]> {
         this.ensureApiKey();
+
+        // Debug: Log raw input filters
+        console.log("[InfluencerClub] Raw input filters:", JSON.stringify(params.filters, null, 2));
+
         this.validateFilters(params.filters);
 
         // 1. Prepare Filters Object
         const filters: any = {};
 
-        // Category / Topics (Required or Keyword fallback)
-        const category = params.filters.category ||
-            (params.filters.topics && params.filters.topics !== 'any' ? (Array.isArray(params.filters.topics) ? params.filters.topics[0] : params.filters.topics) : null) ||
-            (params.filters.categories && params.filters.categories.length > 0 ? params.filters.categories[0] : null);
-
-        if (category) {
-            filters.category = category;
+        // Category (Primary targeting method)
+        // Check for category first, then fall back to topics
+        let category = params.filters.category;
+        if (!category && params.filters.topics && params.filters.topics !== 'any' && params.filters.topics !== 'Any Topic') {
+            category = Array.isArray(params.filters.topics) ? params.filters.topics[0] : params.filters.topics;
+        }
+        if (!category && params.filters.categories && params.filters.categories.length > 0) {
+            category = params.filters.categories[0];
         }
 
-        // Keywords (Optional) -> keywords_in_bio
+        if (category && category !== '' && category !== 'any') {
+            filters.category = category;
+            console.log(`[InfluencerClub] Using category filter: ${category}`);
+        }
+
+        // Keywords (Alternative targeting method) -> keywords_in_bio
+        // Accept keywords from multiple possible field names
         const keywordInput = params.filters.keywords || params.filters.keyword;
         if (keywordInput) {
-            filters.keywords_in_bio = Array.isArray(keywordInput) ? keywordInput : [keywordInput];
+            const keywordArray = Array.isArray(keywordInput) ? keywordInput : [keywordInput];
+            // Filter out empty strings
+            const cleanedKeywords = keywordArray.filter(k => k && k.trim() !== '');
+            if (cleanedKeywords.length > 0) {
+                filters.keywords_in_bio = cleanedKeywords;
+                console.log(`[InfluencerClub] Using keywords filter: ${cleanedKeywords.join(', ')}`);
+            }
         }
 
         // Location (Optional) -> location array

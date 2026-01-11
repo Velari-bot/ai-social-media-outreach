@@ -25,6 +25,7 @@ async function getTransporter() {
 
     if (GMAIL_CLIENT_ID && GMAIL_CLIENT_SECRET && GMAIL_REFRESH_TOKEN) {
         try {
+            console.log('[Email] Attempting to use Gmail API OAuth2...');
             const { OAuth2 } = google.auth;
             const oauth2Client = new OAuth2(
                 GMAIL_CLIENT_ID,
@@ -43,6 +44,7 @@ async function getTransporter() {
                 });
             });
 
+            console.log('[Email] ✅ Gmail OAuth2 access token obtained');
             return nodemailer.createTransport({
                 service: 'gmail',
                 auth: {
@@ -55,23 +57,39 @@ async function getTransporter() {
                 },
             });
         } catch (error) {
-            console.error("Failed to create Gmail OAuth transporter, falling back to SMTP", error);
+            console.error("[Email] ❌ Failed to create Gmail OAuth transporter, falling back to SMTP:", error);
         }
     } else {
-        console.warn("Gmail API credentials missing. Falling back to SMTP.");
-        if (!GMAIL_CLIENT_ID) console.warn("Missing GMAIL_CLIENT_ID");
-        if (!GMAIL_CLIENT_SECRET) console.warn("Missing GMAIL_CLIENT_SECRET");
-        if (!GMAIL_REFRESH_TOKEN) console.warn("Missing GMAIL_ADMIN_REFRESH_TOKEN");
+        console.warn("[Email] Gmail API credentials incomplete. Falling back to SMTP.");
+        if (!GMAIL_CLIENT_ID) console.warn("[Email] ⚠️  Missing GMAIL_CLIENT_ID");
+        if (!GMAIL_CLIENT_SECRET) console.warn("[Email] ⚠️  Missing GMAIL_CLIENT_SECRET");
+        if (!GMAIL_REFRESH_TOKEN) console.warn("[Email] ⚠️  Missing GMAIL_ADMIN_REFRESH_TOKEN");
     }
 
     // Fallback to SMTP
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
+    const smtpPort = parseInt(process.env.SMTP_PORT || '587');
+
+    // Validate SMTP credentials
+    if (!smtpUser || !smtpPass) {
+        console.error('[Email] ❌ CRITICAL: SMTP credentials missing!');
+        console.error('[Email] ⚠️  SMTP_USER:', smtpUser ? '✅ SET' : '❌ NOT SET');
+        console.error('[Email] ⚠️  SMTP_PASS:', smtpPass ? '✅ SET' : '❌ NOT SET');
+        console.error('[Email] 📖 See EMAIL_FIX_GUIDE.md for setup instructions');
+        throw new Error('Email service not configured. Missing SMTP_USER or SMTP_PASS environment variables.');
+    }
+
+    console.log(`[Email] Using SMTP: ${smtpHost}:${smtpPort} with user: ${smtpUser}`);
+
     return nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.SMTP_PORT || '587'),
+        host: smtpHost,
+        port: smtpPort,
         secure: process.env.SMTP_SECURE === 'true',
         auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
+            user: smtpUser,
+            pass: smtpPass,
         },
     });
 }
@@ -114,6 +132,7 @@ Join the call here: ${MEETING_LINK}`,
 
     // 2. Send Email to User (Confirmation + ICS)
     try {
+        console.log(`[Email] Sending confirmation email to ${booking.email}...`);
         await transporter.sendMail({
             from: `"Verality Booking" <${process.env.SMTP_USER || CORY_EMAIL}>`, // Must match auth user for Gmail API
             to: booking.email,
@@ -143,15 +162,25 @@ Join the call here: ${MEETING_LINK}`,
                 content: icsFile,
             },
         });
-        console.log(`Confirmation email sent to ${booking.email}`);
-    } catch (err) {
-        console.error('Error sending user confirmation email:', err);
+        console.log(`[Email] ✅ Confirmation email sent successfully to ${booking.email}`);
+    } catch (err: any) {
+        console.error('[Email] ❌ Error sending user confirmation email:', err);
+        console.error('[Email] Error details:', {
+            message: err.message,
+            code: err.code,
+            command: err.command,
+            response: err.response,
+            responseCode: err.responseCode
+        });
+        // Re-throw so the booking API knows email failed
+        throw new Error(`Failed to send confirmation email: ${err.message}`);
     }
 
     // 3. Send Notification to Cory (if different from sender, but usually same inbox, so maybe skip or just logging)
     // If we are sending AS Cory, he will see it in Sent Items. But let's send a specific notification anyway just in case.
     if (booking.email !== CORY_EMAIL) {
         try {
+            console.log(`[Email] Sending admin notification to ${CORY_EMAIL}...`);
             await transporter.sendMail({
                 from: `"Verality Booking System" <${process.env.SMTP_USER || CORY_EMAIL}>`,
                 to: CORY_EMAIL,
@@ -171,9 +200,14 @@ Join the call here: ${MEETING_LINK}`,
         </div>
       `,
             });
-            console.log(`Notification email sent to ${CORY_EMAIL}`);
-        } catch (err) {
-            console.error('Error sending admin notification email:', err);
+            console.log(`[Email] ✅ Admin notification sent to ${CORY_EMAIL}`);
+        } catch (err: any) {
+            console.error('[Email] ❌ Error sending admin notification email:', err);
+            console.error('[Email] Error details:', {
+                message: err.message,
+                code: err.code
+            });
+            // Don't throw - admin notification is not critical
         }
     }
 }
