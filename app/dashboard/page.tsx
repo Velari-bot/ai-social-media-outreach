@@ -16,7 +16,7 @@ interface DashboardMetrics {
   activeConversations: number;
   meetingsInterested: number;
   remainingQuota: number;
-  replyRate: number;
+  totalEmailsSent: number;
   totalCreatorsFound: number;
   totalCredits: number;
   creditsUsed: number;
@@ -64,7 +64,7 @@ function DashboardContent() {
     activeConversations: 0,
     meetingsInterested: 0,
     remainingQuota: 0,
-    replyRate: 0,
+    totalEmailsSent: 0,
     totalCreatorsFound: 0,
     totalCredits: 0,
     creditsUsed: 0,
@@ -110,7 +110,7 @@ function DashboardContent() {
             activeConversations: stats.activeConversations || 0,
             meetingsInterested: stats.meetingsInterested || 0,
             remainingQuota: stats.remainingQuota || 0,
-            replyRate: stats.replyRate || 0,
+            totalEmailsSent: stats.totalEmailsSent || stats.email_used_today || 0,
             totalCreatorsFound: stats.total_creators_contacted || 0,
             totalCredits: 0, // Will be updated from account
             creditsUsed: 0, // Will be updated from account
@@ -123,7 +123,7 @@ function DashboardContent() {
           setUserName(accountRes.account.name || accountRes.account.first_name || accountRes.account.business_name || null);
           setOutreachIntent(accountRes.account.outreach_intent || "");
 
-          // Update credits info
+          // Update credits info and email count
           const totalCredits = accountRes.account.email_quota_daily || 0;
           const creditsUsed = accountRes.account.email_used_today || 0;
           const creditsRemaining = totalCredits - creditsUsed;
@@ -132,7 +132,8 @@ function DashboardContent() {
             ...prev,
             totalCredits,
             creditsUsed,
-            creditsRemaining
+            creditsRemaining,
+            totalEmailsSent: creditsUsed // Use the same value as creditsUsed
           }));
 
           // Try to link Stripe customer if not already linked
@@ -156,7 +157,8 @@ function DashboardContent() {
                       ...prev,
                       totalCredits: newCredits,
                       creditsUsed: newUsed,
-                      creditsRemaining: newCredits - newUsed
+                      creditsRemaining: newCredits - newUsed,
+                      totalEmailsSent: newUsed
                     }));
                   }
                 }
@@ -337,9 +339,9 @@ function DashboardContent() {
             color="bg-white border-2 border-gray-100"
           />
           <StatTile
-            label="Reply Rate"
-            value={`${metrics.replyRate}%`}
-            suffix="avg"
+            label="Emails Sent"
+            value={metrics.totalEmailsSent}
+            suffix="total"
             color="bg-white border-2 border-gray-100"
           />
           <StatTile
