@@ -23,6 +23,10 @@ export async function POST(request: NextRequest) {
             updateData.email_found = true;
         }
 
+        if (status) {
+            updateData.email_status = status;
+        }
+
         // Update Firestore Document
         // verality_id corresponds to the Firestore Document ID
         await db.collection('creators').doc(verality_id).update(updateData);

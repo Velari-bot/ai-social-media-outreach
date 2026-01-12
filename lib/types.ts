@@ -29,6 +29,21 @@ export interface Creator {
   updated_at: string;
 }
 
+/**
+ * New Firestore Creator Schema
+ * Primary Key: verality_id
+ */
+export interface FirestoreCreator {
+  verality_id: string; // REQUIRED (primary key)
+  full_name: string;
+  company: string;
+  title: string;
+  linkedin_url?: string;
+  email?: string; // initially empty
+  email_status?: string; // optional
+  [key: string]: any; // Allow for other fields like platform, handle, etc.
+}
+
 export interface DiscoveryPipelineResponse {
   creators: Creator[];
   meta: {
