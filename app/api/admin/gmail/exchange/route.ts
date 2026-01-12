@@ -22,10 +22,12 @@ export async function POST(request: NextRequest) {
         await db.collection('settings').doc('email').set({
             provider: 'gmail',
             email: profile.emailAddress,
+            picture: profile.picture || null,
             accessToken: tokens.access_token,
             refreshToken: tokens.refresh_token, // CRITICAL: This allows us to get new access tokens indefinitely
             expiresIn: tokens.expires_in,
             lastUpdated: new Date().toISOString(),
+            createdAt: new Date().toISOString(), // Track when it was first connected
             isActive: true
         });
 

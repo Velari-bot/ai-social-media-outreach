@@ -105,23 +105,31 @@ export async function refreshAccessToken(refreshToken: string): Promise<{
 }
 
 /**
- * Get user's Gmail profile
+ * Get user's Google Profile (Email)
+ * Uses the OIDC userinfo endpoint which works with the 'userinfo.email' scope
  */
 export async function getGmailProfile(accessToken: string): Promise<{
   emailAddress: string;
-  messagesTotal: number;
-  threadsTotal: number;
+  picture?: string;
 }> {
-  const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
+  // We use the userinfo endpoint because it only requires the userinfo.email scope.
+  // The Gmail profile endpoint requires gmail.readonly which is too intrusive for just sending.
+  const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
   });
 
   if (!response.ok) {
-    throw new Error('Failed to fetch Gmail profile');
+    const errorText = await response.text();
+    console.error("Failed to fetch user profile:", errorText);
+    throw new Error(`Failed to fetch Google profile: ${response.status} ${response.statusText}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  return {
+    emailAddress: data.email,
+    picture: data.picture
+  };
 }
 

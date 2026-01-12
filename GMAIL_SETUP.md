@@ -1,43 +1,26 @@
-# Gmail Integration Setup
+# Gmail Integration Setup Guide
 
-To enable Gmail features, you need to set up a Google Cloud Project and add the credentials to your `.env.local` file.
+If you see an **Error 400: redirect_uri_mismatch**, it means Google doesn't recognize the callback URL your app is sending. You need to whitelist it in the Google Cloud Console.
 
-## Step 1: Create a Google Cloud Project
-1. Go to [Google Cloud Console](https://console.cloud.google.com/).
-2. Create a new project (or select your existing one).
-3. Enable the **Gmail API**:
-   - Go to "APIs & Services" > "Library".
-   - Search for "Gmail API".
-   - Click "Enable".
+## How to Fix "redirect_uri_mismatch"
 
-## Step 2: Configure OAuth Consent Screen
-1. Go to "APIs & Services" > "OAuth consent screen".
-2. Select "External" User Type and click "Create".
-3. Fill in the required app information (App name, support email, etc.).
-4. Add the following scopes:
-   - `https://www.googleapis.com/auth/gmail.send`
-   - `https://www.googleapis.com/auth/gmail.readonly`
-   - `https://www.googleapis.com/auth/gmail.modify`
-5. Add your email as a Test User (important while the app is in "Testing" mode).
+1. Go to the [Google Cloud Console > Credentials](https://console.cloud.google.com/apis/credentials).
+2. Find the **OAuth 2.0 Client ID** you created for this project (it matches your `NEXT_PUBLIC_GMAIL_CLIENT_ID`).
+3. Click the **Edit** (pencil) icon.
+4. Scroll down to **Authorized redirect URIs**.
+5. Click **ADD URI** and paste the following:
 
-## Step 3: Create Credentials
-1. Go to "APIs & Services" > "Credentials".
-2. Click "Create Credentials" > "OAuth client ID".
-3. Application type: **Web application**.
-4. Name: `Modash Clone` (or similar).
-5. **Authorized redirect URIs** (add exactly this URL):
-   - `http://localhost:3000/api/gmail/callback`
-   *(If you deploy to Vercel later, you will need to add that URL too)*
-6. Click "Create".
+   **For Local Development:**
+   ```
+   http://localhost:3000/admin/google-callback
+   ```
 
-## Step 4: Add to .env.local
-Copy the **Client ID** and **Client Secret** and add them to your `.env.local` file in the root of the project:
+   **For Production (Live Site):**
+   ```
+   https://verality.io/admin/google-callback
+   ```
+   *(Replace `verality.io` with your actual domain)*
 
-```env
-# Gmail OAuth
-NEXT_PUBLIC_GMAIL_CLIENT_ID=your_client_id_here
-GMAIL_CLIENT_SECRET=your_client_secret_here
-```
-
-## Step 5: Restart Server
-Stop your running server (Ctrl+C) and run `npm run dev` again to load the new credentials.
+6. Click **SAVE**.
+7. Wait a few minutes (it can take up to 5 minutes to propagate).
+8. Try "Connect Gmail" again in your Admin Panel.
