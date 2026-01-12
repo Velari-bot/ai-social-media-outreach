@@ -69,8 +69,11 @@ async function getTransporter() {
     }
 
     // 4. Create Nodemailer Transporter
+    // we use explicit smtp settings instead of 'service: gmail' to ensure correct ssl/tls handling
     const transporter = nodemailer.createTransport({
-        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true, // use SSL
         auth: {
             type: 'OAuth2',
             user: emailUser,
