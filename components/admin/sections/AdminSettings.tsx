@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Save, Shield, Bell, Globe, Key, Database } from "lucide-react";
+import { Save, Shield, Bell, Globe, Key, Database, Mail } from "lucide-react";
 
 export default function AdminSettings() {
     return (
@@ -68,6 +68,42 @@ export default function AdminSettings() {
                         </div>
                     </div>
                     <div className="p-8 space-y-4 text-sm">
+
+                        {/* Gmail Integration */}
+                        <div className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-2xl transition-colors group border border-dashed border-gray-200 hover:border-blue-200">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center text-red-500 group-hover:bg-white transition-colors shadow-sm">
+                                    <Mail className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <p className="font-bold text-black">Booking Email Sender</p>
+                                    <p className="text-xs text-gray-500 font-medium">Connect Gmail account for sending invites</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    const clientId = process.env.NEXT_PUBLIC_GMAIL_CLIENT_ID;
+                                    if (!clientId) {
+                                        alert("Configuration Error: NEXT_PUBLIC_GMAIL_CLIENT_ID is missing.");
+                                        return;
+                                    }
+                                    const redirectUri = `${window.location.origin}/admin/google-callback`;
+                                    const scope = [
+                                        'https://www.googleapis.com/auth/gmail.send',
+                                        // 'https://www.googleapis.com/auth/gmail.readonly', // Maybe irrelevant for just sending
+                                        'https://www.googleapis.com/auth/userinfo.email' // To get the email address
+                                    ].join(' ');
+
+                                    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&access_type=offline&prompt=consent`;
+
+                                    window.location.href = authUrl;
+                                }}
+                                className="text-xs font-bold text-white hover:bg-blue-700 bg-blue-600 px-4 py-2 rounded-xl transition-all shadow-sm shadow-blue-200"
+                            >
+                                Connect Gmail
+                            </button>
+                        </div>
+
                         <div className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-2xl transition-colors group">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center font-bold text-[10px] text-gray-400 group-hover:bg-white transition-colors">STR</div>

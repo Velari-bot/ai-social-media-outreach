@@ -12,20 +12,30 @@ const SMTP_FROM = process.env.SMTP_FROM || 'bookings@verality.io';
 const CORY_EMAIL = 'cory@beyondvisionltd.org';
 
 // Helper to get OAuth2 Transport if available
+// Helper to get OAuth2 Transport if available
 async function getTransporter() {
-    // Check if we have a system admin token stored in Firestore or Env
-    // For this "fix", we will try to use env vars for Service Account or User Refresh Token if provided
-    // Otherwise fall back to SMTP.
-    // BUT the user asked to "send email via gmail api".
-    // This usually implies using a refresh token to generate an access token.
+    // 1. Check Firestore for dynamic configuration (Admin Panel > Settings > Connect Gmail)
+    // This allows the admin to update the email sender without re-deploying env vars.
+    let firestoreConfig = null;
+    try {
+        const settingsDoc = await db.collection('settings').doc('email').get();
+        if (settingsDoc.exists) {
+            firestoreConfig = settingsDoc.data();
+        }
+    } catch (err) {
+        console.warn("[Email] Failed to fetch settings from Firestore (ignoring):", err);
+    }
 
     const GMAIL_CLIENT_ID = process.env.NEXT_PUBLIC_GMAIL_CLIENT_ID;
     const GMAIL_CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET;
-    const GMAIL_REFRESH_TOKEN = process.env.GMAIL_ADMIN_REFRESH_TOKEN; // New env var for the admin's refresh token
 
-    if (GMAIL_CLIENT_ID && GMAIL_CLIENT_SECRET && GMAIL_REFRESH_TOKEN) {
+    // Priority: Firestore Config -> Env Var Config
+    const refreshToken = firestoreConfig?.refreshToken || process.env.GMAIL_ADMIN_REFRESH_TOKEN;
+    const emailUser = firestoreConfig?.email || process.env.SMTP_USER || CORY_EMAIL;
+
+    if (GMAIL_CLIENT_ID && GMAIL_CLIENT_SECRET && refreshToken) {
         try {
-            console.log('[Email] Attempting to use Gmail API OAuth2...');
+            console.log(`[Email] Attempting to use Gmail API OAuth2 (User: ${emailUser})...`);
             const { OAuth2 } = google.auth;
             const oauth2Client = new OAuth2(
                 GMAIL_CLIENT_ID,
@@ -34,12 +44,15 @@ async function getTransporter() {
             );
 
             oauth2Client.setCredentials({
-                refresh_token: GMAIL_REFRESH_TOKEN
+                refresh_token: refreshToken
             });
 
             const accessToken = await new Promise((resolve, reject) => {
                 oauth2Client.getAccessToken((err, token) => {
-                    if (err) reject(err);
+                    if (err) {
+                        console.error("[Email] Error getting access token:", err);
+                        reject(err);
+                    }
                     resolve(token);
                 });
             });
@@ -49,10 +62,10 @@ async function getTransporter() {
                 service: 'gmail',
                 auth: {
                     type: 'OAuth2',
-                    user: process.env.SMTP_USER || CORY_EMAIL, // The email address of the admin
+                    user: emailUser,
                     clientId: GMAIL_CLIENT_ID,
                     clientSecret: GMAIL_CLIENT_SECRET,
-                    refreshToken: GMAIL_REFRESH_TOKEN,
+                    refreshToken: refreshToken,
                     accessToken: accessToken as string,
                 },
             });
@@ -63,7 +76,7 @@ async function getTransporter() {
         console.warn("[Email] Gmail API credentials incomplete. Falling back to SMTP.");
         if (!GMAIL_CLIENT_ID) console.warn("[Email] ⚠️  Missing GMAIL_CLIENT_ID");
         if (!GMAIL_CLIENT_SECRET) console.warn("[Email] ⚠️  Missing GMAIL_CLIENT_SECRET");
-        if (!GMAIL_REFRESH_TOKEN) console.warn("[Email] ⚠️  Missing GMAIL_ADMIN_REFRESH_TOKEN");
+        if (!refreshToken) console.warn("[Email] ⚠️  Missing Refresh Token (Env or Firestore)");
     }
 
     // Fallback to SMTP

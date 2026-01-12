@@ -169,14 +169,46 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen flex bg-gray-100 p-6">
+    <main className="min-h-screen flex p-6 items-center justify-center">
       <div className="w-full bg-white border border-gray-200 rounded-3xl overflow-hidden flex min-h-[calc(100vh-3rem)]">
-        {/* Left Side - Gradient Panel */}
-        <div className="hidden md:flex md:w-[40%] bg-gradient-to-b from-[#FFD4A3] via-[#FF9EC5] to-[#D4A3FF] rounded-l-3xl relative overflow-hidden">
-          {/* Logo */}
-          <div className="absolute top-8 left-8">
-            <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center overflow-hidden shadow-lg rotate-3 transition-transform hover:rotate-6 hover:scale-110">
-              <img src="/v-nav.png" alt="Verality" className="w-full h-full object-contain p-1" />
+        {/* Left Side - Rich Gradient & Personality */}
+        <div className="hidden md:flex md:w-[45%] bg-[#F3F1EB] rounded-l-3xl relative overflow-hidden flex-col justify-between p-12 relative">
+
+          {/* Rich Animated Gradient Background */}
+          <div className="absolute top-[-20%] left-[-20%] w-[90%] h-[90%] bg-[#FF9E0B]/30 blur-[100px] rounded-full mix-blend-multiply animate-blob" />
+          <div className="absolute bottom-[-20%] right-[-20%] w-[90%] h-[90%] bg-[#6B4BFF]/30 blur-[100px] rounded-full mix-blend-multiply animate-blob animation-delay-2000" />
+          <div className="absolute top-[40%] right-[-20%] w-[70%] h-[70%] bg-[#FF5252]/20 blur-[90px] rounded-full mix-blend-multiply animate-blob animation-delay-4000" />
+
+          {/* Noise Overlay */}
+          <div className="absolute inset-0 opacity-[0.4] bg-[url('/noise.png')] mix-blend-overlay pointer-events-none" />
+
+          {/* Logo Area */}
+          <div className="relative z-10 w-12 h-12 bg-black rounded-xl flex items-center justify-center shadow-xl rotate-3">
+            <img src="/v-nav.png" alt="Verality" className="w-5 h-5 object-contain" />
+          </div>
+
+          {/* Personality Card - Glassmorphism */}
+          <div className="relative z-10 glass-panel p-6 rounded-2xl border border-white/40 shadow-xl backdrop-blur-md bg-white/30 max-w-sm mt-auto transform hover:scale-[1.02] transition-transform duration-500">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm">
+                <img src="/mr-beast.jpg" alt="Creator" className="w-full h-full object-cover" />
+              </div>
+              <div>
+                <div className="text-sm font-bold text-[#1A1A1A]">MrBeast</div>
+                <div className="text-xs text-gray-600 font-medium">@mrbeast • YouTube</div>
+              </div>
+              <div className="ml-auto px-2 py-1 bg-green-100/80 text-green-700 text-[10px] font-bold uppercase tracking-wider rounded-full border border-green-200">
+                Replied
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-2 w-full bg-white/50 rounded-full overflow-hidden">
+                <div className="h-full w-[85%] bg-[#1A1A1A] rounded-full" />
+              </div>
+              <div className="flex justify-between text-xs font-semibold text-gray-600">
+                <span>Engagement Score</span>
+                <span>98/100</span>
+              </div>
             </div>
           </div>
         </div>

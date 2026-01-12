@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Caveat } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import { ErrorBoundary } from "./error-boundary";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const caveat = Caveat({ subsets: ["latin"], variable: "--font-caveat" });
 
 export const metadata: Metadata = {
   title: "Verality | AI Creator Outreach & Social Media Automation",
@@ -47,6 +48,8 @@ import AffiliateTracker from "@/components/AffiliateTracker";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import { Suspense } from "react";
 
+import CursorBloom from "@/components/CursorBloom";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -54,7 +57,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${inter.className} ${caveat.variable} font-sans`}>
+        <CursorBloom />
         <GoogleAnalytics GA_MEASUREMENT_ID={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || ''} />
         <ErrorBoundary>
           <Suspense fallback={null}>

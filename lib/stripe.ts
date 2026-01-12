@@ -1,7 +1,9 @@
 import Stripe from 'stripe';
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2024-06-20' as any, // Use the latest API version you're comfortable with
+const stripeKey = process.env.STRIPE_SECRET_KEY || 'dummy_key_for_build';
+
+export const stripe = new Stripe(stripeKey, {
+    apiVersion: '2024-06-20' as any,
     typescript: true,
 });
 

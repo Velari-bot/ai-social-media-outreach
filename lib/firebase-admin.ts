@@ -57,9 +57,22 @@ function initAdmin(): { app: App | null; db: Firestore | null; auth: Auth | null
   const serviceAccount = getServiceAccount();
 
   if (!serviceAccount) {
-    if (isBuildTime) {
+    if (isBuildTime || typeof window === 'undefined') {
       console.warn('Firebase Service Account missing during build/init. Using mock mode.');
-      return { app: null, db: null, auth: null };
+      // Return a dummy DB that allows chaining but does nothing
+      const mockDb = {
+        collection: () => mockDb,
+        doc: () => mockDb,
+        get: async () => ({ exists: false, data: () => ({}) }),
+        set: async () => { },
+        add: async () => ({ id: 'mock-id' }),
+        where: () => mockDb,
+        orderBy: () => mockDb,
+        limit: () => mockDb,
+        startAfter: () => mockDb,
+      } as unknown as Firestore;
+
+      return { app: null, db: mockDb, auth: null };
     }
 
     console.error('CRITICAL: FIREBASE_SERVICE_ACCOUNT is missing in environment variables.');

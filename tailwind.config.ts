@@ -12,6 +12,7 @@ const config: Config = {
         sans: ["var(--font-inter)", "sans-serif"],
         mono: ['"JetBrains Mono"', "monospace"],
         serif: ['"Playfair Display"', "serif"],
+        cursive: ["var(--font-caveat)", "cursive"],
       },
       colors: {
         background: "var(--background)",
