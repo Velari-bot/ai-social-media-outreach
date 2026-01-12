@@ -37,3 +37,7 @@ next-env.d.ts
 
 # firebase credentials
 ai-social-media-outreach-4e66c-firebase-adminsdk-fbsvc-00b1d928b3.json
+
+# temporary scripts
+verify-*.js
+find-clay-resources.js
