@@ -93,7 +93,7 @@ export async function sendBookingEmails(booking: BookingDetails & { start: Date,
     const MEETING_LINK = booking.meetLink || process.env.MEETING_LINK || 'https://meet.google.com/your-default-code';
 
     // 2. Generate ICS Calendar File
-    const event: EventAttributes = {
+    const event = {
         start: [
             booking.start.getFullYear(),
             booking.start.getMonth() + 1,
@@ -114,7 +114,7 @@ export async function sendBookingEmails(booking: BookingDetails & { start: Date,
     };
 
     const icsFile = await new Promise<string>((resolve, reject) => {
-        createEvent(event, (error, value) => {
+        createEvent(event, (error: any, value: any) => {
             if (error) reject(error);
             resolve(value);
         });
