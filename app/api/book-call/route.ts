@@ -64,13 +64,15 @@ export async function POST(request: NextRequest) {
             // Don't fail the booking if Google Meet creation fails
         }
 
-        // 3. Send Emails (with Meet link if available)
+        // 3. Email sending disabled per user request
+        /*
         await sendBookingEmails({
             ...bookingDetails,
             start,
             end,
             meetLink: meetLink || undefined
         });
+        */
 
         return NextResponse.json({
             success: true,
