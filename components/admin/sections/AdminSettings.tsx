@@ -110,10 +110,16 @@ export default function AdminSettings() {
                                     <button
                                         onClick={async () => {
                                             if (confirm("Disconnect Gmail account?")) {
-                                                // Simple disconnect by deleting the doc (for now, in a real app better to have an endpoint)
-                                                // but for UI strictly, we can just re-prompt connect.
-                                                // Ideally we should have a disconnect endpoint. 
-                                                // For now, let's just let them Re-Connect if they want to switch.
+                                                try {
+                                                    const res = await fetch('/api/admin/gmail/disconnect', { method: 'POST' });
+                                                    if (res.ok) {
+                                                        setGmailConnected(false);
+                                                        setGmailEmail("");
+                                                    }
+                                                } catch (err) {
+                                                    console.error("Failed to disconnect", err);
+                                                    alert("Failed to disconnect Gmail account. Please try again.");
+                                                }
                                             }
                                         }}
                                         className="text-xs font-bold text-gray-400 hover:text-red-500 px-3 py-1 rounded-lg transition-colors"
