@@ -18,31 +18,40 @@ export async function GET() {
         const users = snapshot.docs.map(doc => doc.data());
 
         const paidUsers = users.filter(u => u.role !== 'admin' && u.plan && u.plan.toLowerCase() !== 'free');
-        const mrr = paidUsers.reduce((sum, u) => sum + (PLAN_PRICES[u.plan.toLowerCase()] || 0), 0);
+        const mrr = paidUsers.reduce((sum, u) => sum + (PLAN_PRICES[(u.plan || '').toLowerCase()] || 0), 0);
 
         // Remove dummy multiplier. 1.0x MRR or whatever is actually in database.
         const totalRevenue = mrr;
 
-        // Recent Transactions (Mocking from recent paid user creations ONLY if no real transactions exist)
-        // In a real app, you'd fetch from a 'transactions' collection.
-        const recentTransactions = paidUsers
-            .sort((a, b) => {
-                const bDate = (b.created_at?.seconds) || (b.createdAt ? new Date(b.createdAt).getTime() / 1000 : 0);
-                const aDate = (a.created_at?.seconds) || (a.createdAt ? new Date(a.createdAt).getTime() / 1000 : 0);
-                return bDate - aDate;
-            })
-            .slice(0, 10)
-            .map((u, i) => {
-                const createdAt = u.created_at || u.createdAt;
-                const d = createdAt?.toDate ? createdAt.toDate() : (createdAt ? new Date(createdAt) : new Date());
-                return {
-                    id: `TXN_${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-                    customer: u.name || u.email || 'Customer',
-                    amount: `$${(PLAN_PRICES[u.plan.toLowerCase()] || 0).toLocaleString()}`,
-                    status: 'Succeeded',
-                    date: d.toLocaleString()
-                };
-            });
+        // Fetch Real Transactions from Firestore
+        let recentTransactions: any[] = [];
+        try {
+            const txSnapshot = await db.collection('wallet_transactions')
+                .orderBy('created_at', 'desc')
+                .limit(50)
+                .get();
+
+            if (!txSnapshot.empty) {
+                recentTransactions = txSnapshot.docs.map(doc => {
+                    const data = doc.data();
+                    const createdAt = data.created_at;
+                    const d = createdAt?.toDate ? createdAt.toDate() : (createdAt ? new Date(createdAt) : new Date());
+
+                    return {
+                        id: doc.id,
+                        customer: data.user_email || data.user_id || 'Unknown',
+                        amount: data.amount ? `$${data.amount}` : '$0.00',
+                        status: data.status || 'Completed',
+                        date: d.toLocaleString()
+                    };
+                });
+            }
+        } catch (err) {
+            console.warn("Failed to fetch wallet_transactions (collection might not exist yet)", err);
+        }
+
+        // Fallback: If no transactions exist, return empty array instead of mock data
+        // This stops the confusion where deleting something doesn't work because it was never real.
 
         return NextResponse.json({
             success: true,
