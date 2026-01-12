@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
         // Update Firestore Document
         // verality_id corresponds to the Firestore Document ID
-        await db.collection('creators').doc(verality_id).update(updateData);
+        await db.collection('creators').doc(verality_id).set(updateData, { merge: true });
 
         console.log(`[Clay Webhook] Successfully updated Firestore doc ${verality_id}`);
 
