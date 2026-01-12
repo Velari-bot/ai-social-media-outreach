@@ -15,24 +15,59 @@ const ADMIN_NAME = 'Aiden';
 // Helper to get OAuth2 Transport if available
 // Helper to get OAuth2 Transport if available
 async function getTransporter() {
-    // 1. Check Firestore for dynamic configuration (Admin Panel > Settings > Connect Gmail)
-    // This allows the admin to update the email sender without re-deploying env vars.
-    let firestoreConfig = null;
+    const adminEmail = 'benderaiden826@gmail.com';
+    let dynamicConfig: { refreshToken?: string; email?: string } | null = null;
+
+    // 1. Try to find "Connected Gmail" for the admin user (matches creator outreach setup)
     try {
-        const settingsDoc = await db.collection('settings').doc('email').get();
-        if (settingsDoc.exists) {
-            firestoreConfig = settingsDoc.data();
+        let userSnap = await db.collection('user_accounts').where('email', '==', adminEmail).limit(1).get();
+        if (userSnap.empty) {
+            userSnap = await db.collection('users').where('email', '==', adminEmail).limit(1).get();
+        }
+
+        if (!userSnap.empty) {
+            const userId = userSnap.docs[0].id;
+            const connDoc = await db.collection('gmail_connections').doc(userId).get();
+            if (connDoc.exists) {
+                const connData = connDoc.data();
+                if (connData && connData.refresh_token) {
+                    console.log(`[Email] Using OAuth connection from gmail_connections for ${adminEmail}`);
+                    dynamicConfig = {
+                        refreshToken: connData.refresh_token,
+                        email: connData.email || adminEmail
+                    };
+                }
+            }
         }
     } catch (err) {
-        console.warn("[Email] Failed to fetch settings from Firestore (ignoring):", err);
+        console.warn("[Email] Error checking gmail_connections:", err);
+    }
+
+    // 2. Fallback to settings document if not found in connections
+    if (!dynamicConfig) {
+        try {
+            const settingsDoc = await db.collection('settings').doc('email').get();
+            if (settingsDoc.exists) {
+                const data = settingsDoc.data();
+                if (data && data.refreshToken) {
+                    console.log(`[Email] Using config from settings/email`);
+                    dynamicConfig = {
+                        refreshToken: data.refreshToken,
+                        email: data.email
+                    };
+                }
+            }
+        } catch (err) {
+            console.warn("[Email] Error checking settings/email:", err);
+        }
     }
 
     const GMAIL_CLIENT_ID = process.env.NEXT_PUBLIC_GMAIL_CLIENT_ID;
     const GMAIL_CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET;
 
-    // Priority: Firestore Config -> Env Var Config
-    const refreshToken = firestoreConfig?.refreshToken || process.env.GMAIL_ADMIN_REFRESH_TOKEN;
-    const emailUser = firestoreConfig?.email || process.env.SMTP_USER || CORY_EMAIL;
+    // Combined Priority: Connections -> Settings -> Env Vars
+    const refreshToken = dynamicConfig?.refreshToken || process.env.GMAIL_ADMIN_REFRESH_TOKEN;
+    const emailUser = dynamicConfig?.email || process.env.SMTP_USER || CORY_EMAIL;
 
     if (GMAIL_CLIENT_ID && GMAIL_CLIENT_SECRET && refreshToken) {
         try {
@@ -41,7 +76,7 @@ async function getTransporter() {
             const oauth2Client = new OAuth2(
                 GMAIL_CLIENT_ID,
                 GMAIL_CLIENT_SECRET,
-                "https://developers.google.com/oauthplayground" // Callback URL
+                "https://developers.google.com/oauthplayground"
             );
 
             oauth2Client.setCredentials({
@@ -77,7 +112,7 @@ async function getTransporter() {
             console.error("[Email] ❌ Failed to create Gmail OAuth transporter, falling back to SMTP:", error);
         }
     } else {
-        console.warn("[Email] Gmail API credentials incomplete. Falling back to SMTP.");
+        console.warn("[Email] Gmail API credentials incomplete or missing. Falling back to SMTP.");
         if (!GMAIL_CLIENT_ID) console.warn("[Email] ⚠️  Missing GMAIL_CLIENT_ID");
         if (!GMAIL_CLIENT_SECRET) console.warn("[Email] ⚠️  Missing GMAIL_CLIENT_SECRET");
         if (!refreshToken) console.warn("[Email] ⚠️  Missing Refresh Token (Env or Firestore)");
@@ -94,7 +129,6 @@ async function getTransporter() {
         console.error('[Email] ❌ CRITICAL: SMTP credentials missing!');
         console.error('[Email] ⚠️  SMTP_USER:', smtpUser ? '✅ SET' : '❌ NOT SET');
         console.error('[Email] ⚠️  SMTP_PASS:', smtpPass ? '✅ SET' : '❌ NOT SET');
-        console.error('[Email] 📖 See EMAIL_FIX_GUIDE.md for setup instructions');
         throw new Error('Email service not configured. Missing SMTP_USER or SMTP_PASS environment variables.');
     }
 
