@@ -5,7 +5,7 @@ This guide explains how to configure the application to send booking confirmatio
 ## Prerequisites
 
 1.  Access to the **Google Cloud Console** (https://console.cloud.google.com/).
-2.  Access to the **Gmail account** you want to send emails FROM (e.g., `admin@verality.io` or `cory@beyondvisionltd.org`).
+2.  Access to the **Gmail account** you want to send emails FROM (e.g., `admin@verality.io` or `benderaiden826@gmail.com`).
 
 ## Step 1: Create Google Cloud Project & Credentials
 

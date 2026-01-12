@@ -8,8 +8,9 @@ import { db } from './firebase-admin'; // Assuming we store admin tokens here or
 // Environment variables should be set:
 // SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
 
-const SMTP_FROM = process.env.SMTP_FROM || 'bookings@verality.io';
-const CORY_EMAIL = 'cory@beyondvisionltd.org';
+const SMTP_FROM = process.env.SMTP_FROM || 'benderaiden826@gmail.com';
+const CORY_EMAIL = 'benderaiden826@gmail.com';
+const ADMIN_NAME = 'Aiden';
 
 // Helper to get OAuth2 Transport if available
 // Helper to get OAuth2 Transport if available
@@ -48,7 +49,7 @@ async function getTransporter() {
             });
 
             const accessToken = await new Promise((resolve, reject) => {
-                oauth2Client.getAccessToken((err, token) => {
+                oauth2Client.getAccessToken((err: Error | null, token?: string | null) => {
                     if (err) {
                         console.error("[Email] Error getting access token:", err);
                         reject(err);
@@ -58,17 +59,20 @@ async function getTransporter() {
             });
 
             console.log('[Email] ✅ Gmail OAuth2 access token obtained');
-            return nodemailer.createTransport({
-                service: 'gmail',
-                auth: {
-                    type: 'OAuth2',
-                    user: emailUser,
-                    clientId: GMAIL_CLIENT_ID,
-                    clientSecret: GMAIL_CLIENT_SECRET,
-                    refreshToken: refreshToken,
-                    accessToken: accessToken as string,
-                },
-            });
+            return {
+                transporter: nodemailer.createTransport({
+                    service: 'gmail',
+                    auth: {
+                        type: 'OAuth2',
+                        user: emailUser,
+                        clientId: GMAIL_CLIENT_ID,
+                        clientSecret: GMAIL_CLIENT_SECRET,
+                        refreshToken: refreshToken,
+                        accessToken: accessToken as string,
+                    },
+                }),
+                emailUser
+            };
         } catch (error) {
             console.error("[Email] ❌ Failed to create Gmail OAuth transporter, falling back to SMTP:", error);
         }
@@ -96,19 +100,22 @@ async function getTransporter() {
 
     console.log(`[Email] Using SMTP: ${smtpHost}:${smtpPort} with user: ${smtpUser}`);
 
-    return nodemailer.createTransport({
-        host: smtpHost,
-        port: smtpPort,
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: {
-            user: smtpUser,
-            pass: smtpPass,
-        },
-    });
+    return {
+        transporter: nodemailer.createTransport({
+            host: smtpHost,
+            port: smtpPort,
+            secure: process.env.SMTP_SECURE === 'true',
+            auth: {
+                user: smtpUser,
+                pass: smtpPass,
+            },
+        }),
+        emailUser: smtpUser
+    };
 }
 
 export async function sendBookingEmails(booking: BookingDetails & { start: Date, end: Date, meetLink?: string }) {
-    const transporter = await getTransporter();
+    const { transporter, emailUser } = await getTransporter();
 
     const MEETING_LOCATION = 'Google Meet';
     const MEETING_LINK = booking.meetLink || process.env.MEETING_LINK || 'https://meet.google.com/your-default-code';
@@ -129,10 +136,10 @@ export async function sendBookingEmails(booking: BookingDetails & { start: Date,
 Join the call here: ${MEETING_LINK}`,
         location: MEETING_LOCATION,
         url: MEETING_LINK,
-        organizer: { name: 'Verality Team', email: CORY_EMAIL },
+        organizer: { name: 'Verality Team', email: emailUser },
         attendees: [
             { name: booking.name, email: booking.email, rsvp: true, partstat: 'ACCEPTED', role: 'REQ-PARTICIPANT' },
-            { name: 'Cory', email: CORY_EMAIL, rsvp: true, partstat: 'ACCEPTED', role: 'CHAIR' }
+            { name: ADMIN_NAME, email: emailUser, rsvp: true, partstat: 'ACCEPTED', role: 'CHAIR' }
         ]
     };
 
@@ -147,7 +154,7 @@ Join the call here: ${MEETING_LINK}`,
     try {
         console.log(`[Email] Sending confirmation email to ${booking.email}...`);
         await transporter.sendMail({
-            from: `"Verality Booking" <${process.env.SMTP_USER || CORY_EMAIL}>`, // Must match auth user for Gmail API
+            from: `"Verality Booking" <${emailUser}>`, // Must match auth user for Gmail API
             to: booking.email,
             subject: 'Booking Confirmed: Call with Verality',
             text: `Hi ${booking.name},\n\nYour call has been confirmed for ${booking.date} at ${booking.time} (30 mins).\n\nJoin the call here: ${process.env.MEETING_LINK || 'Check calendar invite'}\n\nPlease find the calendar invite attached.\n\nBest,\nVerality Team`,
@@ -189,19 +196,21 @@ Join the call here: ${MEETING_LINK}`,
         throw new Error(`Failed to send confirmation email: ${err.message}`);
     }
 
-    // 3. Send Notification to Cory (if different from sender, but usually same inbox, so maybe skip or just logging)
-    // If we are sending AS Cory, he will see it in Sent Items. But let's send a specific notification anyway just in case.
-    if (booking.email !== CORY_EMAIL) {
+    // 3. Send Notification to Aiden (if different from sender, but usually same inbox, so maybe skip or just logging)
+    // If we are sending AS Aiden, he will see it in Sent Items. But let's send a specific notification anyway just in case.
+    if (booking.email !== emailUser) {
         try {
-            console.log(`[Email] Sending admin notification to ${CORY_EMAIL}...`);
+            console.log(`[Email] Sending admin notification to ${emailUser}...`);
             await transporter.sendMail({
-                from: `"Verality Booking System" <${process.env.SMTP_USER || CORY_EMAIL}>`,
-                to: CORY_EMAIL,
+                from: `"Verality Booking System" <${emailUser}>`,
+                to: emailUser,
                 subject: `New Booking: ${booking.name} - ${booking.company}`,
                 text: `New booking received.\n\nName: ${booking.name}\nEmail: ${booking.email}\nCompany: ${booking.company}\nTier Guess: ${booking.selectedTierGuess}\nDate: ${booking.date}\nTime: ${booking.time}`,
                 html: `
         <div style="font-family: sans-serif; color: #333;">
           <h1>New Booking Received</h1>
+          <p>Hi ${ADMIN_NAME},</p>
+          <p>You have a new booking from <strong>${booking.name}</strong>.</p>
           <ul>
             <li><strong>Name:</strong> ${booking.name}</li>
             <li><strong>Email:</strong> ${booking.email}</li>
@@ -213,7 +222,7 @@ Join the call here: ${MEETING_LINK}`,
         </div>
       `,
             });
-            console.log(`[Email] ✅ Admin notification sent to ${CORY_EMAIL}`);
+            console.log(`[Email] ✅ Admin notification sent to ${emailUser}`);
         } catch (err: any) {
             console.error('[Email] ❌ Error sending admin notification email:', err);
             console.error('[Email] Error details:', {

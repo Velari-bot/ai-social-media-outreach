@@ -104,7 +104,7 @@ export default function BookingWizard() {
                     We've scheduled your call for <strong>{selectedSlot?.date}</strong> at <strong>{format(parseISO(selectedSlot!.startTime), 'h:mm a')}</strong> ({userTimezone}).
                 </p>
                 <p className="text-gray-600 mb-8">
-                    You'll receive an email from <strong>benderaiden826</strong> for confirmations and reminders automatically. This same system will be set up for your email sending with creators.
+                    You'll receive an email from <strong>benderaiden826@gmail.com</strong> for confirmations and reminders automatically. This same system will be set up for your email sending with creators.
                 </p>
 
                 <button
