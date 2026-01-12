@@ -109,6 +109,33 @@ export default function AdminSettings() {
                                     </span>
                                     <button
                                         onClick={async () => {
+                                            if (confirm("Send a test email to yourself?")) {
+                                                const btn = document.getElementById('test-email-btn');
+                                                if (btn) btn.innerText = "Sending...";
+
+                                                try {
+                                                    const res = await fetch('/api/admin/gmail/test', { method: 'POST' });
+                                                    const data = await res.json();
+
+                                                    if (res.ok) {
+                                                        alert("Success! " + data.message);
+                                                    } else {
+                                                        alert("Error: " + JSON.stringify(data.error));
+                                                    }
+                                                } catch (err) {
+                                                    alert("Failed to call test endpoint.");
+                                                } finally {
+                                                    if (btn) btn.innerText = "Test Config";
+                                                }
+                                            }
+                                        }}
+                                        id="test-email-btn"
+                                        className="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-lg transition-colors border border-blue-100"
+                                    >
+                                        Test Config
+                                    </button>
+                                    <button
+                                        onClick={async () => {
                                             if (confirm("Disconnect Gmail account?")) {
                                                 try {
                                                     const res = await fetch('/api/admin/gmail/disconnect', { method: 'POST' });
