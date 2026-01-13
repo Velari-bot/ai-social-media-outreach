@@ -24,6 +24,7 @@ export interface Creator {
   phone?: string | null;
   bio?: string | null;
   website?: string | null;
+  niche?: string | null;
   source?: string | 'influencers_club';
   created_at: string;
   updated_at: string;
