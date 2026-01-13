@@ -136,7 +136,7 @@ export default function AdminCreators() {
 
                                     {/* Email */}
                                     <div className="mt-4">
-                                        {c.email ? (
+                                        {c.email && c.email !== 'No email' ? (
                                             <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-xl text-xs font-bold border border-blue-100">
                                                 <span className="truncate">{c.email}</span>
                                             </div>
