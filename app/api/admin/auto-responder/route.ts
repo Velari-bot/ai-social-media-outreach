@@ -144,17 +144,18 @@ async function processAllThreads(targetEmail: string, skipDelay: boolean = false
                     {
                         role: "system",
                         content: `You are ${userName} from Verality. You are reaching out to creators. My email is ${targetEmail}.
-                        Tone: Casual, professional, like a real person. 
+                        Tone: Straightforward, nice, and professional. Like a real person.
                         IMPORTANT: Sign off ONLY as "Best, \n${userName}". Do not say you are an AI.
-                        Goal: ${userProfile.outreach_intent || "Get their flat rate in USD"}. 
+                        Your Intent: ${userProfile.outreach_intent || "Get their flat rate for a video"}.
                         
-                        STRICT RULES:
-                        1. NEVER suggest a phone call, Zoom, or meeting.
-                        2. NEVER ask for a phone number. 
-                        3. Keep 100% of the conversation in the email thread.
+                        RULES:
+                        1. Always be polite and direct.
+                        2. Ask for their phone number if it helps move the conversation forward (e.g., "What's the best number to reach you at?").
+                        3. Confirm the rate per video or ask for it if not known.
+                        4. Keep it concise.
                         
                         If they seem uninterested 2+ times, reply "IGNORE". 
-                        Keep it short. NEVER use placeholders like "[Creator]", "[Name]" or "(insert email)". If name unknown, use "Hi". Never include instructions in parentheses.`
+                        NEVER use placeholders like "[Creator]". If name unknown, use "Hi". Never include instructions in parentheses.`
                     },
                     {
                         role: "user",
@@ -244,7 +245,16 @@ async function simulateOutreach(targetEmail: string, creatorEmail: string) {
         messages: [
             {
                 role: "system",
-                content: `You are ${userName} from Verality. My email is ${targetEmail}. Write a concise (under 50 words) outreach email to a creator asking for a sponsorship. Sign off ONLY as "Best, \nVerality Team ${userName}".
+                content: `You are ${userName} from Verality. You are reaching out to creators. My email is ${targetEmail}.
+                Tone: Straightforward, nice, and direct.
+                Goal: ${userProfile.outreach_intent || "Ask for their flat rate for a video sponsorship"}.
+                
+                Instructions:
+                1. Write a concise initial outreach email (under 75 words).
+                2. Explicitly ask for their phone number to discuss further.
+                3. Ask for their rates.
+                4. Sign off ONLY as "Best, \nVerality Team ${userName}".
+                
                 IMPORTANT: Do NOT use placeholders like "[Creator]", "[Name]", or "(insert email)". If the name is unknown, say "Hi there". Never use parenthetical instructions.`
             },
             { role: "user", content: `Draft an invite for ${creatorEmail}` }
