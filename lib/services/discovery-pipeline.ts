@@ -19,8 +19,9 @@ export class DiscoveryPipeline {
         requestedCount: number;
         platform: Platform;
         skipEnrichment?: boolean;
+        campaignId?: string;
     }): Promise<DiscoveryPipelineResponse> {
-        const { userId, filters, requestedCount, platform, skipEnrichment } = params;
+        const { userId, filters, requestedCount, platform, skipEnrichment, campaignId } = params;
 
         // 1. Query Internal Database first
         let internalCreators = await this.queryInternalDb(platform, filters, requestedCount);
@@ -108,7 +109,7 @@ export class DiscoveryPipeline {
         if (!skipEnrichment) {
             console.log(`[Discovery] Sending ${finalCreators.length} creators to Clay...`);
             // We want to update the returned objects with the new status/data
-            const enrichedFinalCreators = await this.bulkEnrichWithClay(finalCreators, userId);
+            const enrichedFinalCreators = await this.bulkEnrichWithClay(finalCreators, userId, campaignId);
             finalCreators = enrichedFinalCreators;
         }
 
@@ -219,7 +220,7 @@ export class DiscoveryPipeline {
     /**
      * Enrich batch of creators with Clay
      */
-    private async bulkEnrichWithClay(creators: Creator[], userId: string): Promise<Creator[]> {
+    private async bulkEnrichWithClay(creators: Creator[], userId: string, campaignId?: string): Promise<Creator[]> {
         const enriched: Creator[] = [];
 
         // Use Promise.all for parallel enrichment, but keep it robust
@@ -234,7 +235,8 @@ export class DiscoveryPipeline {
                 const clayResult = await clayClient.enrichCreator({
                     handle: creator.handle,
                     platform: creator.platform,
-                    userId: userId
+                    userId: userId,
+                    campaignId: campaignId
                 });
 
                 const updateData: Partial<Creator> = {

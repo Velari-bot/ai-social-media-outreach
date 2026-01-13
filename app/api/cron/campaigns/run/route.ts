@@ -113,6 +113,7 @@ export async function GET(req: NextRequest) {
                     platform: platform as any,
                     filters: campaign.criteria as any,
                     requestedCount: batchSize,
+                    campaignId: campaignId,
                     // skipEnrichment: false is default/implied now
                 });
 

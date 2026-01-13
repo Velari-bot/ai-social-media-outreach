@@ -89,6 +89,52 @@ export async function POST(request: NextRequest) {
             // Import dynamically to avoid circular deps if any, or just import at top if clean
             const { incrementEmailQuota } = await import('@/lib/database');
             await incrementEmailQuota(targetUserId, -1);
+        } else if (updateData.email_found && targetUserId) {
+            // AUTO-EMAIL LOGIC
+            // If we found an email, trigger the auto-responder immediately
+            // We use the `campaign_id` if available, or just the user context.
+            const campaignId = body.campaign_id;
+            const targetEmail = updateData.email;
+
+            console.log(`[Clay Webhook] Email found for ${verality_id}. Triggering auto-responder...`);
+
+            // We call the auto-responder endpoint internally or just import the logic.
+            // Importing logic is safer for serverless execution time (calling HTTP might timeout or be weird).
+            // But `simulateOutreach` is in a route file. 
+            // Better to fetch the endpoint so it runs independently? 
+            // Or just make a fetch call to ourselves.
+
+            // Actually, best to fetch the auto-responder endpoint "fire and forget" style 
+            // OR await it if we want to be sure.
+            // Let's await it to be safe.
+
+            try {
+                // Get the user's email to know who is sending
+                const { getUserAccount } = await import('@/lib/database');
+                const user = await getUserAccount(targetUserId);
+
+                if (user && user.email) {
+                    // We simulate an outreach
+                    // Note: We need the base URL. In Vercel, it is tricky.
+                    // But we can just import the logic if we extract it.
+                    // For now, let's try fetch with absolute URL fallback or localhost
+
+                    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+                    await fetch(`${baseUrl}/api/admin/auto-responder`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'simulate',
+                            targetEmail: user.email, // The user sending the email
+                            creatorEmail: targetEmail, // The creator receiving it
+                            campaignId: campaignId // Pass context if needed later
+                        })
+                    });
+                    console.log(`[Clay Webhook] Triggered auto-email to ${targetEmail} from ${user.email}`);
+                }
+            } catch (emailError) {
+                console.error(`[Clay Webhook] Failed to trigger auto-email:`, emailError);
+            }
         }
 
         console.log(`[Clay Webhook] Successfully updated Firestore doc ${verality_id}`);
