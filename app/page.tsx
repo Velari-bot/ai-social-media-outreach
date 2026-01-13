@@ -345,7 +345,10 @@ export default function Home() {
                 Book a Demo Call
               </Link>
             </div>
-            <p className="mt-8 text-white/40 text-sm font-medium">No credit card required. Cancel anytime.</p>
+            <p className="mt-8 text-white/40 text-sm font-medium">
+              No credit card required. Cancel anytime. <br />
+              <Link href="/privacy-policy" className="hover:text-white underline decoration-white/30 underline-offset-4">Privacy Policy</Link>
+            </p>
           </div>
         </div>
       </section>
