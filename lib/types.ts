@@ -41,6 +41,11 @@ export interface FirestoreCreator {
   linkedin_url?: string;
   email?: string; // initially empty
   email_status?: string; // optional
+  phone?: string;
+  region?: string;
+  picture_url?: string;
+  niche?: string;
+  followers?: number;
   [key: string]: any; // Allow for other fields like platform, handle, etc.
 }
 
