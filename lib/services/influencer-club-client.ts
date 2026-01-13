@@ -175,19 +175,29 @@ export class InfluencerClubClient {
         }
         // ----------------------------------------------------------------------------------
 
-        // 2. Prepare Payload (Official Structure)
-        const body = {
+        // 2. Prepare Payload (Flattened as per User Spec)
+        // User Spec: platform, keyword, niche, min_followers, max_followers, limit
+        const body: any = {
             platform: params.platform.toLowerCase(),
-            paging: {
-                limit: params.limit || 50,
-                page: params.offset ? Math.floor(params.offset / (params.limit || 50)) : 0
-            },
-            sort: {
-                sort_by: "relevancy",
-                sort_order: "desc"
-            },
-            filters: filters
+            limit: params.limit || 50,
+            offset: params.offset || 0, // Using offset for paging
+            // Standard Fields
+            min_followers: filters.min_followers || 1000,
+            // Add max_followers only if defined
+            ...(filters.max_followers ? { max_followers: filters.max_followers } : {}),
+            // Keyword/Niche logic
+            niche: filters.niche || undefined,
+            keyword: filters.keyword || (filters.keywords_in_bio ? filters.keywords_in_bio.join(' ') : "influencer"),
         };
+
+        // Add location if present (flat)
+        if (filters.location) {
+            body.location = filters.location; // Array of codes e.g. ["US"]
+        }
+
+        // Add sorting (flat)
+        body.sort_by = "relevancy";
+        body.sort_order = "desc";
 
         // 3. Log Request
         console.log("[InfluencerClub] Official API Query:", JSON.stringify(body, null, 2));
