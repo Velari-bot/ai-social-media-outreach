@@ -92,9 +92,10 @@ export class InfluencerClubClient {
         offset?: number;
     }): Promise<ModashDiscoveryResult[]> {
         this.ensureApiKey();
+        const requestId = Math.random().toString(36).substring(7);
 
         // Debug: Log raw input filters
-        console.log("[InfluencerClub] Raw input filters:", JSON.stringify(params.filters, null, 2));
+        console.log(`[InfluencerClub:${requestId}] Raw input filters:`, JSON.stringify(params.filters, null, 2));
 
         this.validateFilters(params.filters);
 
@@ -116,12 +117,12 @@ export class InfluencerClubClient {
         // relying solely on keywords in bio is too restrictive and returns 0 results.
         if (!category && params.filters.niche && params.filters.niche !== 'any') {
             category = params.filters.niche;
-            console.log(`[InfluencerClub] Auto-mapping niche '${params.filters.niche}' to category.`);
+            console.log(`[InfluencerClub:${requestId}] Auto-mapping niche '${params.filters.niche}' to category.`);
         }
 
         if (category && category !== '' && category !== 'any') {
             filters.category = category;
-            console.log(`[InfluencerClub] Using category filter: ${category}`);
+            console.log(`[InfluencerClub:${requestId}] Using category filter: ${category}`);
         }
 
         // Keywords (Alternative targeting method) -> keywords_in_bio
@@ -143,7 +144,7 @@ export class InfluencerClubClient {
             // Also send as 'keyword' and 'keywords' to match potential API variations
             filters.keyword = cleanedKeywords.join(' ');
             filters.keywords = cleanedKeywords;
-            console.log(`[InfluencerClub] Using keywords filter: ${cleanedKeywords.join(', ')}`);
+            console.log(`[InfluencerClub:${requestId}] Using keywords filter: ${cleanedKeywords.join(', ')}`);
         }
 
         // Location (Optional) -> location array
@@ -196,7 +197,7 @@ export class InfluencerClubClient {
         body.sort_order = "desc";
 
         // 3. Log Request
-        console.log("[InfluencerClub] Official API Query:", JSON.stringify(body, null, 2));
+        console.log(`[InfluencerClub:${requestId}] Official API Query:`, JSON.stringify(body, null, 2));
         await logApiCall({
             api_provider: 'influencer_club' as any,
             api_action: 'discovery',
@@ -206,6 +207,10 @@ export class InfluencerClubClient {
         try {
             const url = `${this.baseUrl}/public/v1/discovery/`;
             const authHeader = this.apiKey.startsWith('Bearer ') ? this.apiKey : `Bearer ${this.apiKey}`;
+            const maskedAuth = authHeader.substring(0, 15) + '...';
+
+            console.log(`[InfluencerClub:${requestId}] Calling URL: ${url}`);
+            console.log(`[InfluencerClub:${requestId}] Headers: Authorization: ${maskedAuth}`);
 
             const response = await fetch(url, {
                 method: "POST",
@@ -216,25 +221,35 @@ export class InfluencerClubClient {
                 body: JSON.stringify(body)
             });
 
+            console.log(`[InfluencerClub:${requestId}] Response Status: ${response.status} ${response.statusText}`);
+
             if (!response.ok) {
                 const text = await response.text();
-                throw new Error(`Influencer Club API error: ${text}`);
+                console.error(`[InfluencerClub:${requestId}] API Error Body:`, text);
+                throw new Error(`Influencer Club API error (${response.status}): ${text}`);
             }
 
-            const data = await response.json();
+            const rawText = await response.text();
+            let data;
+            try {
+                data = JSON.parse(rawText);
+            } catch (e) {
+                console.error(`[InfluencerClub:${requestId}] Failed to parse JSON response:`, rawText.substring(0, 500));
+                throw new Error(`Influencer Club returned invalid JSON`);
+            }
 
             // Response Structure: { total, limit, credits_left, accounts: [...] }
             const accounts = data.accounts || [];
 
             if (accounts.length > 0 && accounts[0].profile) {
                 const sp = accounts[0].profile;
-                console.log(`[InfluencerClub] Debug Sample: ${sp.username} - followers: ${sp.followers}, ER: ${sp.engagement_percent}%`);
+                console.log(`[InfluencerClub:${requestId}] Debug Sample: ${sp.username} - followers: ${sp.followers}, ER: ${sp.engagement_percent}%`);
             }
 
             if (data.credits_left) {
-                console.log(`[InfluencerClub] Credits Remaining: ${data.credits_left}`);
+                console.log(`[InfluencerClub:${requestId}] Credits Remaining: ${data.credits_left}`);
             }
-            console.log(`[InfluencerClub] Raw Return: ${accounts.length} / Total Matches: ${data.total}`);
+            console.log(`[InfluencerClub:${requestId}] Raw Return: ${accounts.length} / Total Matches: ${data.total}`);
 
             // 4. Normalization & Local Filtering (Post-Fetch Strategy)
             const normalizedCreators = accounts.map((p: any) => {
@@ -256,11 +271,11 @@ export class InfluencerClubClient {
             const maxFollowers = params.filters.maxFollowers || params.filters.followersMax ? Number(params.filters.maxFollowers || params.filters.followersMax) : undefined;
             const minEngagement = params.filters.minEngagementRate || params.filters.engagementRateMin ? Number(params.filters.minEngagementRate || params.filters.engagementRateMin) : undefined;
 
-            console.log(`[InfluencerClub] Filtering locally: minFollowers=${minFollowers}, minEngagement=${minEngagement}%`);
+            console.log(`[InfluencerClub:${requestId}] Filtering locally: minFollowers=${minFollowers}, minEngagement=${minEngagement}%`);
 
             // Debug: Log first 3 creators before filtering
             if (normalizedCreators.length > 0) {
-                console.log(`[InfluencerClub] Sample creators BEFORE filtering:`);
+                console.log(`[InfluencerClub:${requestId}] Sample creators BEFORE filtering:`);
                 normalizedCreators.slice(0, 3).forEach((c: any, i: number) => {
                     console.log(`  ${i + 1}. ${c.handle} - Followers: ${c.followers}, ER: ${(c.engagement_rate * 100).toFixed(2)}%`);
                 });
@@ -306,12 +321,12 @@ export class InfluencerClubClient {
                 return true;
             });
 
-            console.log(`[InfluencerClub] Post-Filter Return: ${filteredCreators.length} (from ${accounts.length})`);
+            console.log(`[InfluencerClub:${requestId}] Post-Filter Return: ${filteredCreators.length} (from ${accounts.length})`);
 
             return filteredCreators;
 
         } catch (error) {
-            console.error('Influencer Club discovery error:', error);
+            console.error(`[InfluencerClub:${requestId}] Influencer Club discovery error:`, error);
             throw error;
         }
     }
