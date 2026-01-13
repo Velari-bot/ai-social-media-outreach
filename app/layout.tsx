@@ -8,17 +8,25 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const caveat = Caveat({ subsets: ["latin"], variable: "--font-caveat" });
 
 export const metadata: Metadata = {
-  title: "Verality | #1 AI Creator Outreach & Influencer Marketing Platform",
-  description: "The complete AI creator outreach solution. Automated discovery, personalized emailing, and CRM for brands and agencies. Scale your influencer marketing today.",
-  keywords: ["AI creator outreach", "influencer marketing automation", "find creators", "automated dm", "influencer crm", "tiktok outreach", "instagram outreach"],
+  title: "AI Influencer Outreach Software – Automate Creator Campaigns | Verality",
+  description: "Verality automates influencer outreach using AI. Find creators, get emails, send DMs, and track campaigns in one platform.",
+  keywords: [
+    "ai social media outreach",
+    "influencer outreach software",
+    "ai influencer outreach",
+    "creator outreach platform",
+    "influencer marketing automation",
+    "automated social media outreach",
+    "influencer email finder"
+  ],
   authors: [{ name: "Verality Team" }],
   metadataBase: new URL('https://verality.io'),
   alternates: {
     canonical: '/',
   },
   openGraph: {
-    title: "Verality | #1 AI Creator Outreach Platform",
-    description: "Stop manual searching. Verality automates your entire creator outreach pipeline from discovery to signed deal.",
+    title: "AI Influencer Outreach Software – Automate Creator Campaigns | Verality",
+    description: "Verality automates influencer outreach using AI. Find creators, get emails, send DMs, and track campaigns in one platform.",
     url: 'https://verality.io',
     siteName: 'Verality',
     images: [
@@ -34,8 +42,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Verality | AI Creator Outreach Automation',
-    description: 'Scale your creator partnerships automatically with AI.',
+    title: 'AI Influencer Outreach Software – Automate Creator Campaigns | Verality',
+    description: 'Verality automates influencer outreach using AI. Find creators, get emails, send DMs, and track campaigns in one platform.',
     images: ['/v-nav.png'],
   },
   icons: {
@@ -50,6 +58,7 @@ export const metadata: Metadata = {
 
 import AffiliateTracker from "@/components/AffiliateTracker";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
+import Footer from "@/components/Footer";
 import { Suspense } from "react";
 
 import CursorBloom from "@/components/CursorBloom";
@@ -80,6 +89,7 @@ export default function RootLayout({
             },
           }}
         />
+        <Footer />
       </body>
     </html>
   );

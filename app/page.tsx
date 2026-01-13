@@ -32,12 +32,12 @@ export default function Home() {
         </div>
 
         <h1 className="text-6xl sm:text-7xl lg:text-[80px] font-[850] text-[#1A1A1A] mb-8 tracking-tighter leading-[1.05] max-w-5xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
-          The <span className="text-[#6B4BFF]">AI Creator Outreach</span> Platform.
+          <span className="text-[#6B4BFF]">AI Social Media Outreach</span> for Creators & Brands
         </h1>
 
         <p className="text-xl text-gray-600 mb-10 leading-relaxed font-medium max-w-2xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-200">
-          Verality is the all-in-one personalized outreach engine for high-growth brands and agencies.
-          <span className="block mt-2 text-gray-500">Discover vetted creators, automate personal emails, and close deals 10x faster.</span>
+          Verality is the all-in-one influencer outreach software.
+          <span className="block mt-2 text-gray-500">Find creators, get emails, send DMs, and track campaigns in one platform.</span>
         </p>
 
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center animate-in fade-in slide-in-from-bottom-6 duration-700 delay-300">
@@ -350,25 +350,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="mt-32 border-t border-gray-200">
-        <div className="max-w-[1440px] mx-auto px-6 py-12 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
-              <img src="/v-nav.png" alt="V" className="w-4 h-4" />
-            </div>
-            <span className="font-bold text-xl tracking-tight text-black">verality.io</span>
-          </div>
-          <div className="flex gap-8 text-sm font-semibold text-gray-500">
-            <Link href="/terms" className="hover:text-black">Terms</Link>
-            <Link href="/privacy" className="hover:text-black">Privacy</Link>
-            <Link href="/support" className="hover:text-black">Support</Link>
-          </div>
-          <div className="text-sm text-gray-400 font-medium">
-            © 2026 Verality Inc.
-          </div>
-        </div>
-      </footer>
     </main>
   );
 }
