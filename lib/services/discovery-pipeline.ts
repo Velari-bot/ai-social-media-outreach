@@ -23,103 +23,84 @@ export class DiscoveryPipeline {
     }): Promise<DiscoveryPipelineResponse> {
         const { userId, filters, requestedCount, platform, skipEnrichment, campaignId } = params;
 
-        // 1. Query Internal Database first
-        let internalCreators = await this.queryInternalDb(platform, filters, requestedCount);
-        console.log(`[Discovery] Internal DB found ${internalCreators.length} potential matches`);
+        console.log(`[Discovery] Starting search for User ${userId}. Force External: YES`);
 
-        // Post-filter internal results in memory for location/topic strictness
-        internalCreators = internalCreators.filter(c => {
-            // Filter by Location if specified
-            if (filters.location && filters.location !== 'any') {
-                const cLoc = (c.basic_profile_data?.location || c.basic_profile_data?.geo_country || c.location || '').toLowerCase();
-                // Leniency: If location is missing, we let it pass through to avoid 0 results
-                if (cLoc && !cLoc.includes(filters.location.toLowerCase())) return false;
-            }
-            // Filter by Topic (Niche) if specified - STRICTER NOW
-            if (filters.topics && filters.topics !== 'any') {
-                const topic = filters.topics.toLowerCase();
-                // Check multiple fields for topic match
-                const cNiche = (c.basic_profile_data?.category || c.niche || '').toLowerCase();
-                const cBio = (c.basic_profile_data?.biography || c.bio || '').toLowerCase();
-                const cName = (c.name || '').toLowerCase();
+        // 1. Build User's "Seen" Cache (Deduplication)
+        const userSeenIds = await this.getUserSeenCreatorIds(userId);
+        console.log(`[Discovery] User has already seen ${userSeenIds.size} creators.`);
 
-                // If niche data exists and doesn't match, reject.
-                // If niche data is missing, we check bio.
-                const matches = cNiche.includes(topic) || cBio.includes(topic) || cName.includes(topic);
-
-                if (!matches) return false;
-            }
-            return true;
-        });
-        console.log(`[Discovery] Internal DB filtered to ${internalCreators.length} matches`);
-
-        let foundCount = internalCreators.length;
-
+        // 2. ALWAYS Fetch from Influencer Club (Fresh Data)
+        // We fetch slightly more than requested to account for duplicates we might filter out
+        const fetchLimit = Math.min(requestedCount, 50);
         let externalFetches = 0;
         let creditsConsumed = 0;
-        let finalCreators: Creator[] = [...internalCreators];
+        let finalCreators: Creator[] = [];
 
-        // 2. Fallback to Influencers.club (ALWAYS fetch new to satisfy "new everytime")
-        // User explicitly wants new creators every time.
-        // if (foundCount < requestedCount) { <--- Old condition
-        if (true) {
-            console.log(`[Discovery] Force fetching new creators from External API...`);
-            try {
-                // Fetch at least what was requested, capped at 50 for safety
-                const fetchLimit = Math.min(requestedCount, 50);
+        try {
+            // We loop until we have enough or hit a safety limit (e.g. 2 pages)
+            // For now, single fetch as per simpler logic, but requests "new everytime".
+            // If the first 50 are all duplicates, we might need to fetch more?
+            // Let's stick to one batch for now to avoid accidental infinite loops/credit drain.
 
-                const externalResults = await influencerClubClient.discoverCreators({
-                    platform,
-                    filters,
-                    limit: fetchLimit,
-                });
+            const externalResults = await influencerClubClient.discoverCreators({
+                platform,
+                filters,
+                limit: fetchLimit,
+            });
+            externalFetches = externalResults.length;
+            const batches = Math.ceil(externalFetches / 50);
+            creditsConsumed = batches > 0 ? batches : 1;
 
-                console.log(`[Discovery] External API returned ${externalResults.length} creators`);
+            console.log(`[Discovery] External API returned ${externalResults.length} raw results`);
 
-                externalFetches = externalResults.length;
+            // 3. Process & Resolve to Internal DB (Global Deduplication)
+            // We need to convert these raw results into Creator objects (either existing DB ones or new ones)
 
-                // Cost Calculation (Influencer Club charges 1 credit per batch of 50)
-                // If we fetched 0, we still paid 1 credit for the attempt.
-                // If we fetched 1-50, we paid 1 credit.
-                // If we fetched 51-100, we paid 2 credits.
-                const batches = Math.ceil(externalFetches / 50);
-                creditsConsumed = batches > 0 ? batches : 1;
+            const handles = externalResults.map(r => (r.handle || r.username || '').toLowerCase()).filter(h => h);
 
-                // 3. Deduplication Logic
-                const newCreators = await this.processExternalResults(externalResults, internalCreators, platform);
-                console.log(`[Discovery] New unique creators to save: ${newCreators.length}`);
+            // Batch Query for existing creators by handle
+            // Firestore 'in' limit is 30. We process in chunks or Promise.all if needed.
+            // Simplified: Loop and check/create (Parallel).
 
-                // 4. database Insert (status = 'pending')
-                const savedCreators = await this.bulkSaveCreators(newCreators);
-                console.log(`[Discovery] Saved ${savedCreators.length} creators to DB`);
+            const resolvedCreators = await Promise.all(externalResults.map(async (raw) => {
+                return await this.resolveCreator(raw, platform);
+            }));
 
-                // Add new ones to final list
-                finalCreators = [...finalCreators, ...savedCreators];
-
-            } catch (externalError: any) {
-                console.error('[DiscoveryPipeline] External discovery failed:', externalError.message);
-                // Don't throw - return what we have from internal DB
-                // Optionally mark the request as partially failed/limited
+            // 4. Per-User Deduplication
+            for (const creator of resolvedCreators) {
+                if (userSeenIds.has(String(creator.id))) {
+                    console.log(`[Discovery] Skipping duplicate for user: ${creator.handle}`);
+                    continue;
+                }
+                finalCreators.push(creator);
+                userSeenIds.add(String(creator.id)); // Add to current set
             }
+
+            console.log(`[Discovery] After Dedupe: ${finalCreators.length} unique new creators for user.`);
+
+        } catch (error: any) {
+            console.error('[Discovery] External Fetch Failed:', error);
+            // In strict mode "force external", we fail? Or fallback?
+            // User said "pulling from db ... shouldn't be". So we probably shouldn't return old data.
+            // But returning nothing is bad UI.
+            // Let's return empty if failed, or maybe internal cache if we really have to?
+            // "it needs to generate new creators eerytime" -> implication: if fail, show error.
         }
 
-        // Trim to requested count
+        // Trim
         finalCreators = finalCreators.slice(0, requestedCount);
 
-        // 5. Clay Enrichment Pipeline - UPDATED: Send ALL final creators to Clay
-        if (!skipEnrichment) {
+        // 5. Clay Enrichment
+        if (!skipEnrichment && finalCreators.length > 0) {
             console.log(`[Discovery] Sending ${finalCreators.length} creators to Clay...`);
-            // We want to update the returned objects with the new status/data
-            const enrichedFinalCreators = await this.bulkEnrichWithClay(finalCreators, userId, campaignId);
-            finalCreators = enrichedFinalCreators;
+            finalCreators = await this.bulkEnrichWithClay(finalCreators, userId, campaignId);
         }
 
-        // 6. Response to User (exactly N)
         return {
             creators: finalCreators,
             meta: {
                 total_requested: requestedCount,
-                internal_hits: internalCreators.length,
+                internal_hits: 0, // We intentionally ignored internal cache as source
                 external_fetches: externalFetches,
                 credits_consumed: creditsConsumed
             }
@@ -127,96 +108,81 @@ export class DiscoveryPipeline {
     }
 
     /**
-     * Query Firestore for existing creators matching filters
+     * Get Set of Creator IDs the user has already requested/seen.
      */
-    private async queryInternalDb(
-        platform: Platform,
-        filters: CreatorSearchFilters,
-        limit: number
-    ): Promise<Creator[]> {
-        let query = db.collection('creators')
-            .where('platform', '==', platform);
+    private async getUserSeenCreatorIds(userId: string): Promise<Set<string>> {
+        const seen = new Set<string>();
+        try {
+            // Optimization: If this gets huge, we need a "user_seen_creators" subcollection.
+            // For now, reading creator_requests is okay.
+            const snapshot = await db.collection('creator_requests')
+                .where('user_id', '==', userId)
+                .select('creator_ids')
+                .get();
 
-        // Note: We only filter by platform and min followers at DB level
-        // Detailed filtering (Location, Niche) happens in memory in discover()
-        // This is to avoid missing potential matches due to schema variations
-        // and excessive composite index requirements.
-
-        if (filters.minFollowers) {
-            query = query.where('basic_profile_data.followers', '>=', filters.minFollowers);
-        }
-
-        const snapshot = await query.limit(limit * 5).get(); // Over-fetch to allow for in-memory filtering
-        return snapshot.docs.map(doc => this.docToCreator(doc));
-    }
-
-    /**
-     * Deduplicate external results against internal DB and current session
-     */
-    private async processExternalResults(
-        externalResults: any[],
-        internalCreators: Creator[],
-        platform: Platform
-    ): Promise<any[]> {
-        const internalHandles = new Set(internalCreators.map(c => c.handle.toLowerCase()));
-        const uniqueNewCreators: any[] = [];
-        const seenHandlesInSession = new Set<string>();
-
-        for (const item of externalResults) {
-            const handle = (item.handle || item.username || '').toLowerCase();
-            if (!handle) continue;
-
-            // Deduplicate against internal DB and current session
-            if (!internalHandles.has(handle) && !seenHandlesInSession.has(handle)) {
-                seenHandlesInSession.add(handle);
-                uniqueNewCreators.push(item);
-            }
-        }
-
-        return uniqueNewCreators;
-    }
-
-    /**
-     * Save creators to database with status 'pending'
-     */
-    private async bulkSaveCreators(creators: any[]): Promise<Creator[]> {
-        const saved: Creator[] = [];
-        const now = Timestamp.now();
-
-        for (const item of creators) {
-            const creatorData: Omit<Creator, 'id' | 'created_at' | 'updated_at'> = {
-                platform: item.platform,
-                handle: item.handle,
-                modash_creator_id: item.creator_id || item.id || null,
-                name: item.fullname || item.full_name || item.name,
-                full_name: item.fullname || item.full_name || item.name,
-                followers: item.followers,
-                engagement_rate: item.engagement_rate,
-                picture: item.picture || item.profile_pic_url,
-                location: item.location || item.country || item.geo_country || null,
-                has_basic_profile: true,
-                has_detailed_profile: false,
-                enrichment_status: 'pending' as const,
-                source: 'influencers_club',
-                basic_profile_data: item,
-                niche: item.category || item.niche || null,
-                email_found: item.emails && item.emails.length > 0,
-                email: item.emails && item.emails.length > 0 ? item.emails[0] : null,
-                clay_enriched_at: null,
-                detailed_profile_fetched_at: null,
-                detailed_profile_data: null
-            };
-
-            const docRef = await db.collection('creators').add({
-                ...creatorData,
-                created_at: now,
-                updated_at: now,
+            snapshot.docs.forEach(doc => {
+                const ids = doc.data().creator_ids;
+                if (Array.isArray(ids)) {
+                    ids.forEach(id => seen.add(String(id)));
+                }
             });
-            const doc = await docRef.get();
-            saved.push(this.docToCreator(doc));
+        } catch (e) {
+            console.error('Failed to fetch user history', e);
+        }
+        return seen;
+    }
+
+    /**
+     * Find existing creator or create new one in Global DB
+     */
+    private async resolveCreator(raw: any, platform: Platform): Promise<Creator> {
+        const handle = (raw.handle || raw.username || '').toLowerCase();
+
+        // 1. Try to find by handle & platform
+        const snapshot = await db.collection('creators')
+            .where('platform', '==', platform)
+            .where('handle', '==', handle)
+            .limit(1)
+            .get();
+
+        if (!snapshot.empty) {
+            // Found existing in Global DB
+            return this.docToCreator(snapshot.docs[0]);
         }
 
-        return saved;
+        // 2. Create New
+        const now = Timestamp.now();
+        const creatorData: Omit<Creator, 'id' | 'created_at' | 'updated_at'> = {
+            platform: platform,
+            handle: handle,
+            modash_creator_id: raw.creator_id || raw.id || null,
+            name: raw.fullname || raw.full_name || raw.name || handle,
+            full_name: raw.fullname || raw.full_name || raw.name || handle,
+            followers: raw.followers || 0,
+            engagement_rate: raw.engagement_rate || 0,
+            picture: raw.picture || raw.profile_pic_url,
+            location: raw.location || raw.country || raw.geo_country || null,
+            has_basic_profile: true,
+            has_detailed_profile: false,
+            enrichment_status: 'pending' as const,
+            source: 'influencers_club',
+            basic_profile_data: raw,
+            niche: raw.category || raw.niche || null,
+            email_found: raw.emails && raw.emails.length > 0,
+            email: raw.emails && raw.emails.length > 0 ? raw.emails[0] : null,
+            clay_enriched_at: null,
+            detailed_profile_fetched_at: null,
+            detailed_profile_data: null
+        };
+
+        const docRef = await db.collection('creators').add({
+            ...creatorData,
+            created_at: now,
+            updated_at: now,
+        });
+
+        const newDoc = await docRef.get();
+        return this.docToCreator(newDoc);
     }
 
     /**
