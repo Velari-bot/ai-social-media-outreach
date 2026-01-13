@@ -135,6 +135,21 @@ async function storeCreators(
         updated_at: now,
       });
       creators.push(docToCreator(doc));
+
+      // AUTO-PUSH TO CLAY (Fire and Forget)
+      // This ensures 24/7 automation: As soon as a creator is found/stored, they go to Clay.
+      const savedCreator = docToCreator(doc);
+      clayClient.enrichCreator({
+        creatorId: savedCreator.id,
+        handle: savedCreator.handle,
+        platform: savedCreator.platform,
+        name: creatorData.basic_profile_data.fullname || savedCreator.handle,
+        profileUrl: result.profile_url || result.url || undefined, // Pass URL if available from source
+        followers: creatorData.basic_profile_data.followers,
+        bio: creatorData.basic_profile_data.biography || creatorData.basic_profile_data.bio,
+        website: creatorData.basic_profile_data.external_url || creatorData.basic_profile_data.website,
+        niche: "", // Niche is usually filter-level, not per-creator in raw data
+      }).catch(err => console.error(`Failed to auto-push creator ${savedCreator.id} to Clay:`, err));
     }
   }
 

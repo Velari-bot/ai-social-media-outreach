@@ -39,52 +39,57 @@ export class ClayClient {
     handle: string;
     platform: string;
     profileUrl?: string; // New: we need the full URL for Clay
-    creatorId?: number;
+    creatorId?: number | string;
     userId?: string;
     name?: string; // Optional but helpful
+    niche?: string;
+    followers?: number;
+    bio?: string;
+    website?: string;
   }): Promise<ClayEnrichmentResult> {
-    this.ensureWebhookUrl();
+    // specific URL provided by user
+    const targetUrl = this.webhookUrl || 'https://api.clay.com/v3/sources/webhook/pull-in-data-from-a-webhook-2f50d72c-37c4-4ef0-86e9-f36fd3897aac';
 
     // Log the call
     await logApiCall({
       api_provider: 'clay',
       api_action: 'enrichment_push',
       reason: `Pushing ${params.handle} to Clay Webhook`,
-      creator_id: params.creatorId || null,
+      creator_id: typeof params.creatorId === 'number' ? params.creatorId : null,
       user_id: params.userId || null,
     });
 
     try {
-      // Construct exact payload matching our Clay Table columns
+      // Construct exact payload matching the User's Schema from Step 35
       const payload = {
-        "Creator Name": params.name || params.handle,
-        "Profile URL": params.profileUrl || this.constructProfileUrl(params.platform, params.handle),
-        "Platform": params.platform,
-        "verality_id": params.creatorId?.toString() || "", // Critical for callback matching
-        "user_id": params.userId || "",
-        "timestamp": new Date().toISOString()
+        "verality_id": params.creatorId?.toString() || "",
+        "creator_name": params.name || params.handle,
+        "platform": params.platform,
+        "username": params.handle,
+        "profile_url": params.profileUrl || this.constructProfileUrl(params.platform, params.handle),
+        "niche": params.niche || "",
+        "followers": params.followers || 0,
+        "bio": params.bio || "",
+        "website": params.website || "",
+        "user_id": params.userId || ""
       };
 
       console.log('Pushing to Clay:', JSON.stringify(payload));
 
-      const response = await fetch(this.webhookUrl, {
+      // Fire and forget (don't await response to block UI, but we catch errors)
+      fetch(targetUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload),
-      });
+      }).catch(err => console.error('Clay Webhook Background Error:', err));
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Clay Webhook error: ${response.status} - ${errorText}`);
-      }
-
-      // We return a "pending" result because enrichment is asynchronous
+      // We return a "pending" result immediately
       return {
         email: null,
-        email_found: false, // Will be updated via callback later
-        clay_enriched_at: new Date().toISOString(), // Mark as sent
+        email_found: false,
+        clay_enriched_at: new Date().toISOString(),
         is_pending: true
       } as any;
 
