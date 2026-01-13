@@ -155,14 +155,13 @@ export class InfluencerClubClient {
         // --- ADDED: Pass numeric filters to API to avoid "fetch and filter out everything" ---
         const minFollowersVal = params.filters.minFollowers || params.filters.followersMin;
         if (minFollowersVal) {
-            filters.followers_min = String(minFollowersVal);
+            // Simplify: Send only one standard format.
+            // Using min_followers (snake_case) is safest for this API style.
             filters.min_followers = Number(minFollowersVal);
-            filters.followers = { min: Number(minFollowersVal) };
         }
 
         const maxFollowersVal = params.filters.maxFollowers || params.filters.followersMax;
         if (maxFollowersVal) {
-            filters.followers_max = String(maxFollowersVal);
             filters.max_followers = Number(maxFollowersVal);
         }
         // ----------------------------------------------------------------------------------
