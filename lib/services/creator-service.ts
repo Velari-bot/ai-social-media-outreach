@@ -30,7 +30,7 @@ function docToCreator(doc: any): Creator {
     id: parseInt(doc.id) || doc.id,
     platform: data.platform,
     handle: data.handle,
-    modash_creator_id: data.modash_creator_id || null,
+    verality_id: data.verality_id || data.modash_creator_id || null, // Backwards compat
     has_basic_profile: data.has_basic_profile || false,
     has_detailed_profile: data.has_detailed_profile || false,
     detailed_profile_fetched_at: data.detailed_profile_fetched_at?.toDate?.()?.toISOString() || data.detailed_profile_fetched_at || null,
@@ -101,7 +101,7 @@ async function storeCreators(
     const creatorData = {
       platform: safePlatform,
       handle: safeHandle,
-      modash_creator_id: result.user_id || result.id || safeHandle, // Use their ID as "modash_creator_id" for now to maintain schema compatibility
+      verality_id: result.user_id || result.id || safeHandle, // Use their ID as "verality_id" for now to maintain schema compatibility
       has_basic_profile: true,
       has_detailed_profile: false,
       // Store raw data for debugging/future use, but ensure key fields are top-level
@@ -314,13 +314,13 @@ export async function selectCreatorForOutreach(params: {
   }
 
   // Need to fetch detailed profile
-  if (!creator.modash_creator_id) {
-    throw new Error('Creator does not have Modash ID. Cannot fetch detailed profile.');
+  if (!creator.verality_id) {
+    throw new Error('Creator does not have Verality ID. Cannot fetch detailed profile.');
   }
 
   try {
-    // Call Modash Detailed Profile API
-    const detailedProfile = await modashClient.getDetailedProfile(creator.modash_creator_id);
+    // Call Modash Detailed Profile API (Ensure client can handle this parameter renamed if necessary)
+    const detailedProfile = await modashClient.getDetailedProfile(creator.verality_id);
 
     // Update creator with detailed profile data
     const docRef = db.collection('creators').doc(String(creator.id));
