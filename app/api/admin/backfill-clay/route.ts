@@ -38,7 +38,8 @@ export async function POST(req: NextRequest) {
                 const basicData = data.basic_profile_data || {};
 
                 // Ensure we have a valid Profile URL (Critical for Findymail)
-                let pUrl = data.profile_url || basicData.profile_url || basicData.url;
+                let rawPUrl = data.profile_url || basicData.profile_url || basicData.url || "";
+                let pUrl = typeof rawPUrl === 'string' ? rawPUrl.trim() : "";
                 // If pUrl is missing or looks like an image, reconstruct it
                 if (!pUrl || pUrl.match(/\.(jpeg|jpg|png|gif|webp)$/i)) {
                     pUrl = constructProfileUrl(data.platform || 'instagram', data.handle);
