@@ -16,21 +16,25 @@ const GMAIL_SCOPES = [
 /**
  * Get Gmail OAuth URL
  */
-export function getGmailOAuthUrl(redirectUri: string): string {
+export function getGmailOAuthUrl(redirectUri: string, state?: string): string {
   if (!GMAIL_CLIENT_ID) {
     throw new Error('Gmail Client ID is not configured. Please set NEXT_PUBLIC_GMAIL_CLIENT_ID in your .env.local file. See GMAIL_SETUP.md for instructions.');
   }
 
-  const params = new URLSearchParams({
+  const params: Record<string, string> = {
     client_id: GMAIL_CLIENT_ID,
     redirect_uri: redirectUri,
     response_type: 'code',
     scope: GMAIL_SCOPES,
     access_type: 'offline',
     prompt: 'consent',
-  });
+  };
 
-  return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+  if (state) {
+    params.state = state;
+  }
+
+  return `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams(params).toString()}`;
 }
 
 /**

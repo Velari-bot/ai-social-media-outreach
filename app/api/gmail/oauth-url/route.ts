@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const redirectUri = request.nextUrl.searchParams.get('redirectUri');
-    
+
     if (!redirectUri) {
       return NextResponse.json(
         { error: 'Missing redirectUri parameter' },
@@ -19,12 +19,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const url = getGmailOAuthUrl(redirectUri);
+    // Generate secure state to prevent CSRF
+    const state = crypto.randomUUID();
 
-    return NextResponse.json({
+    const url = getGmailOAuthUrl(redirectUri, state);
+
+    // Set state in cookie
+    const response = NextResponse.json({
       success: true,
       url,
     });
+
+    response.cookies.set('oauth_state', state, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 600, // 10 minutes
+      path: '/',
+    });
+
+    return response;
   } catch (error: any) {
     console.error('Error generating Gmail OAuth URL:', error);
     return NextResponse.json(
