@@ -164,9 +164,9 @@ function OnboardingContent() {
       // Clear URL params
       router.replace('/onboarding');
 
-      // Redirect to creator request page
+      // Redirect to settings page
       setTimeout(() => {
-        router.push("/creator-request");
+        router.push("/settings");
       }, 1000);
     } catch (error: any) {
       console.error("OAuth callback error:", error);
