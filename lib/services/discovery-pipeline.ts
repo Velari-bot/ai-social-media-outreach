@@ -36,47 +36,60 @@ export class DiscoveryPipeline {
         let creditsConsumed = 0;
         let finalCreators: Creator[] = [];
 
+        let batchesChecked = 0;
+        const MAX_BATCHES = 5; // Safety limit (check up to 250 creators)
+
         try {
-            // We loop until we have enough or hit a safety limit (e.g. 2 pages)
-            // For now, single fetch as per simpler logic, but requests "new everytime".
-            // If the first 50 are all duplicates, we might need to fetch more?
-            // Let's stick to one batch for now to avoid accidental infinite loops/credit drain.
+            // Loop until we have enough creators or hit safety limit
+            while (finalCreators.length < requestedCount && batchesChecked < MAX_BATCHES) {
+                const currentOffset = batchesChecked * 50;
+                console.log(`[Discovery] Fetching batch ${batchesChecked + 1} (Offset ${currentOffset})...`);
 
-            const externalResults = await influencerClubClient.discoverCreators({
-                platform,
-                filters,
-                limit: fetchLimit,
-            });
-            externalFetches = externalResults.length;
-            const batches = Math.ceil(externalFetches / 50);
-            creditsConsumed = batches > 0 ? batches : 1;
+                const externalResults = await influencerClubClient.discoverCreators({
+                    platform,
+                    filters,
+                    limit: 50, // Always fetch full page
+                    offset: currentOffset
+                });
 
-            console.log(`[Discovery] External API returned ${externalResults.length} raw results`);
-
-            // 3. Process & Resolve to Internal DB (Global Deduplication)
-            // We need to convert these raw results into Creator objects (either existing DB ones or new ones)
-
-            const handles = externalResults.map(r => (r.handle || r.username || '').toLowerCase()).filter(h => h);
-
-            // Batch Query for existing creators by handle
-            // Firestore 'in' limit is 30. We process in chunks or Promise.all if needed.
-            // Simplified: Loop and check/create (Parallel).
-
-            const resolvedCreators = await Promise.all(externalResults.map(async (raw) => {
-                return await this.resolveCreator(raw, platform);
-            }));
-
-            // 4. Per-User Deduplication
-            for (const creator of resolvedCreators) {
-                if (userSeenIds.has(String(creator.id))) {
-                    console.log(`[Discovery] Skipping duplicate for user: ${creator.handle}`);
-                    continue;
+                if (!externalResults || externalResults.length === 0) {
+                    console.log(`[Discovery] Batch ${batchesChecked + 1} returned 0 results. Stopping.`);
+                    break;
                 }
-                finalCreators.push(creator);
-                userSeenIds.add(String(creator.id)); // Add to current set
-            }
 
-            console.log(`[Discovery] After Dedupe: ${finalCreators.length} unique new creators for user.`);
+                externalFetches += externalResults.length; // Track total fetched
+                batchesChecked++;
+                creditsConsumed += 1; // 1 credit per batch of 50
+
+                console.log(`[Discovery] External API returned ${externalResults.length} raw results in batch ${batchesChecked}`);
+
+                // 3. Process & Resolve to Internal DB (Global Deduplication)
+                const resolvedCreators = await Promise.all(externalResults.map(async (raw) => {
+                    return await this.resolveCreator(raw, platform);
+                }));
+
+                // 4. Per-User Deduplication
+                let addedInBatch = 0;
+                for (const creator of resolvedCreators) {
+                    // Stop if we have enough
+                    if (finalCreators.length >= requestedCount) break;
+
+                    if (userSeenIds.has(String(creator.id))) {
+                        // console.log(`[Discovery] Skipping duplicate for user: ${creator.handle}`);
+                        continue;
+                    }
+                    finalCreators.push(creator);
+                    userSeenIds.add(String(creator.id)); // Add to set
+                    addedInBatch++;
+                }
+
+                console.log(`[Discovery] Batch ${batchesChecked}: Added ${addedInBatch} unique new creators. Total: ${finalCreators.length}/${requestedCount}`);
+
+                // If we got fewer results than requested in this batch (i.e. end of list), break
+                if (externalResults.length < 50) {
+                    break;
+                }
+            }
 
         } catch (error: any) {
             console.error('[Discovery] External Fetch Failed:', error);
