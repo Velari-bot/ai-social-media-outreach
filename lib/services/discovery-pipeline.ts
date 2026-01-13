@@ -232,7 +232,7 @@ export class DiscoveryPipeline {
                     phone: clayResult.phone || null,
                     bio: clayResult.bio || null,
                     website: clayResult.website || null,
-                    enrichment_status: 'enriched',
+                    enrichment_status: (clayResult as any).is_pending ? 'processing' : 'enriched',
                     clay_enriched_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),
                 };
