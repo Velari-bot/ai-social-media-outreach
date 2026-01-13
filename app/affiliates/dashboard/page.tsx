@@ -103,30 +103,31 @@ export default function AffiliateDashboard() {
                             Copy Link
                         </button>
                     </div>
-                    Share this link on social media, your blog, or with friends. When they sign up, you earn 20%.
-                </p>
-            </div>
+                    <p className="text-gray-500 mt-4 text-sm">
+                        Share this link on social media, your blog, or with friends. When they sign up, you earn 20%.
+                    </p>
+                </div>
 
-            {/* Payout Info Placeholder */}
-            <div className="grid md:grid-cols-2 gap-8">
-                <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 opacity-60">
-                    <h3 className="font-bold mb-4 text-black">Recent Referrals</h3>
-                    <div className="h-32 flex items-center justify-center text-gray-400 text-sm italic border-2 border-dashed border-gray-100 rounded-xl">
-                        No referrals yet.
+                {/* Payout Info Placeholder */}
+                <div className="grid md:grid-cols-2 gap-8">
+                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 opacity-60">
+                        <h3 className="font-bold mb-4 text-black">Recent Referrals</h3>
+                        <div className="h-32 flex items-center justify-center text-gray-400 text-sm italic border-2 border-dashed border-gray-100 rounded-xl">
+                            No referrals yet.
+                        </div>
+                    </div>
+                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                        <h3 className="font-bold mb-4 text-black">Payout Settings</h3>
+                        <p className="text-sm text-gray-500 mb-4">
+                            Payouts are processed automatically via Stripe on the 1st of every month for earnings over $50.
+                        </p>
+                        <button className="text-purple-600 font-bold text-sm hover:underline">
+                            Connect Stripe Account &rarr;
+                        </button>
                     </div>
                 </div>
-                <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 className="font-bold mb-4 text-black">Payout Settings</h3>
-                    <p className="text-sm text-gray-500 mb-4">
-                        Payouts are processed automatically via Stripe on the 1st of every month for earnings over $50.
-                    </p>
-                    <button className="text-purple-600 font-bold text-sm hover:underline">
-                        Connect Stripe Account &rarr;
-                    </button>
-                </div>
-            </div>
 
-        </div>
+            </div>
         </main >
     );
 }
