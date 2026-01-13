@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 import Navbar from "@/components/Navbar";
 import SubscriptionGuard from "@/components/SubscriptionGuard";
@@ -57,6 +56,7 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
   const [showThread, setShowThread] = useState(false);
 
   // Moved out of useEffect to allow manual refresh
+  // Moved out of useEffect to allow manual refresh
   const loadUserAndReplies = useCallback(async () => {
     // Check for demo mode
     const demoMode = searchParams?.demo === "true";
@@ -64,8 +64,7 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
 
     if (demoMode) {
       setUserId("demo-user");
-      // Mock replies logic...
-      // (Keep existing mock data logic here for brevity, assuming the full mock object is unchanged)
+      // Mock replies
       const mockReplies: Reply[] = [
         {
           id: "1",
@@ -155,31 +154,27 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
     }
 
     try {
-      // 1. Get Session first (more reliable for persistence)
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-      let user = session?.user ?? null;
-
-      // 2. Fallback to getUser if session is missing but might exist
-      if (!user) {
-        const { data: { user: fetchedUser }, error: userError } = await supabase.auth.getUser();
-        user = fetchedUser;
-      }
+      // 1. Get Firebase User (this is cached by the SDK, so it's fast)
+      // We import this dynamically or assume it's available via auth-helpers
+      const { getCurrentUser } = await import("@/lib/auth-helpers");
+      const user = await getCurrentUser();
 
       if (!user) {
-        // Only redirect if explicitly not authenticated and NOT just a momentary loading state
-        console.warn("No user found in Inbox, redirecting to login");
+        console.warn("No user found in Inbox (Firebase), redirecting to login");
         toast.error("Please log in to continue");
         router.push("/login");
         return;
       }
 
-      setUserId(user.id);
+      setUserId(user.uid);
+
+      // Get fresh token
+      const token = await user.getIdToken();
 
       // Fetch real messages
       const response = await fetch('/api/gmail/messages', {
         headers: {
-          'Authorization': `Bearer ${session?.access_token || 'TEST_TOKEN'}` // Use real token if available
+          'Authorization': `Bearer ${token}`
         }
       });
 
