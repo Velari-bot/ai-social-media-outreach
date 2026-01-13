@@ -72,10 +72,12 @@ export class InfluencerClubClient {
             filters.topics !== 'Any Topic' &&
             filters.topics !== '';
 
-        const hasStrongTargeting = hasKeywords || hasCategory || hasTopics;
+        const hasNiche = filters.niche && filters.niche !== '' && filters.niche !== 'any';
+
+        const hasStrongTargeting = hasKeywords || hasCategory || hasTopics || hasNiche;
 
         if (!hasStrongTargeting) {
-            throw new Error("Influencer Club discovery requires keywords or a category to return results.");
+            throw new Error("Influencer Club discovery requires keywords, category, or niche to return results.");
         }
     }
 
