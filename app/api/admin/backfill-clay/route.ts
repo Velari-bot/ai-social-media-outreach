@@ -25,45 +25,58 @@ export async function POST(req: NextRequest) {
 
         console.log(`[Backfill] Found ${snapshot.size} creators. Processing...`);
 
-        // We will process in batches to avoid overwhelming the system
-        // Since Vercel has limits, we might not be able to process ALL if there are thousands
-        // We will try processing up to 200 for now, or just all if fewer.
-        const docs = snapshot.docs.slice(0, 500);
+        // Batched process for speed (Vercel timeout protection)
+        const BATCH_SIZE = 20;
+        const items = snapshot.docs; // Process ALL docs now that we are faster
         let successCount = 0;
+        let failCount = 0;
 
-        for (const doc of docs) {
-            const data = doc.data();
-            const basicData = data.basic_profile_data || {};
+        for (let i = 0; i < items.length; i += BATCH_SIZE) {
+            const batch = items.slice(i, i + BATCH_SIZE);
 
-            // Map to Clay Schema
-            const payload = {
-                "verality_id": doc.id,
-                "creator_name": data.full_name || basicData.fullname || basicData.full_name || data.handle || "Unknown",
-                "platform": data.platform || "instagram",
-                "username": data.handle || basicData.username,
-                "profile_url": data.profile_url || basicData.profile_url || basicData.url || constructProfileUrl(data.platform || 'instagram', data.handle),
-                "niche": data.niche || "",
-                "followers": Number(data.followers || basicData.followers || 0),
-                "bio": data.bio || basicData.biography || basicData.bio || "",
-                "website": data.website || basicData.external_url || basicData.website || "",
-                "user_id": data.user_id || "",
-                "backfill": true // Flag to identify these rows
-            };
+            // Process batch in parallel
+            await Promise.all(batch.map(async (doc) => {
+                try {
+                    const data = doc.data();
+                    const basicData = data.basic_profile_data || {};
 
-            // Fire and forget individually (or small delays)
-            // Ideally use a queue, but for this trigger button:
-            fetch(CLAY_WEBHOOK_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            }).catch(e => console.error(`Failed to push ${doc.id}`, e));
+                    const payload = {
+                        "verality_id": doc.id,
+                        "creator_name": data.full_name || basicData.fullname || basicData.full_name || data.handle || "Unknown",
+                        "platform": data.platform || "instagram",
+                        "username": data.handle || basicData.username,
+                        "profile_url": data.profile_url || basicData.profile_url || basicData.url || constructProfileUrl(data.platform || 'instagram', data.handle),
+                        "niche": data.niche || "",
+                        "followers": Number(data.followers || basicData.followers || 0),
+                        "bio": data.bio || basicData.biography || basicData.bio || "",
+                        "website": data.website || basicData.external_url || basicData.website || "",
+                        "user_id": data.user_id || "",
+                        "backfill": true
+                    };
 
-            successCount++;
-            // Tiny delay to spread load slightly
-            await new Promise(resolve => setTimeout(resolve, 20));
+                    const res = await fetch(CLAY_WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res.ok) successCount++;
+                    else failCount++;
+                } catch (e) {
+                    console.error(`Failed to push ${doc.id}`, e);
+                    failCount++;
+                }
+            }));
+
+            console.log(`[Backfill] Batch ${i / BATCH_SIZE + 1} done.`);
         }
 
-        return NextResponse.json({ success: true, count: successCount, total: snapshot.size });
+        return NextResponse.json({
+            success: true,
+            message: `Processed ${items.length}. Success: ${successCount}, Failed: ${failCount}`,
+            count: successCount,
+            total: items.length
+        });
     } catch (error: any) {
         console.error('Backfill error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
