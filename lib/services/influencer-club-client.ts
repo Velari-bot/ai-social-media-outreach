@@ -121,14 +121,19 @@ export class InfluencerClubClient {
         // Keywords (Alternative targeting method) -> keywords_in_bio
         // Accept keywords from multiple possible field names
         const keywordInput = params.filters.keywords || params.filters.keyword;
-        if (keywordInput) {
-            const keywordArray = Array.isArray(keywordInput) ? keywordInput : [keywordInput];
-            // Filter out empty strings
-            const cleanedKeywords = keywordArray.filter(k => k && k.trim() !== '');
-            if (cleanedKeywords.length > 0) {
-                filters.keywords_in_bio = cleanedKeywords;
-                console.log(`[InfluencerClub] Using keywords filter: ${cleanedKeywords.join(', ')}`);
-            }
+        let keywords = keywordInput ? (Array.isArray(keywordInput) ? keywordInput : [keywordInput]) : [];
+
+        // IMPROVEMENT: If niche is provided but not keywords, use niche as a keyword too
+        // This helps when "niche" is something specific like "Yoga" that might be a category OR a keyword.
+        if (params.filters.niche && params.filters.niche !== 'any' && keywords.length === 0) {
+            keywords = [params.filters.niche];
+            console.log(`[InfluencerClub] Using niche '${params.filters.niche}' as keyword filter.`);
+        }
+
+        const cleanedKeywords = keywords.filter((k: any) => k && k.trim() !== '');
+        if (cleanedKeywords.length > 0) {
+            filters.keywords_in_bio = cleanedKeywords;
+            console.log(`[InfluencerClub] Using keywords filter: ${cleanedKeywords.join(', ')}`);
         }
 
         // Location (Optional) -> location array
