@@ -132,6 +132,9 @@ export class InfluencerClubClient {
 
         // IMPROVEMENT: Always append Niche as a keyword to ensure finding relevant profiles
         if (params.filters.niche && params.filters.niche !== 'any') {
+            // Pass niche explicitly to API if it supports it
+            filters.niche = params.filters.niche;
+
             // Avoid adding if already present
             if (!keywords.includes(params.filters.niche)) {
                 keywords.push(params.filters.niche);
@@ -142,6 +145,9 @@ export class InfluencerClubClient {
         const cleanedKeywords = keywords.filter((k: any) => k && k.trim() !== '');
         if (cleanedKeywords.length > 0) {
             filters.keywords_in_bio = cleanedKeywords;
+            // Also send as 'keyword' and 'keywords' to match potential API variations
+            filters.keyword = cleanedKeywords.join(' ');
+            filters.keywords = cleanedKeywords;
             console.log(`[InfluencerClub] Using keywords filter: ${cleanedKeywords.join(', ')}`);
         }
 
@@ -158,11 +164,14 @@ export class InfluencerClubClient {
             // Simplify: Send only one standard format.
             // Using min_followers (snake_case) is safest for this API style.
             filters.min_followers = Number(minFollowersVal);
+            // Redundancy for safety based on user hints
+            filters.followers_min = String(minFollowersVal);
         }
 
         const maxFollowersVal = params.filters.maxFollowers || params.filters.followersMax;
         if (maxFollowersVal) {
             filters.max_followers = Number(maxFollowersVal);
+            filters.followers_max = String(maxFollowersVal);
         }
         // ----------------------------------------------------------------------------------
 
