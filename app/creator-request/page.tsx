@@ -58,7 +58,7 @@ function CreatorRequestContent() {
   // State
   const [platform, setPlatform] = useState<string>("instagram");
   const [niche, setNiche] = useState("Fitness"); // Default to first common niche
-  const [followersMin, setFollowersMin] = useState(10000);
+  const [followersMin, setFollowersMin] = useState(1000); // Lowered default to avoid 0 results
   const [followersMax, setFollowersMax] = useState(250000);
   const [requestedCreators, setRequestedCreators] = useState(50);
 
@@ -108,13 +108,16 @@ function CreatorRequestContent() {
     setSearchResults(null); // Reset results to show loading state cleanly
 
     try {
-      // Build Payload exactly as backend expects
-      const criteria = {
-        niche: niche,
-        min_followers: followersMin,
-        max_followers: followersMax,
+      // Build Paylod: Clean empty values as per best integration practices
+      const criteria: any = {
         batchSize: requestedCreators
       };
+
+      if (niche?.trim()) criteria.niche = niche.trim();
+      if (followersMin && followersMin > 0) criteria.min_followers = followersMin;
+      if (followersMax && followersMax > 0) criteria.max_followers = followersMax;
+
+      console.log("Submitting Request:", { platform, ...criteria });
 
       const res = await createRequest({
         name: `${niche}`,

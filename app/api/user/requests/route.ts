@@ -125,24 +125,30 @@ export async function POST(request: NextRequest) {
         console.log(`[RequestsAPI] Discovery complete. Found ${foundCount} creators. IDs: ${creatorIds.length}`);
 
         // 6. Check if zero results - delete request and return error
+        // 6. Check if zero results - handle gracefully
         if (foundCount === 0) {
-          console.log(`[RequestsAPI] Zero creators found. Deleting request ${newRequest.id} and returning error.`);
+          console.log(`[RequestsAPI] Zero creators found. Returning empty list.`);
+
+          // DO NOT delete the request if you want to keep record of the attempt, 
+          // OR delete it if you consider it "failed". 
+          // The previous logic deleted it. Let's keep the delete logic but return 200.
           try {
             await adminDb.collection('creator_requests').doc(newRequest.id).delete();
           } catch (deleteError: any) {
-            console.error(`[RequestsAPI] Failed to delete zero-result request (non-fatal):`, deleteError.message);
+            console.error(`[RequestsAPI] Failed to delete zero-result request:`, deleteError.message);
           }
 
           return NextResponse.json({
-            success: false,
-            error: 'No creators found matching your criteria. Try adjusting your filters (lower follower count, remove location filter, or try a different category).',
+            success: true, // Use true so frontend handles it as a valid response
+            creators: [],
+            message: 'No creators found matching your criteria.',
             suggestions: [
               'Lower the minimum follower count',
               'Remove or change the location filter',
               'Try a different category or use keywords instead',
               'Set engagement to "Any Engagement"'
             ]
-          }, { status: 400 });
+          }, { status: 200 });
         }
 
         // 7. Update Request Record (PIN results)

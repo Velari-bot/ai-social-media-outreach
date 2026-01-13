@@ -57,13 +57,45 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // --- Auto-Create (Lazy Creation) if missing ---
     if (!account) {
-      return NextResponse.json(
-        { error: 'Account not found' },
-        { status: 404 }
-      );
+      console.log(`[UserAccount] Account not found for ${userId}, creating new one...`);
+      const { db } = await import('@/lib/firebase-admin');
+      const { Timestamp } = await import('firebase-admin/firestore');
+
+      const now = Timestamp.now();
+      const quotaResetDate = new Date();
+      quotaResetDate.setDate(quotaResetDate.getDate() + 1);
+
+      const newAccountData = {
+        email: decodedToken.email || '',
+        name: decodedToken.name || '',
+        plan: 'pro', // Default plan
+        email_quota_daily: 100,
+        email_quota_monthly: 3000,
+        email_used_today: 0,
+        email_used_this_month: 0,
+        quota_reset_date: Timestamp.fromDate(quotaResetDate),
+        created_at: now,
+        updated_at: now,
+      };
+
+      await db.collection('user_accounts').doc(userId).set(newAccountData);
+
+      // Return the new account (formatting timestamps to string if needed to match getUserAccount return type)
+      return NextResponse.json({
+        success: true,
+        account: {
+          id: userId,
+          ...newAccountData,
+          created_at: now.toDate().toISOString(),
+          updated_at: now.toDate().toISOString(),
+          quota_reset_date: quotaResetDate.toISOString(),
+        }
+      });
     }
 
+    // Normal return if found
     return NextResponse.json({
       success: true,
       account,
