@@ -50,10 +50,31 @@ export default function AdminCreators() {
                     <h1 className="text-3xl font-black text-black">Creator Database</h1>
                     <p className="text-gray-500 mt-1">Directory of crawled and verified social media creators.</p>
                 </div>
-                <button className="bg-black text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-gray-800 transition-all shadow-lg shadow-black/10">
-                    <Plus className="w-5 h-5" />
-                    Add Creator
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={async () => {
+                            const btn = document.getElementById('sync-clay-btn');
+                            if (btn) btn.innerText = 'Syncing...';
+                            try {
+                                await fetch('/api/admin/backfill-clay', { method: 'POST' });
+                                alert('Sync started! Check Clay in a few seconds.');
+                            } catch (e) {
+                                alert('Sync failed');
+                            } finally {
+                                if (btn) btn.innerText = 'Sync Clay';
+                            }
+                        }}
+                        id="sync-clay-btn"
+                        className="bg-purple-600 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-purple-800 transition-all shadow-lg shadow-purple-500/20"
+                    >
+                        <Database className="w-5 h-5" />
+                        Sync Clay
+                    </button>
+                    <button className="bg-black text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-gray-800 transition-all shadow-lg shadow-black/10">
+                        <Plus className="w-5 h-5" />
+                        Add Creator
+                    </button>
+                </div>
             </div>
 
             {/* Toolbar */}
