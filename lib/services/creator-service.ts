@@ -91,6 +91,7 @@ async function storeCreators(
 ): Promise<Creator[]> {
   const now = Timestamp.now();
   const creators: Creator[] = [];
+  const pushPromises: Promise<any>[] = [];
 
   for (const result of discoveryResults) {
     // Map Influencer Club fields to our schema
@@ -136,21 +137,27 @@ async function storeCreators(
       });
       creators.push(docToCreator(doc));
 
-      // AUTO-PUSH TO CLAY (Fire and Forget)
-      // This ensures 24/7 automation: As soon as a creator is found/stored, they go to Clay.
+      // AUTO-PUSH TO CLAY
       const savedCreator = docToCreator(doc);
-      clayClient.enrichCreator({
-        creatorId: savedCreator.id,
-        handle: savedCreator.handle,
-        platform: savedCreator.platform,
-        name: creatorData.basic_profile_data.fullname || savedCreator.handle,
-        profileUrl: result.profile_url || result.url || undefined, // Pass URL if available from source
-        followers: Number(creatorData.basic_profile_data.followers || 0),
-        bio: (creatorData.basic_profile_data as any).biography || (creatorData.basic_profile_data as any).bio || "",
-        website: (creatorData.basic_profile_data as any).external_url || (creatorData.basic_profile_data as any).website || "",
-        niche: "", // Niche is usually filter-level, not per-creator in raw data
-      }).catch(err => console.error(`Failed to auto-push creator ${savedCreator.id} to Clay:`, err));
+      pushPromises.push(
+        clayClient.enrichCreator({
+          creatorId: savedCreator.id,
+          handle: savedCreator.handle,
+          platform: savedCreator.platform,
+          name: creatorData.basic_profile_data.fullname || savedCreator.handle,
+          profileUrl: result.profile_url || result.url || undefined,
+          followers: Number(creatorData.basic_profile_data.followers || 0),
+          bio: (creatorData.basic_profile_data as any).biography || (creatorData.basic_profile_data as any).bio || "",
+          website: (creatorData.basic_profile_data as any).external_url || (creatorData.basic_profile_data as any).website || "",
+          niche: "",
+        }).catch(err => console.error(`Failed to auto-push creator ${savedCreator.id} to Clay:`, err))
+      );
     }
+  }
+
+  // Ensure all Clay pushes Complete before returning (Serverless safety)
+  if (pushPromises.length > 0) {
+    await Promise.allSettled(pushPromises);
   }
 
   return creators;

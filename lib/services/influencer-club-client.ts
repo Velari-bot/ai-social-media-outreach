@@ -153,9 +153,7 @@ export class InfluencerClubClient {
         const body = {
             platform: params.platform.toLowerCase(),
             paging: {
-                // Fetch 3x the requested limit (up to 100 max per page) to account for local filtering attrition
-                // especially since Engagement Rate filtering happens locally
-                limit: Math.min((params.limit || 50) * 3, 100),
+                limit: params.limit || 50,
                 page: params.offset ? Math.floor(params.offset / (params.limit || 50)) : 0
             },
             sort: {
@@ -278,8 +276,7 @@ export class InfluencerClubClient {
 
             console.log(`[InfluencerClub] Post-Filter Return: ${filteredCreators.length} (from ${accounts.length})`);
 
-            // Return at most the requested amount (we fetched extra to be safe)
-            return filteredCreators.slice(0, params.limit || 50);
+            return filteredCreators;
 
         } catch (error) {
             console.error('Influencer Club discovery error:', error);
