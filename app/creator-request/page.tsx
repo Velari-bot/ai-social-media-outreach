@@ -130,8 +130,8 @@ function CreatorRequestContent() {
           setSearchResults(res.creators);
           toast.success(`${res.creators.length} creators found!`);
         } else {
-          // Handle 0 results gracefully (this technically shouldn't happen with the new robustness check, but just in case)
-          toast.error("No creators found. Trying adjusting filters.");
+          // Handle 0 results gracefully if returned with 200 OK
+          toast.error("No creators found. Try adjusting your filters.");
         }
 
         // Refresh stats
@@ -139,12 +139,21 @@ function CreatorRequestContent() {
         fetchRecentRequests().then(r => r.success && setRecentRequests(r.requests || []));
 
       } else {
+        // This branch is rarely reached because createRequest throws on error, 
+        // but handling it just in case api-client changes.
         toast.error((res as any).error || "Search failed.");
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Search error:", error);
-      toast.error("An error occurred.");
+      // extracting the specific error message from the backend (e.g. "No creators found...")
+      const msg = error.message || "An error occurred.";
+
+      if (msg.includes("No creators found")) {
+        toast.error("No creators found. Try broader filters (e.g. lower follower count).", { duration: 5000 });
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
