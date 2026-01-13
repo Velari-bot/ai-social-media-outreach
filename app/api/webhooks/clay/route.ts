@@ -42,10 +42,16 @@ export async function POST(request: NextRequest) {
         }
         if (status) updateData.email_status = status;
         if (phone) updateData.phone = phone;
-        if (region) updateData.region = region;
+
+        // Default to "General" if missing, per user request
+        updateData.region = region || "General";
+
         if (picture) updateData.picture_url = picture; // PFP
         if (profile) updateData.profile_url = profile; // Social Link
-        if (niche) updateData.niche = niche;
+
+        // Default to "General" if missing
+        updateData.niche = niche || "General";
+
         if (followers) updateData.followers = Number(followers);
 
         // Update Firestore Document

@@ -14,7 +14,7 @@ export async function GET() {
                 handle: data.handle || 'Unknown',
                 platform: data.platform || 'Instagram',
                 followers: data.basic_profile_data?.followers_count || data.basic_profile_data?.followers || '0',
-                niche: data.basic_profile_data?.category || 'General',
+                niche: data.niche || data.basic_profile_data?.category || 'General',
                 email: data.email || 'No email',
                 status: data.email_found ? 'Verified' : 'Pending'
             };
