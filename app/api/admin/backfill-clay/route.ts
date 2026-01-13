@@ -28,58 +28,63 @@ export async function POST(req: NextRequest) {
         // Sequential processing to guarantee delivery and respect Rate Limits
         // Vercel Serverless Function Limit is usually 10-60s. 
 
-        let successCount = 0;
-        let failCount = 0;
         const docs = snapshot.docs;
 
-        for (const doc of docs) {
-            try {
-                const data = doc.data();
-                const basicData = data.basic_profile_data || {};
+        // Optimized Batched Processing
+        // We need to fit 200 items into 10 seconds (Vercel limit)
+        // Batch size 5 allows ~100ms per batch including network overhead.
 
-                // Ensure we have a valid Profile URL (Critical for Findymail)
-                let rawPUrl = data.profile_url || basicData.profile_url || basicData.url || "";
-                let pUrl = typeof rawPUrl === 'string' ? rawPUrl.trim() : "";
-                // If pUrl is missing or looks like an image, reconstruct it
-                if (!pUrl || pUrl.match(/\.(jpeg|jpg|png|gif|webp)$/i)) {
-                    pUrl = constructProfileUrl(data.platform || 'instagram', data.handle);
-                }
+        const BATCH_SIZE = 5;
+        const items = snapshot.docs;
+        let successCount = 0;
+        let failCount = 0;
 
-                const payload = {
-                    "verality_id": doc.id,
-                    "creator_name": data.full_name || basicData.fullname || basicData.full_name || data.handle || "Unknown",
-                    "platform": data.platform || "instagram",
-                    "username": data.handle || basicData.username,
-                    "profile_url": pUrl,
-                    "picture_url": data.picture_url || basicData.picture || basicData.profile_pic_url || "",
-                    "niche": data.niche || "",
-                    "followers": Number(data.followers || basicData.followers || 0),
-                    "bio": data.bio || basicData.biography || basicData.bio || "",
-                    "website": data.website || basicData.external_url || basicData.website || "",
-                    "user_id": data.user_id || "",
-                    "backfill": true
-                };
+        for (let i = 0; i < items.length; i += BATCH_SIZE) {
+            const chunk = items.slice(i, i + BATCH_SIZE);
 
-                const res = await fetch(CLAY_WEBHOOK_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+            // Send chunk in parallel
+            await Promise.all(chunk.map(async (doc) => {
+                try {
+                    const data = doc.data();
+                    const basicData = data.basic_profile_data || {};
 
-                if (res.ok) {
-                    successCount++;
-                } else {
-                    console.error(`Clay returned ${res.status} for ${doc.id}`);
+                    // Ensure we have a valid Profile URL (Critical for Findymail)
+                    let rawPUrl = data.profile_url || basicData.profile_url || basicData.url || "";
+                    let pUrl = typeof rawPUrl === 'string' ? rawPUrl.trim() : "";
+                    if (!pUrl || pUrl.match(/\.(jpeg|jpg|png|gif|webp)$/i)) {
+                        pUrl = constructProfileUrl(data.platform || 'instagram', data.handle);
+                    }
+
+                    const payload = {
+                        "verality_id": doc.id,
+                        "creator_name": data.full_name || basicData.fullname || basicData.full_name || data.handle || "Unknown",
+                        "platform": data.platform || "instagram",
+                        "username": data.handle || basicData.username,
+                        "profile_url": pUrl,
+                        "picture_url": data.picture_url || basicData.picture || basicData.profile_pic_url || "",
+                        "niche": data.niche || "",
+                        "followers": Number(data.followers || basicData.followers || 0),
+                        "bio": data.bio || basicData.biography || basicData.bio || "",
+                        "website": data.website || basicData.external_url || basicData.website || "",
+                        "user_id": data.user_id || "",
+                        "backfill": true
+                    };
+
+                    const res = await fetch(CLAY_WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res.ok) successCount++;
+                    else failCount++;
+                } catch (e) {
                     failCount++;
                 }
+            }));
 
-                // Small delay to prevent rate limiting (critical for Clay)
-                await new Promise(r => setTimeout(r, 150));
-
-            } catch (e) {
-                console.error(`Exception pushing ${doc.id}`, e);
-                failCount++;
-            }
+            // Tiny delay between batches to be nice to Clay
+            await new Promise(r => setTimeout(r, 50));
         }
 
         return NextResponse.json({
