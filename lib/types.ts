@@ -39,14 +39,14 @@ export interface FirestoreCreator {
   company: string;
   title: string;
   linkedin_url?: string;
-  email?: string; // initially empty
-  email_status?: string; // optional
+  email?: string;
+  email_status?: string;
   phone?: string;
   region?: string;
-  picture_url?: string;
+  profile_url?: string; // Link to social media profile (not image)
   niche?: string;
   followers?: number;
-  [key: string]: any; // Allow for other fields like platform, handle, etc.
+  [key: string]: any;
 }
 
 export interface DiscoveryPipelineResponse {
