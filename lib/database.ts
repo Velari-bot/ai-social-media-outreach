@@ -16,6 +16,7 @@ export interface UserAccount {
   email_used_today: number;
   email_used_this_month: number;
   quota_reset_date: Timestamp | string;
+  last_daily_reset_at?: Timestamp | string;
   created_at: Timestamp | string;
   updated_at: Timestamp | string;
 }
@@ -96,6 +97,7 @@ function docToObject<T>(doc: any, id?: string): T {
     updated_at: toISODate(data.updated_at),
     date_submitted: toISODate(data.date_submitted),
     quota_reset_date: toISODate(data.quota_reset_date),
+    last_daily_reset_at: toISODate(data.last_daily_reset_at),
   } as T;
 }
 
@@ -107,6 +109,46 @@ export async function getUserAccount(userId: string): Promise<UserAccount | null
       return null;
     }
     const data = docToObject<UserAccount>(doc, userId);
+
+    // DAILY QUOTA RESET LOGIC
+    const now = new Date();
+
+    const getDate = (d: any) => {
+      if (!d) return new Date(0);
+      if (typeof d === 'string') return new Date(d);
+      if (d.toDate) return d.toDate();
+      return new Date(d);
+    };
+
+    const lastReset = data.last_daily_reset_at
+      ? getDate(data.last_daily_reset_at)
+      : getDate(data.updated_at);
+
+    // Compare YYYY-MM-DD
+    const todayStr = now.toISOString().split('T')[0];
+    const lastResetStr = lastReset.toISOString().split('T')[0];
+
+    if (todayStr !== lastResetStr) {
+      console.log(`[UserAccount] Resetting daily quota for ${userId}. Last: ${lastResetStr}, Today: ${todayStr}`);
+
+      // Reset in DB
+      const updateData = {
+        email_used_today: 0,
+        last_daily_reset_at: Timestamp.now(),
+        updated_at: Timestamp.now()
+      };
+
+      // We run this async to not block the read too much
+      try {
+        await db.collection('user_accounts').doc(userId).update(updateData);
+      } catch (e) {
+        console.error("Quota reset update failed", e);
+      }
+
+      // Update local object to return correct state
+      data.email_used_today = 0;
+      data.last_daily_reset_at = now.toISOString();
+    }
 
     // Admin Override (Enterprise access for all admins)
     if (data.role === 'admin') {
