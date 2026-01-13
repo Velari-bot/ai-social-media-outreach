@@ -168,7 +168,7 @@ export class DiscoveryPipeline {
         const creatorData: Omit<Creator, 'id' | 'created_at' | 'updated_at'> = {
             platform: platform,
             handle: handle,
-            modash_creator_id: raw.creator_id || raw.id || null,
+            verality_id: raw.creator_id || raw.id || null,
             name: raw.fullname || raw.full_name || raw.name || handle,
             full_name: raw.fullname || raw.full_name || raw.name || handle,
             followers: raw.followers || 0,

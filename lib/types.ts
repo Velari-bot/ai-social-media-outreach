@@ -2,10 +2,10 @@
 export type Platform = 'instagram' | 'tiktok' | 'youtube';
 
 export interface Creator {
-  id: string | number;
+  id: string | number; // Firestore ID
   platform: Platform;
   handle: string;
-  modash_creator_id: string | null;
+  verality_id: string | null; // Mapped from external ID if useful, or alias for id
   has_basic_profile: boolean;
   has_detailed_profile: boolean;
   detailed_profile_fetched_at: string | null;
