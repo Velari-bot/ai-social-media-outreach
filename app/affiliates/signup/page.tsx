@@ -68,7 +68,7 @@ export default function AffiliateSignupPage() {
                         Partner Program
                     </span>
                     <h1 className="text-5xl md:text-6xl font-black text-[#1A1A1A] mb-8 tracking-tight">
-                        Earn <span className="text-purple-600">25%</span> Recurring Commission.
+                        Earn <span className="text-purple-600">20%</span> Recurring Commission.
                     </h1>
                     <p className="text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto">
                         Join the Verality Affiliate Program. Help creators and brands automate their outreach, and build a passive income stream for yourself.
@@ -79,7 +79,7 @@ export default function AffiliateSignupPage() {
                     <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
                         <div className="text-4xl mb-4">💰</div>
                         <h3 className="text-xl font-bold mb-2 text-black">High Commissions</h3>
-                        <p className="text-gray-900">Get 25% of every sale you refer, recurring for the lifetime of the customer.</p>
+                        <p className="text-gray-900">Get 20% of every sale you refer, recurring for the lifetime of the customer.</p>
                     </div>
                     <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
                         <div className="text-4xl mb-4">📈</div>

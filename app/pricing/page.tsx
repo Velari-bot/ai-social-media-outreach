@@ -152,7 +152,8 @@ function PricingContent() {
                     priceId,
                     planName: tier.name,
                     userId,
-                    userEmail
+                    userEmail,
+                    referralCode: typeof window !== 'undefined' ? localStorage.getItem("verality_affiliate_ref") : undefined
                 }),
             });
 

@@ -34,10 +34,19 @@ export class DiscoveryPipeline {
                 // Leniency: If location is missing, we let it pass through to avoid 0 results
                 if (cLoc && !cLoc.includes(filters.location.toLowerCase())) return false;
             }
-            // Filter by Topic if specified (basic check)
-            if (filters.topics && filters.topics !== 'any' && c.basic_profile_data?.category) {
-                // thorough topic check could be complex, simple string match for now
-                // or skip if overly restrictive
+            // Filter by Topic (Niche) if specified - STRICTER NOW
+            if (filters.topics && filters.topics !== 'any') {
+                const topic = filters.topics.toLowerCase();
+                // Check multiple fields for topic match
+                const cNiche = (c.basic_profile_data?.category || c.niche || '').toLowerCase();
+                const cBio = (c.basic_profile_data?.biography || c.bio || '').toLowerCase();
+                const cName = (c.name || '').toLowerCase();
+
+                // If niche data exists and doesn't match, reject.
+                // If niche data is missing, we check bio.
+                const matches = cNiche.includes(topic) || cBio.includes(topic) || cName.includes(topic);
+
+                if (!matches) return false;
             }
             return true;
         });
@@ -82,14 +91,9 @@ export class DiscoveryPipeline {
                 const savedCreators = await this.bulkSaveCreators(newCreators);
                 console.log(`[Discovery] Saved ${savedCreators.length} creators to DB`);
 
-                // 5. Clay Enrichment Pipeline
-                // Only enrich the NEW creators we just found
-                if (!skipEnrichment) {
-                    const enrichedCreators = await this.bulkEnrichWithClay(savedCreators, userId);
-                    finalCreators = [...finalCreators, ...enrichedCreators];
-                } else {
-                    finalCreators = [...finalCreators, ...savedCreators];
-                }
+                // Add new ones to final list
+                finalCreators = [...finalCreators, ...savedCreators];
+
             } catch (externalError: any) {
                 console.error('[DiscoveryPipeline] External discovery failed:', externalError.message);
                 // Don't throw - return what we have from internal DB
@@ -97,9 +101,20 @@ export class DiscoveryPipeline {
             }
         }
 
+        // Trim to requested count
+        finalCreators = finalCreators.slice(0, requestedCount);
+
+        // 5. Clay Enrichment Pipeline - UPDATED: Send ALL final creators to Clay
+        if (!skipEnrichment) {
+            console.log(`[Discovery] Sending ${finalCreators.length} creators to Clay...`);
+            // We want to update the returned objects with the new status/data
+            const enrichedFinalCreators = await this.bulkEnrichWithClay(finalCreators, userId);
+            finalCreators = enrichedFinalCreators;
+        }
+
         // 6. Response to User (exactly N)
         return {
-            creators: finalCreators.slice(0, requestedCount),
+            creators: finalCreators,
             meta: {
                 total_requested: requestedCount,
                 internal_hits: internalCreators.length,

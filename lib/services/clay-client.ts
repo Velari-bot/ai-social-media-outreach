@@ -77,13 +77,14 @@ export class ClayClient {
       console.log('Pushing to Clay:', JSON.stringify(payload));
 
       // Fire and forget (don't await response to block UI, but we catch errors)
-      fetch(targetUrl, {
+      // UDPATE: User requires ALL 50 to be sent. We must await this to ensure execution in serverless env.
+      await fetch(targetUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload),
-      }).catch(err => console.error('Clay Webhook Background Error:', err));
+      });
 
       // We return a "pending" result immediately
       return {

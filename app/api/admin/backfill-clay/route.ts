@@ -31,10 +31,10 @@ export async function POST(req: NextRequest) {
         const docs = snapshot.docs;
 
         // Optimized Batched Processing
-        // We need to fit 200 items into 10 seconds (Vercel limit)
-        // Batch size 5 allows ~100ms per batch including network overhead.
+        // We need to move fast to avoid Vercel timeouts (10s on hobby, 60s on pro)
+        // Clay Webhook can handle higher concurrency.
 
-        const BATCH_SIZE = 5;
+        const BATCH_SIZE = 25;
         const items = snapshot.docs;
         let successCount = 0;
         let failCount = 0;
@@ -83,8 +83,8 @@ export async function POST(req: NextRequest) {
                 }
             }));
 
-            // Tiny delay between batches to be nice to Clay
-            await new Promise(r => setTimeout(r, 50));
+            // Minimal delay to prevent absolute flooding
+            await new Promise(r => setTimeout(r, 20));
         }
 
         return NextResponse.json({

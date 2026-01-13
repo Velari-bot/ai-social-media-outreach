@@ -264,7 +264,7 @@ export async function createAffiliateAccount(userId: string, email: string): Pro
 
     const affiliateData = {
       referral_code: referralCode,
-      commission_rate: 0.25,
+      commission_rate: 0.20,
       commission_type: 'recurring',
       total_earnings: 0,
       pending_earnings: 0,
@@ -308,6 +308,48 @@ export async function trackAffiliateClick(referralCode: string, ipHash: string):
     });
   } catch (error) {
     console.error('Error tracking affiliate click:', error);
+  }
+}
+
+export async function trackAffiliateConversion(referralCode: string, amountPaid: number, orderId: string): Promise<boolean> {
+  try {
+    const affiliatesRef = db.collection('affiliates');
+    const snapshot = await affiliatesRef.where('referral_code', '==', referralCode).limit(1).get();
+
+    if (snapshot.empty) {
+      console.log(`Referral code not found: ${referralCode}`);
+      return false;
+    }
+
+    const affiliateDoc = snapshot.docs[0];
+    const affiliateData = affiliateDoc.data() as AffiliateAccount;
+    const affiliateId = affiliateDoc.id;
+
+    const commissionAmount = amountPaid * affiliateData.commission_rate;
+
+    // Update Affiliate Account
+    await affiliateDoc.ref.update({
+      conversions: (affiliateData.conversions || 0) + 1,
+      total_earnings: (affiliateData.total_earnings || 0) + commissionAmount,
+      pending_earnings: (affiliateData.pending_earnings || 0) + commissionAmount,
+      updated_at: Timestamp.now()
+    });
+
+    // Log Referral Conversion
+    await db.collection('affiliate_referrals').add({
+      affiliate_id: affiliateId,
+      status: 'conversion',
+      commission_amount: commissionAmount,
+      order_id: orderId, // Store the stripe subscription ID or similar
+      created_at: Timestamp.now()
+    });
+
+    console.log(`Recorded commission of ${commissionAmount} for affiliate ${affiliateId}`);
+    return true;
+
+  } catch (error) {
+    console.error('Error tracking affiliate conversion:', error);
+    return false;
   }
 }
 

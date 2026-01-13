@@ -61,6 +61,17 @@ export async function POST(req: NextRequest) {
                         });
                     }
 
+                    // --- AFFILIATE TRACKING ---
+                    const referralCode = session.metadata?.referralCode;
+                    if (referralCode) {
+                        // Amount is in cents, need to convert to dollars
+                        const amountPaid = (session.amount_total || 0) / 100;
+                        if (amountPaid > 0) {
+                            const { trackAffiliateConversion } = await import('@/lib/database');
+                            await trackAffiliateConversion(referralCode, amountPaid, session.id);
+                        }
+                    }
+
                     console.log(`Updated user ${userId} to plan ${planName} with quota ${dailyQuota}`);
                 }
                 break;

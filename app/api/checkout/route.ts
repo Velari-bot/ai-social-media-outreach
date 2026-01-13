@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
     try {
-        const { priceId, planName, userId, userEmail } = await req.json();
+        const { priceId, planName, userId, userEmail, referralCode } = await req.json();
 
         if (!priceId) {
             return NextResponse.json({ error: 'Price ID is required' }, { status: 400 });
@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
             metadata: {
                 planName: planName,
                 userId: userId || '',
+                referralCode: referralCode || '',
             },
             allow_promotion_codes: true,
             billing_address_collection: 'required',
