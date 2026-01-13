@@ -217,7 +217,13 @@ export class DiscoveryPipeline {
                     handle: creator.handle,
                     platform: creator.platform,
                     userId: userId,
-                    campaignId: campaignId
+                    campaignId: campaignId,
+                    creatorId: creator.id,
+                    niche: creator.niche || undefined,
+                    followers: creator.followers,
+                    bio: creator.basic_profile_data?.biography || creator.bio || undefined,
+                    website: creator.website || undefined,
+                    name: creator.name || undefined
                 });
 
                 const updateData: Partial<Creator> = {
