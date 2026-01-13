@@ -57,7 +57,6 @@ export default function CreatorRequestPage() {
 function CreatorRequestContent() {
   // State
   const [platform, setPlatform] = useState<string>("instagram");
-  const [keyword, setKeyword] = useState("");
   const [niche, setNiche] = useState("Fitness"); // Default to first common niche
   const [followersMin, setFollowersMin] = useState(10000);
   const [followersMax, setFollowersMax] = useState(250000);
@@ -79,7 +78,7 @@ function CreatorRequestContent() {
   const isQuotaExceeded = creditsCost > remainingQuota;
 
   const isValid =
-    keyword.trim().length > 0 &&
+    niche.length > 0 &&
     niche.length > 0 &&
     followersMin < followersMax &&
     followersMin > 0;
@@ -111,7 +110,6 @@ function CreatorRequestContent() {
     try {
       // Build Payload exactly as backend expects
       const criteria = {
-        keyword: keyword.trim(),
         niche: niche,
         min_followers: followersMin,
         max_followers: followersMax,
@@ -119,7 +117,7 @@ function CreatorRequestContent() {
       };
 
       const res = await createRequest({
-        name: `${keyword} / ${niche}`,
+        name: `${niche}`,
         platforms: [platform],
         criteria
       });
@@ -167,7 +165,7 @@ function CreatorRequestContent() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `creators_${keyword}_${new Date().getTime()}.csv`);
+    link.setAttribute("download", `creators_${niche}_${new Date().getTime()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -208,21 +206,7 @@ function CreatorRequestContent() {
                   </div>
                 </div>
 
-                {/* 2. Keyword */}
-                <div>
-                  <label className="block text-xs font-extrabold text-gray-900 uppercase tracking-widest mb-2">Keyword <span className="text-red-500">*</span></label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
-                    <input
-                      type="text"
-                      className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-black/5 outline-none transition-all placeholder:text-gray-400"
-                      placeholder="e.g. fitness, gaming, real estate"
-                      value={keyword}
-                      onChange={e => setKeyword(e.target.value)}
-                    />
-                  </div>
-                  <p className="text-[10px] text-gray-400 mt-1.5 font-medium ml-1">1–3 words max for best results.</p>
-                </div>
+
 
                 {/* 3. Niche */}
                 <div>
@@ -283,8 +267,8 @@ function CreatorRequestContent() {
                     type="submit"
                     disabled={!isValid || loading || isQuotaExceeded}
                     className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-white shadow-xl ${!isValid || isQuotaExceeded
-                        ? "bg-gray-300 cursor-not-allowed shadow-none"
-                        : "bg-black hover:bg-gray-800 shadow-black/20"
+                      ? "bg-gray-300 cursor-not-allowed shadow-none"
+                      : "bg-black hover:bg-gray-800 shadow-black/20"
                       }`}
                   >
                     {loading && <Loader2 className="h-4 w-4 animate-spin" />}
