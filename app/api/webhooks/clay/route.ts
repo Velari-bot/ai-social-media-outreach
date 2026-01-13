@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { verality_id, email, status, phone, region, picture, niche, followers } = body;
+        const { verality_id, email, status, phone, region, picture, profile, niche, followers } = body;
 
         if (!verality_id) {
             return NextResponse.json({ error: 'Missing verality_id' }, { status: 400 });
@@ -30,7 +30,8 @@ export async function POST(request: NextRequest) {
         if (status) updateData.email_status = status;
         if (phone) updateData.phone = phone;
         if (region) updateData.region = region;
-        if (picture) updateData.picture_url = picture;
+        if (picture) updateData.picture_url = picture; // PFP
+        if (profile) updateData.profile_url = profile; // Social Link
         if (niche) updateData.niche = niche;
         if (followers) updateData.followers = Number(followers);
 

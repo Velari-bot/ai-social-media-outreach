@@ -44,6 +44,7 @@ export interface FirestoreCreator {
   phone?: string;
   region?: string;
   profile_url?: string; // Link to social media profile (not image)
+  picture_url?: string; // PFP Image URL
   niche?: string;
   followers?: number;
   [key: string]: any;
