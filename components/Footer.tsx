@@ -54,8 +54,8 @@ export default function Footer() {
                         © 2026 Verality Inc. All rights reserved.
                     </div>
                     <div className="flex gap-8 text-sm font-semibold text-gray-500">
-                        <Link href="/terms" className="hover:text-black">Terms</Link>
-                        <Link href="/privacy" className="hover:text-black">Privacy</Link>
+                        <Link href="/tos" className="hover:text-black">Terms</Link>
+                        <Link href="/privacy-policy" className="hover:text-black">Privacy</Link>
                         <Link href="/support" className="hover:text-black">Support</Link>
                     </div>
                 </div>

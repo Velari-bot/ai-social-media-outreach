@@ -331,6 +331,10 @@ export default function LoginPage() {
               <Link href="/book" className="text-blue-600 underline">Book a demo</Link>
               {" "}to get access.
             </p>
+            <div className="mt-4 flex gap-4 justify-center text-[10px] text-gray-400">
+              <Link href="/tos" className="hover:text-gray-600">Terms of Service</Link>
+              <Link href="/privacy-policy" className="hover:text-gray-600">Privacy Policy</Link>
+            </div>
           </div>
         </div>
       </div>
