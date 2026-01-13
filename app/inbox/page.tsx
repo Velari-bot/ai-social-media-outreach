@@ -158,7 +158,7 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
       // 1. Get Session first (more reliable for persistence)
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-      let user = session?.user;
+      let user = session?.user ?? null;
 
       // 2. Fallback to getUser if session is missing but might exist
       if (!user) {
