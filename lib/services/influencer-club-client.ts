@@ -111,14 +111,13 @@ export class InfluencerClubClient {
             category = params.filters.categories[0];
         }
 
-        // REMOVED: Do not map niche to category automatically. 
-        // Categories are strict enums. Providing an invalid one (e.g. "Yoga") yields 0 results.
-        // We will fallback to using 'niche' as a keyword below, which is safer.
-        /*
+        // CATEGORY STRATEGY: 
+        // We restore the mapping of Niche -> Category because for broad searches (e.g. "Education"), 
+        // relying solely on keywords in bio is too restrictive and returns 0 results.
         if (!category && params.filters.niche && params.filters.niche !== 'any') {
             category = params.filters.niche;
+            console.log(`[InfluencerClub] Auto-mapping niche '${params.filters.niche}' to category.`);
         }
-        */
 
         if (category && category !== '' && category !== 'any') {
             filters.category = category;
@@ -130,15 +129,11 @@ export class InfluencerClubClient {
         const keywordInput = params.filters.keywords || params.filters.keyword;
         let keywords = keywordInput ? (Array.isArray(keywordInput) ? keywordInput : [keywordInput]) : [];
 
-        // IMPROVEMENT: Always append Niche as a keyword to ensure finding relevant profiles
+        // Always append Niche as a keyword too, for double coverage
         if (params.filters.niche && params.filters.niche !== 'any') {
-            // Pass niche explicitly to API if it supports it
             filters.niche = params.filters.niche;
-
-            // Avoid adding if already present
             if (!keywords.includes(params.filters.niche)) {
                 keywords.push(params.filters.niche);
-                console.log(`[InfluencerClub] Added niche '${params.filters.niche}' to keywords.`);
             }
         }
 
@@ -187,6 +182,7 @@ export class InfluencerClubClient {
             ...(filters.max_followers ? { max_followers: filters.max_followers } : {}),
             // Keyword/Niche logic
             niche: filters.niche || undefined,
+            category: filters.category || undefined,
             keyword: filters.keyword || (filters.keywords_in_bio ? filters.keywords_in_bio.join(' ') : "influencer"),
         };
 
