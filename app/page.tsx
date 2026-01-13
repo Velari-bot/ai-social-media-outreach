@@ -12,7 +12,9 @@ import {
   Users,
   CheckCircle2,
   Zap,
-  Globe
+  Globe,
+  ArrowRight,
+  XCircle
 } from "lucide-react";
 
 export default function Home() {
@@ -26,16 +28,16 @@ export default function Home() {
       <section className="pt-32 pb-20 px-6 max-w-[1440px] mx-auto flex flex-col items-center text-center relative z-10">
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-200 shadow-sm mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-xs font-bold uppercase tracking-wider text-gray-500">New: Auto-Dm Feature</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Live: AI Email Outreach</span>
         </div>
 
-        <h1 className="text-6xl sm:text-7xl lg:text-[90px] font-[850] text-[#1A1A1A] mb-8 tracking-tighter leading-[1.05] max-w-5xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
-          Find, Contact, <span className="text-[#1A1A1A]">Close.</span>
-          <br className="hidden sm:block" /> <span className="font-cursive font-normal text-8xl lg:text-[110px] relative -mt-4 block py-2 text-[#6B4BFF]">Automatically.</span>
+        <h1 className="text-6xl sm:text-7xl lg:text-[80px] font-[850] text-[#1A1A1A] mb-8 tracking-tighter leading-[1.05] max-w-5xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
+          The <span className="text-[#6B4BFF]">AI Creator Outreach</span> Platform.
         </h1>
 
         <p className="text-xl text-gray-600 mb-10 leading-relaxed font-medium max-w-2xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-200">
-          The all-in-one platform to find creators, send personalized outreach, and track results. Stop using spreadsheets. Start closing deals.
+          Verality is the all-in-one personalized outreach engine for high-growth brands and agencies.
+          <span className="block mt-2 text-gray-500">Discover vetted creators, automate personal emails, and close deals 10x faster.</span>
         </p>
 
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center animate-in fade-in slide-in-from-bottom-6 duration-700 delay-300">
@@ -43,7 +45,7 @@ export default function Home() {
             href="/book"
             className="px-10 py-4 bg-black text-white rounded-full hover:bg-gray-800 hover:scale-105 transition-all font-bold text-lg shadow-xl shadow-black/10 flex items-center gap-2"
           >
-            Get Started Free <span className="text-white/60">→</span>
+            Start Outreach Free <span className="text-white/60">→</span>
           </Link>
           <Link
             href="/demo"
@@ -145,6 +147,95 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Problem / Solution Section */}
+      <section className="py-24 bg-white border-y border-gray-100">
+        <div className="max-w-[1440px] px-6 mx-auto">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-4xl font-[850] text-[#1A1A1A] mb-4">Why traditional outreach fails.</h2>
+            <p className="text-lg text-gray-500">
+              Most brands struggle to scale influencer marketing because manual work is slow, and "databases" don't do the heavy lifting.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+            {/* Old Way */}
+            <div className="bg-red-50/50 p-10 rounded-[32px] border border-red-100">
+              <h3 className="text-red-900 font-bold text-xl mb-6 flex items-center gap-2">
+                <XCircle className="w-6 h-6 text-red-500" /> The Old Way
+              </h3>
+              <ul className="space-y-4">
+                <li className="flex gap-4 text-gray-700 font-medium">
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-300 mt-2.5 flex-shrink-0" />
+                  Manually searching hashtags on TikTok/IG for hours.
+                </li>
+                <li className="flex gap-4 text-gray-700 font-medium">
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-300 mt-2.5 flex-shrink-0" />
+                  Copy-pasting "Hey [Name]" into 50 different DMs.
+                </li>
+                <li className="flex gap-4 text-gray-700 font-medium">
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-300 mt-2.5 flex-shrink-0" />
+                  Tracking replies in a messy, outdated Google Sheet.
+                </li>
+                <li className="flex gap-4 text-gray-700 font-medium">
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-300 mt-2.5 flex-shrink-0" />
+                  Getting ignored because your messaging is generic.
+                </li>
+              </ul>
+            </div>
+
+            {/* Verality Way */}
+            <div className="bg-green-50/50 p-10 rounded-[32px] border border-green-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-green-200/20 blur-3xl rounded-full" />
+              <h3 className="text-green-900 font-bold text-xl mb-6 flex items-center gap-2">
+                <CheckCircle2 className="w-6 h-6 text-green-600" /> The Verality Way
+              </h3>
+              <ul className="space-y-4">
+                <li className="flex gap-4 text-gray-800 font-bold">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2.5 flex-shrink-0" />
+                  AI finds 1,000+ perfectly matched creators in seconds.
+                </li>
+                <li className="flex gap-4 text-gray-800 font-bold">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2.5 flex-shrink-0" />
+                  Personalized emails sent automatically at scale.
+                </li>
+                <li className="flex gap-4 text-gray-800 font-bold">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2.5 flex-shrink-0" />
+                  Auto-follow ups ensure you never miss a reply.
+                </li>
+                <li className="flex gap-4 text-gray-800 font-bold">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2.5 flex-shrink-0" />
+                  One dashboard to manage relationships and deals.
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* WHO IS THIS FOR? */}
+      <section className="py-24 max-w-[1440px] mx-auto px-6">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-[850] text-[#1A1A1A] mb-4">Who uses Verality?</h2>
+          <p className="text-lg text-gray-500">Built for teams that need to scale relationships, not administrative work.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {[
+            { icon: Building2, title: "DTC Brands", desc: "Scale your seeding campaigns efficiently. Find micro-influencers who actually convert without hiring a full agency." },
+            { icon: Users, title: "Marketing Agencies", desc: "Manage outreach for multiple clients in one place. Reduce improved profit margins by automating the busy work." },
+            { icon: Rocket, title: "Talent Managers", desc: "Find new talent to sign. Use our search tools to spot rising stars before they go viral and get signed by big firms." }
+          ].map((item, i) => (
+            <div key={i} className="bg-gray-50 rounded-3xl p-8 hover:bg-white hover:shadow-xl transition-all border border-gray-100">
+              <div className="w-12 h-12 bg-black text-white rounded-xl flex items-center justify-center mb-6">
+                <item.icon className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">{item.title}</h3>
+              <p className="text-gray-500 leading-relaxed font-medium">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+
       {/* Value Props / Bento Grid */}
       <section className="px-6 max-w-[1440px] mx-auto mb-32">
         <div className="text-center mb-16">
@@ -160,7 +251,7 @@ export default function Home() {
                 <Search className="w-7 h-7" />
               </div>
               <h3 className="text-2xl font-bold mb-3">AI-Powered Search</h3>
-              <p className="text-gray-500 font-medium max-w-sm">Find the perfect creators instantly. Filter by engagement rate, past sponsorship performance, and audience demographics.</p>
+              <p className="text-gray-500 font-medium max-w-sm">Find the perfect creators instantly. Filter by engagement rate, keywords, niche, and follower counts across TikTok, Instagram, and YouTube.</p>
             </div>
             <div className="absolute right-[-20px] bottom-[-20px] opacity-10 group-hover:opacity-20 transition-opacity">
               <Search className="w-64 h-64" />
@@ -173,8 +264,8 @@ export default function Home() {
               <div className="w-14 h-14 bg-black text-white rounded-2xl flex items-center justify-center mb-6 shadow-lg rotate-[5deg] group-hover:rotate-0 transition-all duration-300">
                 <Send className="w-7 h-7" />
               </div>
-              <h3 className="text-2xl font-bold mb-3">One-Click Outreach</h3>
-              <p className="text-gray-500 font-medium">Send personalized emails at scale. Auto-follow up until you get a reply.</p>
+              <h3 className="text-2xl font-bold mb-3">Automated Email Drip</h3>
+              <p className="text-gray-500 font-medium">Set up 3-step email sequences. Verality stops the sequence automatically when a creator replies.</p>
             </div>
           </div>
 
@@ -184,16 +275,16 @@ export default function Home() {
               <div className="w-14 h-14 bg-black text-white rounded-2xl flex items-center justify-center mb-6 shadow-lg rotate-[3deg] group-hover:rotate-0 transition-all duration-300">
                 <BarChart3 className="w-7 h-7" />
               </div>
-              <h3 className="text-2xl font-bold mb-3">Live Analytics</h3>
-              <p className="text-gray-500 font-medium">Track open rates, reply rates, and deal value in real-time.</p>
+              <h3 className="text-2xl font-bold mb-3">Live Pipeline</h3>
+              <p className="text-gray-500 font-medium">Kanban-style board to track every relationship. Drag and drop to move creators from 'Contacted' to 'Negotiating'.</p>
             </div>
           </div>
 
           {/* Card 4 - Full Width */}
           <div className="bg-[#1A1A1A] rounded-[32px] p-8 md:col-span-2 border border-black shadow-sm hover:shadow-xl transition-all duration-300 text-white group overflow-hidden relative flex flex-col md:flex-row items-center gap-8">
             <div className="flex-1 relative z-10">
-              <h3 className="text-2xl font-bold mb-3">Built for teams</h3>
-              <p className="text-gray-400 font-medium mb-6">Collaborate with your team, assign creators, and track performance together.</p>
+              <h3 className="text-2xl font-bold mb-3">Collaborate with your team</h3>
+              <p className="text-gray-400 font-medium mb-6">Invite team members to manage different campaigns. Centralize your creator database so no contact is ever lost.</p>
               <div className="flex gap-4">
                 <div className="flex -space-x-3">
                   {[
@@ -218,6 +309,24 @@ export default function Home() {
                 className="absolute top-0 right-[-20px] w-[110%] h-full object-cover rounded-l-xl opacity-90 group-hover:scale-105 transition-transform duration-700"
               />
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SEO Content: "What is AI Creator Outreach?" */}
+      <section className="py-20 bg-gray-50 border-t border-gray-200">
+        <div className="max-w-3xl mx-auto px-6">
+          <h2 className="text-3xl font-bold text-gray-900 mb-6">What is AI Creator Outreach?</h2>
+          <div className="prose text-gray-600">
+            <p className="mb-4">
+              AI Creator Outreach is the process of using artificial intelligence to automate the labor-intensive parts of influencer marketing: finding the right influencers, finding their verified email addresses, and sending personalized outreach messages.
+            </p>
+            <p className="mb-4">
+              Traditionally, brands would hire virtual assistants to manually scroll through Instagram or TikTok, copy-pasting info into spreadsheets. This approach is slow, error-prone, and unscalable.
+            </p>
+            <p>
+              With Verality, you can replace this entire manual workflow. Our AI scans millions of profiles to find creators that match your exact parameters (like engagement rate, location, and niche), enriches their data to find personal emails, and manages the initial conversation—allowing you to focus on building relationships and strategy.
+            </p>
           </div>
         </div>
       </section>

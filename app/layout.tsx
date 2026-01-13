@@ -8,25 +8,25 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const caveat = Caveat({ subsets: ["latin"], variable: "--font-caveat" });
 
 export const metadata: Metadata = {
-  title: "Verality | AI Creator Outreach & Social Media Automation",
-  description: "Automate your creator outreach with AI. Find creators, send personalized emails, handle replies, and scale your social media presence automatically with Verality.",
-  keywords: ["AI social media outreach", "creator marketing automation", "auto-reply AI", "social media influencer tool", "Verality AI"],
+  title: "Verality | #1 AI Creator Outreach & Influencer Marketing Platform",
+  description: "The complete AI creator outreach solution. Automated discovery, personalized emailing, and CRM for brands and agencies. Scale your influencer marketing today.",
+  keywords: ["AI creator outreach", "influencer marketing automation", "find creators", "automated dm", "influencer crm", "tiktok outreach", "instagram outreach"],
   authors: [{ name: "Verality Team" }],
   metadataBase: new URL('https://verality.io'),
   alternates: {
     canonical: '/',
   },
   openGraph: {
-    title: "Verality | AI Creator Outreach & Social Media Automation",
-    description: "Scale your creator partnerships automatically. AI handles the search, outreach, and replies.",
+    title: "Verality | #1 AI Creator Outreach Platform",
+    description: "Stop manual searching. Verality automates your entire creator outreach pipeline from discovery to signed deal.",
     url: 'https://verality.io',
     siteName: 'Verality',
     images: [
       {
-        url: '/v-nav.png',
-        width: 800,
-        height: 800,
-        alt: 'Verality AI Logo',
+        url: '/v-nav.png', // Ideally a larger OG image
+        width: 1200,
+        height: 630,
+        alt: 'Verality Platform Preview',
       },
     ],
     locale: 'en_US',
@@ -41,6 +41,7 @@ export const metadata: Metadata = {
   icons: {
     icon: '/V.png',
     apple: '/V.png',
+    shortcut: '/V.png'
   }
 };
 
