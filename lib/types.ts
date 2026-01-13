@@ -40,6 +40,7 @@ export interface FirestoreCreator {
   title: string;
   linkedin_url?: string;
   email?: string;
+  other_emails?: string[]; // Array of additional emails found
   email_status?: string;
   phone?: string;
   region?: string;

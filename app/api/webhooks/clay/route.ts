@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { verality_id, email, status, phone, region, picture, profile, niche, followers } = body;
+        const { verality_id, email, email_2, email_3, status, phone, region, picture, profile, niche, followers } = body;
 
         if (!verality_id) {
             return NextResponse.json({ error: 'Missing verality_id' }, { status: 400 });
@@ -23,9 +23,21 @@ export async function POST(request: NextRequest) {
             updated_at: new Date().toISOString()
         };
 
+        // Handle Primary Email
         if (email) {
             updateData.email = email;
             updateData.email_found = true;
+        }
+
+        // Handle Other Emails (merge any that are not the primary)
+        const others = [email_2, email_3].filter(e => e && e !== email && e.trim() !== '');
+        if (others.length > 0) {
+            updateData.other_emails = others;
+            // If primary was missing but we found others, treat as found
+            if (!updateData.email) {
+                updateData.email = others[0];
+                updateData.email_found = true;
+            }
         }
         if (status) updateData.email_status = status;
         if (phone) updateData.phone = phone;
