@@ -145,9 +145,9 @@ async function storeCreators(
         platform: savedCreator.platform,
         name: creatorData.basic_profile_data.fullname || savedCreator.handle,
         profileUrl: result.profile_url || result.url || undefined, // Pass URL if available from source
-        followers: creatorData.basic_profile_data.followers,
-        bio: creatorData.basic_profile_data.biography || creatorData.basic_profile_data.bio,
-        website: creatorData.basic_profile_data.external_url || creatorData.basic_profile_data.website,
+        followers: Number(creatorData.basic_profile_data.followers || 0),
+        bio: (creatorData.basic_profile_data as any).biography || (creatorData.basic_profile_data as any).bio || "",
+        website: (creatorData.basic_profile_data as any).external_url || (creatorData.basic_profile_data as any).website || "",
         niche: "", // Niche is usually filter-level, not per-creator in raw data
       }).catch(err => console.error(`Failed to auto-push creator ${savedCreator.id} to Clay:`, err));
     }
