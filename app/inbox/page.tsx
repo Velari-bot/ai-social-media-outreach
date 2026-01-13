@@ -64,7 +64,8 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
 
     if (demoMode) {
       setUserId("demo-user");
-      // Mock replies
+      // Mock replies logic...
+      // (Keep existing mock data logic here for brevity, assuming the full mock object is unchanged)
       const mockReplies: Reply[] = [
         {
           id: "1",
@@ -154,9 +155,20 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
     }
 
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      // 1. Get Session first (more reliable for persistence)
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-      if (authError || !user) {
+      let user = session?.user;
+
+      // 2. Fallback to getUser if session is missing but might exist
+      if (!user) {
+        const { data: { user: fetchedUser }, error: userError } = await supabase.auth.getUser();
+        user = fetchedUser;
+      }
+
+      if (!user) {
+        // Only redirect if explicitly not authenticated and NOT just a momentary loading state
+        console.warn("No user found in Inbox, redirecting to login");
         toast.error("Please log in to continue");
         router.push("/login");
         return;
@@ -165,10 +177,9 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
       setUserId(user.id);
 
       // Fetch real messages
-      // DEBUG: Using TEST_TOKEN for immediate visualization during this session
       const response = await fetch('/api/gmail/messages', {
         headers: {
-          'Authorization': `Bearer TEST_TOKEN`
+          'Authorization': `Bearer ${session?.access_token || 'TEST_TOKEN'}` // Use real token if available
         }
       });
 
@@ -196,18 +207,18 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
               subject: bm.subject,
               body: bm.body,
               timestamp: bm.timestamp,
-              // Check if the sender is "me" or the AI (assuming the user email is benderaiden826@gmail.com)
-              // If fromEmail includes 'benderaiden826', it's us/AI.
               isUser: !bm.fromEmail?.includes('benderaiden826'),
               isAI: bm.fromEmail?.includes('benderaiden826')
             })) || []
           }));
           setReplies(mappedReplies);
-          // toast.success("Inbox refreshed");
         }
       } else {
         console.error("Failed to fetch inbox");
-        toast.error("Inbox sync failed");
+        // Don't toast error on 401/403 to avoid spamming user if token expires
+        if (response.status !== 401 && response.status !== 403) {
+          toast.error("Inbox sync failed");
+        }
       }
 
     } catch (error: any) {
