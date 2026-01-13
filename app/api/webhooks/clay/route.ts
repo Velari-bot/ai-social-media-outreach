@@ -54,6 +54,11 @@ export async function POST(request: NextRequest) {
 
         if (followers) updateData.followers = Number(followers);
 
+        // Update Status explicitly for UI feedback
+        // If email found -> enriched
+        // If no email found -> failed (so UI shows red/failed state instead of infinite loading)
+        updateData.enrichment_status = updateData.email_found ? 'enriched' : 'failed';
+
         // Update Firestore Document
         // verality_id corresponds to the Firestore Document ID
         const docRef = db.collection('creators').doc(verality_id);
