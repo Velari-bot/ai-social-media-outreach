@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
-        const snapshot = await db.collection('creators').orderBy('created_at', 'desc').limit(500).get();
+        const snapshot = await db.collection('creators').orderBy('created_at', 'desc').limit(2000).get();
         const creators = snapshot.docs.map(doc => {
             const data = doc.data();
             return {
