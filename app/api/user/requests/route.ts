@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
           try {
             await adminDb.collection('creator_requests').doc(newRequest.id).delete();
           } catch (deleteError: any) {
-            console.error(`[RequestsAPI] Failed to delete zero-result request:`, deleteError.message);
+            console.error(`[RequestsAPI] Failed to delete zero-result request (non-fatal):`, deleteError.message);
           }
 
           return NextResponse.json({
