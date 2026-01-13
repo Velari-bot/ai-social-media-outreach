@@ -42,7 +42,10 @@ export const metadata: Metadata = {
     icon: '/V.png',
     apple: '/V.png',
     shortcut: '/V.png'
-  }
+  },
+  verification: {
+    google: '8WS8sBOoEU8uTvfk3rKqsKUiA-XvTM4KLDO57RVOzbE',
+  },
 };
 
 import AffiliateTracker from "@/components/AffiliateTracker";
