@@ -59,13 +59,14 @@ export class DiscoveryPipeline {
         let creditsConsumed = 0;
         let finalCreators: Creator[] = [...internalCreators];
 
-        // 2. Fallback to Influencers.club if needed
-        if (foundCount < requestedCount) {
-            console.log(`[Discovery] Need ${requestedCount - foundCount} more creators. calling external API...`);
+        // 2. Fallback to Influencers.club (ALWAYS fetch new to satisfy "new everytime")
+        // User explicitly wants new creators every time.
+        // if (foundCount < requestedCount) { <--- Old condition
+        if (true) {
+            console.log(`[Discovery] Force fetching new creators from External API...`);
             try {
-                const remaining = requestedCount - foundCount;
-                // API has a hard limit of 50 per request
-                const fetchLimit = Math.min(remaining, 50);
+                // Fetch at least what was requested, capped at 50 for safety
+                const fetchLimit = Math.min(requestedCount, 50);
 
                 const externalResults = await influencerClubClient.discoverCreators({
                     platform,
@@ -198,6 +199,7 @@ export class DiscoveryPipeline {
                 enrichment_status: 'pending' as const,
                 source: 'influencers_club',
                 basic_profile_data: item,
+                niche: item.category || item.niche || null,
                 email_found: item.emails && item.emails.length > 0,
                 email: item.emails && item.emails.length > 0 ? item.emails[0] : null,
                 clay_enriched_at: null,

@@ -109,6 +109,10 @@ export class InfluencerClubClient {
             category = params.filters.categories[0];
         }
 
+        if (!category && params.filters.niche && params.filters.niche !== 'any') {
+            category = params.filters.niche;
+        }
+
         if (category && category !== '' && category !== 'any') {
             filters.category = category;
             console.log(`[InfluencerClub] Using category filter: ${category}`);
