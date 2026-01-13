@@ -109,9 +109,14 @@ export class InfluencerClubClient {
             category = params.filters.categories[0];
         }
 
+        // REMOVED: Do not map niche to category automatically. 
+        // Categories are strict enums. Providing an invalid one (e.g. "Yoga") yields 0 results.
+        // We will fallback to using 'niche' as a keyword below, which is safer.
+        /*
         if (!category && params.filters.niche && params.filters.niche !== 'any') {
             category = params.filters.niche;
         }
+        */
 
         if (category && category !== '' && category !== 'any') {
             filters.category = category;
@@ -123,11 +128,13 @@ export class InfluencerClubClient {
         const keywordInput = params.filters.keywords || params.filters.keyword;
         let keywords = keywordInput ? (Array.isArray(keywordInput) ? keywordInput : [keywordInput]) : [];
 
-        // IMPROVEMENT: If niche is provided but not keywords, use niche as a keyword too
-        // This helps when "niche" is something specific like "Yoga" that might be a category OR a keyword.
-        if (params.filters.niche && params.filters.niche !== 'any' && keywords.length === 0) {
-            keywords = [params.filters.niche];
-            console.log(`[InfluencerClub] Using niche '${params.filters.niche}' as keyword filter.`);
+        // IMPROVEMENT: Always append Niche as a keyword to ensure finding relevant profiles
+        if (params.filters.niche && params.filters.niche !== 'any') {
+            // Avoid adding if already present
+            if (!keywords.includes(params.filters.niche)) {
+                keywords.push(params.filters.niche);
+                console.log(`[InfluencerClub] Added niche '${params.filters.niche}' to keywords.`);
+            }
         }
 
         const cleanedKeywords = keywords.filter((k: any) => k && k.trim() !== '');
