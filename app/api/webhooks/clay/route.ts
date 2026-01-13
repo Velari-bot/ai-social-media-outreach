@@ -66,6 +66,31 @@ export async function POST(request: NextRequest) {
 
         await docRef.set(updateData, { merge: true });
 
+        // Credit Refund Logic
+        // If no email was found, and this was a user request (not backfill), refund the credit.
+        // We check 'email_found' in updateData.
+
+        // Extract user_id and backfill from body (Clay should pass these back if they were in the input)
+        // Note: Clay webhook payload structure depends on how the webhook action is configured in Clay.
+        // We assume Clay passes through the 'user_id' and 'backfill' fields we sent, or we fetch user_id from the doc.
+
+        let targetUserId = body.user_id;
+
+        // If Clay didn't return user_id, fall back to the creator doc's user_id
+        if (!targetUserId && docSnap.exists) {
+            const docData = docSnap.data();
+            targetUserId = docData?.user_id;
+        }
+
+        const isBackfill = body.backfill === true || body.backfill === "true";
+
+        if (targetUserId && !updateData.email_found && !isBackfill) {
+            console.log(`[Clay Webhook] No email found for ${verality_id}. Refunding 1 credit to user ${targetUserId}.`);
+            // Import dynamically to avoid circular deps if any, or just import at top if clean
+            const { incrementEmailQuota } = await import('@/lib/database');
+            await incrementEmailQuota(targetUserId, -1);
+        }
+
         console.log(`[Clay Webhook] Successfully updated Firestore doc ${verality_id}`);
 
         return NextResponse.json({ success: true });

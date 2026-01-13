@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
           platform: platforms[0].toLowerCase() as any,
           filters: criteria,
           requestedCount: finalBatchSize,
-          skipEnrichment: true, // Added to prevent timeouts during initial search
+          // skipEnrichment: false, // ENABLED: We need to send to Clay!
         });
 
         const foundCount = results.creators?.length || 0;

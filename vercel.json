@@ -1,4 +1,10 @@
 {
+    "crons": [
+        {
+            "path": "/api/cron/campaigns/run",
+            "schedule": "0 8 * * *"
+        }
+    ],
     "headers": [
         {
             "source": "/api/webhooks/stripe",

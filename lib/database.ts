@@ -30,6 +30,13 @@ export interface CreatorRequest {
   results_count?: number;
   creator_ids?: string[];
   criteria: Record<string, any>;
+
+  // Recurring Campaign Fields
+  is_recurring?: boolean; // If true, this request acts as a campaign template
+  is_active?: boolean; // Can be paused
+  last_run_at?: Timestamp | string;
+  frequency?: 'daily'; // Default daily
+
   created_at: Timestamp | string;
   updated_at: Timestamp | string;
 }
@@ -209,6 +216,9 @@ export async function createCreatorRequest(
       criteria: requestData.criteria,
       status: 'pending',
       date_submitted: now,
+      is_recurring: true, // Auto-run 24/7 feature
+      is_active: true,
+      last_run_at: now, // Mark created time as first "run"
       created_at: now,
       updated_at: now,
     });
