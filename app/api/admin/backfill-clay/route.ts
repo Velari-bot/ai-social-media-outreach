@@ -37,13 +37,19 @@ export async function POST(req: NextRequest) {
                 const data = doc.data();
                 const basicData = data.basic_profile_data || {};
 
-                // Construct Payload
+                // Ensure we have a valid Profile URL (Critical for Findymail)
+                let pUrl = data.profile_url || basicData.profile_url || basicData.url;
+                // If pUrl is missing or looks like an image, reconstruct it
+                if (!pUrl || pUrl.match(/\.(jpeg|jpg|png|gif|webp)$/i)) {
+                    pUrl = constructProfileUrl(data.platform || 'instagram', data.handle);
+                }
+
                 const payload = {
                     "verality_id": doc.id,
                     "creator_name": data.full_name || basicData.fullname || basicData.full_name || data.handle || "Unknown",
                     "platform": data.platform || "instagram",
                     "username": data.handle || basicData.username,
-                    "profile_url": data.profile_url || data.picture_url || basicData.profile_url || basicData.url || constructProfileUrl(data.platform || 'instagram', data.handle),
+                    "profile_url": pUrl,
                     "picture_url": data.picture_url || basicData.picture || basicData.profile_pic_url || "",
                     "niche": data.niche || "",
                     "followers": Number(data.followers || basicData.followers || 0),
