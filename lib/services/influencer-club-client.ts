@@ -88,6 +88,20 @@ export class InfluencerClubClient {
     /**
      * Search Creators with Fallback Strategy
      */
+    private parseNiche(rawNiche: string): { niche: string; category?: string } {
+        if (!rawNiche || rawNiche === 'any') return { niche: rawNiche };
+        if (rawNiche.includes('(')) {
+            const parts = rawNiche.split(' (');
+            const nicheVal = parts[0].trim();
+            const catVal = parts[1].replace(')', '').trim();
+            return { niche: nicheVal, category: catVal };
+        }
+        return { niche: rawNiche, category: rawNiche };
+    }
+
+    /**
+     * Search Creators with Fallback Strategy
+     */
     async discoverCreators(params: {
         platform: Platform;
         filters: Record<string, any>;
@@ -102,18 +116,17 @@ export class InfluencerClubClient {
         console.log("[InfluencerClub] 0 results found. Attempting Fallback Strategy 1: Lax Category...");
 
         // 2. Fallback 1: Deep lax (Remove Category, force Keyword mode)
-        // Many niches (e.g. "Gaming") fail as categories but work as keywords.
         const laxFilters = { ...params.filters };
         if (laxFilters.niche && laxFilters.niche !== 'any') {
-            // Remove niche as a strict category indicator
-            // But ensure it hits the keyword logic in fetchCreators
-            // We do this by unsetting 'category' mapping risk in the next call,
-            // or by explicitly setting it as keyword here to override.
+            const { niche: cleanNiche } = this.parseNiche(laxFilters.niche);
 
             // Hack: We rename 'niche' to 'keywords' to force keyword path
             if (!laxFilters.keywords) laxFilters.keywords = [];
-            if (Array.isArray(laxFilters.keywords)) laxFilters.keywords.push(laxFilters.niche);
-            else laxFilters.keywords = [laxFilters.keywords, laxFilters.niche];
+
+            const existingKeywords = Array.isArray(laxFilters.keywords) ? laxFilters.keywords : [laxFilters.keywords];
+            if (!existingKeywords.includes(cleanNiche)) {
+                laxFilters.keywords = [...existingKeywords, cleanNiche];
+            }
 
             delete laxFilters.niche; // Remove niche trigger
             delete laxFilters.category; // Remove strict category trigger
@@ -127,7 +140,7 @@ export class InfluencerClubClient {
 
         // 3. Fallback 2: Lower Followers (if originally high)
         const minF = Number(params.filters.minFollowers || params.filters.followersMin || 0);
-        if (minF > 2000) {
+        if (minF > 1500) {
             console.log("[InfluencerClub] 0 results. Attempting Fallback 2: Lower Followers...");
             const lowerFilters = { ...laxFilters, minFollowers: 1000 };
             results = await this.fetchCreators({ ...params, filters: lowerFilters });
@@ -155,17 +168,28 @@ export class InfluencerClubClient {
         try {
             this.validateFilters(params.filters);
         } catch (e) {
-            // If validation fails (e.g. no keywords because we stripped them in fallback), return []
             console.warn(`[InfluencerClub:${requestId}] Validation failed, skipping fetch:`, e);
             return [];
         }
 
         // 1. Prepare Filters Object
         const filters: any = {};
+        let cleanNicheForKeyword = "";
 
-        // Category (Primary targeting method)
-        // Check for category first, then fall back to topics
+        // Category & Niche Parsing
         let category = params.filters.category;
+        if (params.filters.niche && params.filters.niche !== 'any') {
+            const parsed = this.parseNiche(params.filters.niche);
+            filters.niche = parsed.niche;
+            cleanNicheForKeyword = parsed.niche;
+
+            if (!category) {
+                category = parsed.category;
+            }
+            console.log(`[InfluencerClub:${requestId}] Parsed: Niche='${parsed.niche}', Category='${parsed.category}'`);
+        }
+
+        // Fallback for category from topics
         if (!category && params.filters.topics && params.filters.topics !== 'any' && params.filters.topics !== 'Any Topic') {
             category = Array.isArray(params.filters.topics) ? params.filters.topics[0] : params.filters.topics;
         }
@@ -173,55 +197,25 @@ export class InfluencerClubClient {
             category = params.filters.categories[0];
         }
 
-        // CATEGORY STRATEGY: 
-        // We restore the mapping of Niche -> Category because for broad searches (e.g. "Education"), 
-        // relying solely on keywords in bio is too restrictive and returns 0 results.
-        if (params.filters.niche && params.filters.niche !== 'any') {
-            // New format parsing: "Action game (Gaming)" 
-            // Niche = "Action game", Category = "Gaming"
-            if (params.filters.niche.includes('(')) {
-                const parts = params.filters.niche.split(' (');
-                const nicheVal = parts[0].trim();
-                const catVal = parts[1].replace(')', '').trim();
-
-                filters.niche = nicheVal;
-                filters.category = catVal;
-                category = catVal; // for the check below
-
-                console.log(`[InfluencerClub:${requestId}] Parsed: Niche='${nicheVal}', Category='${catVal}' from input.`);
-            } else if (!category) {
-                category = params.filters.niche;
-                filters.niche = params.filters.niche;
-                filters.category = params.filters.niche;
-                console.log(`[InfluencerClub:${requestId}] Auto-mapping niche '${params.filters.niche}' to both category and niche.`);
-            }
-        }
-
         if (category && category !== '' && category !== 'any') {
             filters.category = category;
             console.log(`[InfluencerClub:${requestId}] Using category filter: ${category}`);
         }
 
-        // Keywords (Alternative targeting method) -> keywords_in_bio
-        // Accept keywords from multiple possible field names
+        // Keywords
         const keywordInput = params.filters.keywords || params.filters.keyword;
         let keywords = keywordInput ? (Array.isArray(keywordInput) ? keywordInput : [keywordInput]) : [];
 
-        // Always append Niche as a keyword too, for double coverage
-        if (params.filters.niche && params.filters.niche !== 'any') {
-            filters.niche = params.filters.niche;
-            if (!keywords.includes(params.filters.niche)) {
-                keywords.push(params.filters.niche);
-            }
+        // Always append Cleaned Niche as a keyword too
+        if (cleanNicheForKeyword && !keywords.includes(cleanNicheForKeyword)) {
+            keywords.push(cleanNicheForKeyword);
         }
 
         const cleanedKeywords = keywords.filter((k: any) => k && k.trim() !== '');
         if (cleanedKeywords.length > 0) {
             filters.keywords_in_bio = cleanedKeywords;
-            // Also send as 'keyword' and 'keywords' to match potential API variations
             filters.keyword = cleanedKeywords.join(' ');
             filters.keywords = cleanedKeywords;
-            console.log(`[InfluencerClub:${requestId}] Using keywords filter: ${cleanedKeywords.join(', ')}`);
         }
 
         // Location (Optional) -> location array
