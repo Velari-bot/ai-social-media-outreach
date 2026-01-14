@@ -2,28 +2,24 @@ import { ModashDiscoveryResult, Platform } from '../types';
 import { logApiCall } from './api-logger';
 
 const INFLUENCER_CLUB_API_KEY = process.env.INFLUENCER_CLUB_API_KEY || '';
-const DEFAULT_IC_BASE_URL = 'https://api-dashboard.influencers.club';
+// Base URL for the Discovery API from user requirements
+const INFLUENCER_CLUB_BASE_URL = 'https://api.influencerclub.com';
 
-/**
- * Influencer Club API Client
- * Optimized for maximum filter compliance and result counts.
- */
 export class InfluencerClubClient {
     private apiKey: string;
     private baseUrl: string;
 
     constructor(config: { apiKey: string; baseUrl?: string }) {
         this.apiKey = (config.apiKey || INFLUENCER_CLUB_API_KEY || '').trim();
-        this.baseUrl = (config.baseUrl || DEFAULT_IC_BASE_URL).replace(/\/$/, '');
+        this.baseUrl = (config.baseUrl || INFLUENCER_CLUB_BASE_URL).replace(/\/$/, '');
     }
 
     private getAuthHeader() {
-        // Ensure clean Bearer token
         const cleanKey = this.apiKey.replace(/^Bearer\s+/i, '');
         return `Bearer ${cleanKey}`;
     }
 
-    private parseNiche(rawNiche: string): { niche: string; category?: string } {
+    private parseTopics(rawNiche: string): { niche: string; category?: string } {
         if (!rawNiche || rawNiche === 'any') return { niche: rawNiche };
         if (rawNiche.includes('(')) {
             const parts = rawNiche.split(' (');
@@ -43,53 +39,32 @@ export class InfluencerClubClient {
         if (!this.apiKey) throw new Error('Influencer Club API Key is missing.');
 
         const requestId = Math.random().toString(36).substring(7);
-        const { niche: cleanNiche, category: cleanCategory } = this.parseNiche(params.filters.niche || "");
+        const { niche: cleanNiche, category: cleanCategory } = this.parseTopics(params.filters.niche || "");
 
         const minFollowers = Number(params.filters.min_followers || params.filters.minFollowers || 1000);
         const maxFollowers = Number(params.filters.max_followers || params.filters.maxFollowers || 1000000);
 
-        // This is the "Ultra Schema" - combines all known required fields from documentation and user examples
+        // This is the EXACT flat structure the user provided in their clean minimal example
+        // It uses camelCase for the follower keys and puts niche/category at the top level
         const body: any = {
             platform: params.platform.toLowerCase(),
-            // Top level paging (Flat schema)
-            limit: params.limit || 50,
-            offset: params.offset || 0,
-            // Top level filters (Flat schema fallback)
-            min_followers: minFollowers,
-            max_followers: maxFollowers,
+            niche: cleanNiche || params.filters.niche,
+            category: cleanCategory || params.filters.category,
             minFollowers: minFollowers,
             maxFollowers: maxFollowers,
-            niche: cleanNiche,
-            category: cleanCategory,
-
-            // Nested Paging (V1 Schema Requirement)
-            paging: {
-                limit: params.limit || 50,
-                offset: params.offset || 0,
-                page: Math.floor((params.offset || 0) / (params.limit || 50))
-            },
-
-            // Nested Filters (High-Accuracy Schema)
-            filters: {
-                min_followers: minFollowers,
-                max_followers: maxFollowers,
-                platform: params.platform.toLowerCase(),
-                category: params.filters.category || cleanCategory,
-                niche: params.filters.niche || cleanNiche,
-                keyword: cleanNiche,
-                keywords: [cleanNiche].filter(Boolean)
-            },
-
-            sort_by: "relevancy",
-            sort_order: "desc"
+            limit: params.limit || 50,
+            offset: params.offset || 0,
+            // Add keywords string just in case, some versions use it
+            keywords: cleanNiche || params.filters.niche
         };
 
-        console.log(`[InfluencerClub:${requestId}] POST ${this.baseUrl}/public/v1/discovery/`);
-        // console.log(`[InfluencerClub:${requestId}] Payload:`, JSON.stringify(body));
+        console.log(`[InfluencerClub:${requestId}] POST ${this.baseUrl}/discover`);
+        console.log(`[InfluencerClub:${requestId}] Searching for niche: "${body.niche}"`);
 
         try {
-            // Priority 1: Reach the dashboard discovery endpoint
-            const response = await fetch(`${this.baseUrl}/public/v1/discovery/`, {
+            // THE USER EXPLICITLY ASKED TO USE THE DISCOVERY API
+            // AND the /discover endpoint on api.influencerclub.com
+            const response = await fetch(`${this.baseUrl}/discover`, {
                 method: "POST",
                 headers: {
                     "Authorization": this.getAuthHeader(),
@@ -100,32 +75,47 @@ export class InfluencerClubClient {
 
             if (!response.ok) {
                 const text = await response.text();
-                // If the primary endpoint is failing but the key is good, try the alternate /discover endpoint
-                if (response.status === 403 || response.status === 404) {
-                    console.warn(`[InfluencerClub:${requestId}] Dashboard API failed (${response.status}), trying /discover fallback...`);
-                    return await this.discoverFallback(params, body, requestId);
-                }
+                // If the new domain is unreachable, fall back to the dashboard one but keep the FLAT schema
                 if (response.status === 401) throw new Error("Influencer Club API Key is unauthorized (401).");
-                return [];
+
+                console.warn(`[InfluencerClub:${requestId}] Primary discovery failed (${response.status}), trying fallback domain...`);
+                return await this.discoverFallback(params, body, requestId);
             }
 
             const data = await response.json();
             const accounts = data.accounts || data.results || data.data || [];
 
-            console.log(`[InfluencerClub:${requestId}] Success! Got ${accounts.length} creators (Total matching: ${data.total || '?'})`);
+            console.log(`[InfluencerClub:${requestId}] Success! Got ${accounts.length} creators.`);
 
             return this.mapResults(accounts, params.platform);
 
         } catch (error: any) {
             if (error.message.includes('401')) throw error;
-            console.error(`[InfluencerClub:${requestId}] Error:`, error.message);
-            return [];
+            console.error(`[InfluencerClub:${requestId}] Primary error:`, error.message);
+            // Even on network error, try the fallback domain
+            return await this.discoverFallback(params, body, requestId);
         }
     }
 
     private async discoverFallback(params: any, body: any, requestId: string): Promise<ModashDiscoveryResult[]> {
-        // Try the flatter /discover endpoint which some users prefer
-        const fallbackUrl = `${this.baseUrl}/discover`;
+        const fallbackUrl = `https://api-dashboard.influencers.club/public/v1/discovery/`;
+        // When using the dashboard endpoint, we might need the nested schema for niches to work
+        const nestedBody = {
+            ...body,
+            filters: {
+                platform: params.platform.toLowerCase(),
+                min_followers: body.minFollowers,
+                max_followers: body.maxFollowers,
+                category: body.category,
+                keyword: body.niche,
+                keywords: [body.niche].filter(Boolean)
+            },
+            paging: {
+                limit: body.limit,
+                offset: body.offset
+            }
+        };
+
         try {
             const res = await fetch(fallbackUrl, {
                 method: "POST",
@@ -133,7 +123,7 @@ export class InfluencerClubClient {
                     "Authorization": this.getAuthHeader(),
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify(body)
+                body: JSON.stringify(nestedBody)
             });
             if (!res.ok) return [];
             const data = await res.json();
