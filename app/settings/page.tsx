@@ -332,6 +332,48 @@ function SettingsContent() {
             <div className="space-y-4">
               <button
                 onClick={async () => {
+                  const toastId = toast.loading("Generating CSV export...");
+                  try {
+                    const { auth } = await import("@/lib/firebase");
+                    if (!auth || !auth.currentUser) return;
+                    const token = await auth.currentUser.getIdToken();
+
+                    const response = await fetch('/api/user/export-creators', {
+                      headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    if (!response.ok) {
+                      toast.error("Failed to export creators", { id: toastId });
+                      return;
+                    }
+
+                    const blob = await response.blob();
+                    if (blob.size === 0) {
+                      toast.error("No creators found to export", { id: toastId });
+                      return;
+                    }
+
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `verality_creators_export_${new Date().toISOString().split('T')[0]}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+
+                    toast.success("Export complete!", { id: toastId });
+                  } catch (error) {
+                    console.error("Export failed", error);
+                    toast.error("Failed to export", { id: toastId });
+                  }
+                }}
+                className="w-full sm:w-auto px-6 py-2 bg-white border border-gray-200 text-black rounded-xl hover:bg-gray-50 transition-colors text-sm font-medium mr-2"
+              >
+                Export All Creators
+              </button>
+              <button
+                onClick={async () => {
                   try {
                     const { auth } = await import("@/lib/firebase");
                     if (auth) {
