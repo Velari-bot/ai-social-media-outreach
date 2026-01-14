@@ -90,7 +90,14 @@ function CreatorRequestContent() {
         fetchRecentRequests()
       ]);
 
-      if (accountRes.success) setUserAccount(accountRes.account);
+      if (accountRes.success) {
+        setUserAccount(accountRes.account);
+        // RESTRICT ACCESS: Redirect users with 'custom_no_email' or 'testing' plan to the Email Finder page
+        if (['custom_no_email', 'testing'].includes(accountRes.account?.plan)) {
+          window.location.href = '/email-finder';
+          return;
+        }
+      }
       if (requestsRes.success) setRecentRequests(requestsRes.requests || []);
     }
     init();

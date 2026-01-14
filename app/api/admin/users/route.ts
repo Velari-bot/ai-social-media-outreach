@@ -68,6 +68,11 @@ export async function PATCH(req: Request) {
                 updates.email_quota_daily = 500;
                 updates.email_quota_monthly = 15000;
             }
+            // If setting to Testing, give 100 quota
+            else if (plan.toLowerCase() === 'testing') {
+                updates.email_quota_daily = 100;
+                updates.email_quota_monthly = 3000;
+            }
         }
 
         await db.collection('user_accounts').doc(userId).set(updates, { merge: true });

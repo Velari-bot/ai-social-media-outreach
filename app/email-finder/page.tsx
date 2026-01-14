@@ -97,12 +97,11 @@ function CreatorRequestContent() {
 
         // PLAN CHECK: If you want to restrict this page to only "custom_no_email"
         // Uncomment the below logic. For now, it's open to verify layout.
-        /*
-        if (account.plan !== 'custom_no_email' && account.plan !== 'enterprise' && account.plan !== 'agency') {
-           toast.error("This feature is not included in your plan.");
-           router.push('/dashboard');
+        if (account.plan !== 'custom_no_email' && account.plan !== 'testing' && account.plan !== 'enterprise' && account.role !== 'admin') {
+          // Uncommenting this line enforces the restriction
+          // toast.error("This feature is not included in your plan.");
+          // router.push('/dashboard');
         }
-        */
       }
       if (requestsRes.success) setRecentRequests(requestsRes.requests || []);
     }
@@ -447,85 +446,98 @@ function CreatorRequestContent() {
               <div className="space-y-6 animate-in slide-in-from-bottom-5 fade-in duration-500">
 
                 {/* Header & Actions */}
-                <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
                   <div>
-                    <h3 className="font-black text-2xl text-gray-900 flex items-center gap-2">
-                      {searchResults.length} Creators Found
-                      <span className="bg-black text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-full">Database</span>
+                    <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2">
+                      Database Results
+                      <span className="bg-gray-100 text-gray-600 text-[10px] uppercase font-bold px-2 py-0.5 rounded border border-gray-200">{searchResults.length} rows</span>
                     </h3>
                   </div>
                   <div className="flex gap-2 w-full sm:w-auto">
                     <button
                       onClick={() => setSearchResults(null)}
-                      className="flex-1 sm:flex-none text-xs font-bold bg-white border border-gray-200 px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center justify-center gap-2 text-gray-500 transition-all hover:scale-105"
+                      className="text-xs font-medium bg-white border border-gray-200 px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-600"
                     >
-                      New Search
+                      Clear
                     </button>
                     <button
                       onClick={handleExportCSV}
-                      className="flex-1 sm:flex-none text-xs font-bold bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-800 flex items-center justify-center gap-2 shadow-lg shadow-black/20 transition-all hover:scale-105"
+                      className="text-xs font-medium bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2 shadow-sm"
                     >
-                      <Download className="h-4 w-4" /> Export Results
+                      <Download className="h-3.5 w-3.5" /> Export as CSV
                     </button>
                   </div>
                 </div>
 
-                {/* Grid Results */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {searchResults.map((c, i) => (
-                    <div key={i} className="bg-white rounded-3xl border border-gray-100 p-6 flex flex-col gap-4 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 group relative overflow-hidden">
-                      {/* Decorative Background Blur */}
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-gray-50 rounded-full blur-3xl -z-10 group-hover:bg-blue-50 transition-colors" />
-
-                      {/* Header: Picture & Basic Info */}
-                      <div className="flex items-start gap-4">
-                        <div className="h-16 w-16 bg-gray-100 rounded-2xl flex-shrink-0 overflow-hidden relative border border-gray-100 shadow-inner group-hover:scale-105 transition-transform duration-300">
-                          {c.picture ? (
-                            <img src={c.picture} alt={c.handle} className="h-full w-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
-                          ) : (
-                            <div className="h-full w-full flex items-center justify-center bg-gray-50">{getPlatformIcon(c.platform, "h-6 w-6")}</div>
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1 mb-0.5">
-                            {getPlatformIcon(c.platform)}
-                            <span className="text-[10px] font-bold uppercase text-gray-400 tracking-wider text">{c.platform}</span>
-                          </div>
-                          <h4 className="font-black text-lg text-gray-900 truncate leading-tight" title={c.full_name}>{c.full_name || c.name || c.handle}</h4>
-                          <a
-                            href={getPlatformUrl(c.platform, c.handle)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm font-medium text-gray-500 hover:text-black transition-colors flex items-center gap-1 mt-0.5"
-                          >
-                            @{c.handle?.replace(/^@+/, "")}
-                            <ExternalLink className="h-3 w-3 opacity-50" />
-                          </a>
-                        </div>
-                      </div>
-
-                      {/* Stats Grid */}
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        <div className="bg-gray-50 rounded-xl p-3 border border-gray-100/50">
-                          <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Followers</p>
-                          <p className="text-sm font-black text-gray-900">{new Intl.NumberFormat('en-US', { notation: "compact" }).format(c.followers)}</p>
-                        </div>
-                        <div className="bg-gray-50 rounded-xl p-3 border border-gray-100/50">
-                          <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Avg Views</p>
-                          <p className="text-sm font-black text-gray-900">{c.avg_views ? new Intl.NumberFormat('en-US', { notation: "compact" }).format(c.avg_views) : '-'}</p>
-                        </div>
-                      </div>
-
-                      {/* Location Badge */}
-                      {(c.location || location !== "Anywhere") && (
-                        <div className="bg-blue-50/50 rounded-lg px-3 py-2 flex items-center gap-2 mt-auto border border-blue-100/50">
-                          <span className="text-xs font-bold text-blue-700 truncate">
-                            From {c.location || location}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                {/* Spreadsheet Table View */}
+                <div className="bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-gray-50 border-b border-gray-300 text-gray-500 font-semibold uppercase tracking-wider">
+                        <tr>
+                          <th className="px-4 py-3 w-12 text-center">#</th>
+                          <th className="px-4 py-3">Creator</th>
+                          <th className="px-4 py-3">Platform</th>
+                          <th className="px-4 py-3 text-right">Followers</th>
+                          <th className="px-4 py-3 text-right">Avg Views</th>
+                          <th className="px-4 py-3">Location</th>
+                          <th className="px-4 py-3">Profile Link</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {searchResults.map((c, i) => (
+                          <tr key={i} className="hover:bg-blue-50/30 transition-colors group">
+                            <td className="px-4 py-2 text-center text-gray-400 font-mono text-[10px]">{i + 1}</td>
+                            <td className="px-4 py-2">
+                              <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded bg-gray-100 flex-shrink-0 border border-gray-200 overflow-hidden">
+                                  {c.picture ? (
+                                    <img src={c.picture} alt="" className="h-full w-full object-cover" />
+                                  ) : (
+                                    <div className="h-full w-full flex items-center justify-center text-gray-300">
+                                      {getPlatformIcon(c.platform)}
+                                    </div>
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="font-semibold text-gray-900">{c.full_name || c.name || c.handle}</div>
+                                  <div className="text-gray-500">@{c.handle?.replace(/^@+/, "")}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-2">
+                              <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-gray-50 border border-gray-200 text-gray-600 capitalize">
+                                {getPlatformIcon(c.platform, "h-3 w-3")}
+                                {c.platform}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2 text-right font-mono text-gray-700">
+                              {new Intl.NumberFormat('en-US').format(c.followers)}
+                            </td>
+                            <td className="px-4 py-2 text-right font-mono text-gray-700">
+                              {c.avg_views ? new Intl.NumberFormat('en-US').format(c.avg_views) : '-'}
+                            </td>
+                            <td className="px-4 py-2 text-gray-600">
+                              {c.location || location === "Anywhere" ? (c.location || "Unknown") : location}
+                            </td>
+                            <td className="px-4 py-2">
+                              <a
+                                href={getPlatformUrl(c.platform, c.handle)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline flex items-center gap-1"
+                              >
+                                View <ExternalLink className="h-3 w-3" />
+                              </a>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="bg-gray-50 px-4 py-2 border-t border-gray-200 text-[10px] text-gray-400 text-right font-mono">
+                    Showing {searchResults.length} records • Generated by Verality DB
+                  </div>
                 </div>
               </div>
             )}

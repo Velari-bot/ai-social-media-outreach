@@ -183,12 +183,37 @@ export default function AdminUsers() {
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
                                                 {user.role !== 'admin' ? (
-                                                    <button
-                                                        onClick={() => handleUpdateUser(user.id, { role: 'admin', plan: 'enterprise' })}
-                                                        className="text-[10px] font-bold uppercase tracking-wider text-purple-600 hover:text-purple-800 bg-purple-50 px-2 py-1 rounded"
-                                                    >
-                                                        Make Admin
-                                                    </button>
+                                                    <div className="flex flex-col gap-1 items-start">
+                                                        <button
+                                                            onClick={() => handleUpdateUser(user.id, { role: 'admin', plan: 'enterprise' })}
+                                                            className="text-[10px] font-bold uppercase tracking-wider text-purple-600 hover:text-purple-800 bg-purple-50 px-2 py-1 rounded w-full text-center"
+                                                        >
+                                                            Make Admin
+                                                        </button>
+                                                        {user.plan !== 'custom_no_email' ? (
+                                                            <button
+                                                                onClick={() => handleUpdateUser(user.id, { plan: 'custom_no_email' })}
+                                                                className="text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded w-full text-center"
+                                                            >
+                                                                Set DB Only
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => handleUpdateUser(user.id, { plan: 'pro' })}
+                                                                className="text-[10px] font-bold uppercase tracking-wider text-green-600 hover:text-green-800 bg-green-50 px-2 py-1 rounded w-full text-center"
+                                                            >
+                                                                Set Pro
+                                                            </button>
+                                                        )}
+                                                        {user.plan !== 'testing' && (
+                                                            <button
+                                                                onClick={() => handleUpdateUser(user.id, { plan: 'testing' })}
+                                                                className="text-[10px] font-bold uppercase tracking-wider text-orange-600 hover:text-orange-800 bg-orange-50 px-2 py-1 rounded w-full text-center"
+                                                            >
+                                                                Set Testing (100)
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 ) : (
                                                     <button
                                                         onClick={() => handleUpdateUser(user.id, { role: 'user', plan: 'free' })}
