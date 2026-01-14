@@ -12,7 +12,6 @@ interface InfluencerClubClientConfig {
 
 /**
  * Influencer Club API Client
- * Refactored to strictly follow credit-safety rules.
  */
 export class InfluencerClubClient {
     private apiKey: string;
@@ -55,39 +54,19 @@ export class InfluencerClubClient {
         return undefined;
     }
 
-    /**
-     * Validate filters before API call
-     */
     private validateFilters(filters: any) {
-        // Strict Validation: Keywords OR Category required.
-        const hasKeywords = filters.keywords &&
-            (Array.isArray(filters.keywords) ? filters.keywords.length > 0 : filters.keywords.trim() !== '');
+        // Robust check for targeting criteria
+        const niche = filters.niche || filters.category || filters.topic || filters.topics;
+        const keywords = filters.keywords || filters.keyword || filters.keywords_in_bio;
 
-        const hasCategory = filters.category &&
-            filters.category !== '' &&
-            filters.category !== 'any';
+        const hasNiche = niche && niche !== '' && niche !== 'any' && niche !== 'Any Topic';
+        const hasKeywords = keywords && (Array.isArray(keywords) ? keywords.length > 0 : String(keywords).trim() !== '');
 
-        const hasTopics = filters.topics &&
-            filters.topics !== 'any' &&
-            filters.topics !== 'Any Topic' &&
-            filters.topics !== '';
-
-        const hasNiche = filters.niche && filters.niche !== '' && filters.niche !== 'any';
-
-        const hasStrongTargeting = hasKeywords || hasCategory || hasTopics || hasNiche;
-
-        if (!hasStrongTargeting) {
-            throw new Error("Influencer Club discovery requires keywords, category, or niche to return results.");
+        if (!hasNiche && !hasKeywords) {
+            throw new Error("Discovery requires at least a niche or keyword.");
         }
     }
 
-    /**
-     * Search Creators with strict credit safety
-     * Strategy: Fetch broadly (Targeting Only) -> Filter Locally (Numeric Stats)
-     */
-    /**
-     * Search Creators with Fallback Strategy
-     */
     private parseNiche(rawNiche: string): { niche: string; category?: string } {
         if (!rawNiche || rawNiche === 'any') return { niche: rawNiche };
         if (rawNiche.includes('(')) {
@@ -108,45 +87,49 @@ export class InfluencerClubClient {
         limit: number;
         offset?: number;
     }): Promise<ModashDiscoveryResult[]> {
-        // 1. Initial Attempt
+        const requestId = Math.random().toString(36).substring(7);
+        console.log(`[InfluencerClub:${requestId}] Starting discovery for ${params.platform}...`);
+
+        // 1. Attempt A: Strict (Taxonomy aligned)
         let results = await this.fetchCreators(params);
-
-        if (results.length > 0) return results;
-
-        console.log("[InfluencerClub] 0 results found. Attempting Fallback Strategy 1: Lax Category...");
-
-        // 2. Fallback 1: Deep lax (Remove Category, force Keyword mode)
-        const laxFilters = { ...params.filters };
-        if (laxFilters.niche && laxFilters.niche !== 'any') {
-            const { niche: cleanNiche } = this.parseNiche(laxFilters.niche);
-
-            // Hack: We rename 'niche' to 'keywords' to force keyword path
-            if (!laxFilters.keywords) laxFilters.keywords = [];
-
-            const existingKeywords = Array.isArray(laxFilters.keywords) ? laxFilters.keywords : [laxFilters.keywords];
-            if (!existingKeywords.includes(cleanNiche)) {
-                laxFilters.keywords = [...existingKeywords, cleanNiche];
-            }
-
-            delete laxFilters.niche; // Remove niche trigger
-            delete laxFilters.category; // Remove strict category trigger
-        }
-
-        results = await this.fetchCreators({ ...params, filters: laxFilters });
         if (results.length > 0) {
-            console.log(`[InfluencerClub] Fallback 1 Success: Found ${results.length} creators.`);
+            console.log(`[InfluencerClub:${requestId}] Attempt A (Strict) Success: Found ${results.length} creators.`);
             return results;
         }
 
-        // 3. Fallback 2: Lower Followers (if originally high)
-        const minF = Number(params.filters.minFollowers || params.filters.followersMin || 0);
-        if (minF > 1500) {
-            console.log("[InfluencerClub] 0 results. Attempting Fallback 2: Lower Followers...");
-            const lowerFilters = { ...laxFilters, minFollowers: 1000 };
-            results = await this.fetchCreators({ ...params, filters: lowerFilters });
-            if (results.length > 0) return results;
+        console.log(`[InfluencerClub:${requestId}] Attempt A failed (0 results). Trying Attempt B: Keyword-Only...`);
+
+        // 2. Attempt B: Keyword-Only
+        const { niche: cleanNiche } = this.parseNiche(params.filters.niche || "");
+        const attemptBFilters = { ...params.filters };
+
+        // Move everything to keywords
+        const existingKeywords = attemptBFilters.keywords || attemptBFilters.keyword || [];
+        const keywordList = Array.isArray(existingKeywords) ? [...existingKeywords] : [existingKeywords];
+        if (cleanNiche && !keywordList.includes(cleanNiche)) keywordList.push(cleanNiche);
+
+        attemptBFilters.keyword = keywordList.join(" ").trim();
+        delete attemptBFilters.niche;
+        delete attemptBFilters.category;
+        delete attemptBFilters.topics;
+
+        results = await this.fetchCreators({ ...params, filters: attemptBFilters });
+        if (results.length > 0) {
+            console.log(`[InfluencerClub:${requestId}] Attempt B (Keyword-Only) Success: Found ${results.length} creators.`);
+            return results;
         }
 
+        console.log(`[InfluencerClub:${requestId}] Attempt B failed. Trying Attempt C: Broad Keyword + No Followers...`);
+
+        // 3. Attempt C: Broad Keyword + Min Followers = 0
+        const attemptCFilters = { ...attemptBFilters, minFollowers: 0, min_followers: 0, followersMin: 0 };
+        results = await this.fetchCreators({ ...params, filters: attemptCFilters });
+        if (results.length > 0) {
+            console.log(`[InfluencerClub:${requestId}] Attempt C (Broad Keyword + No Followers) Success: Found ${results.length} creators.`);
+            return results;
+        }
+
+        console.log(`[InfluencerClub:${requestId}] All discovery attempts failed.`);
         return [];
     }
 
@@ -162,9 +145,6 @@ export class InfluencerClubClient {
         this.ensureApiKey();
         const requestId = Math.random().toString(36).substring(7);
 
-        // Debug: Log raw input filters
-        console.log(`[InfluencerClub:${requestId}] Raw input filters:`, JSON.stringify(params.filters, null, 2));
-
         try {
             this.validateFilters(params.filters);
         } catch (e) {
@@ -172,243 +152,92 @@ export class InfluencerClubClient {
             return [];
         }
 
-        // 1. Prepare Filters Object
-        const filters: any = {};
-        let cleanNicheForKeyword = "";
+        // Normalize Filters (Handle snake_case vs camelCase)
+        const f = params.filters;
+        const minF = f.min_followers || f.minFollowers || f.followersMin || 1000;
+        const maxF = f.max_followers || f.maxFollowers || f.followersMax || undefined;
 
-        // Category & Niche Parsing
-        let category = params.filters.category;
-        if (params.filters.niche && params.filters.niche !== 'any') {
-            const parsed = this.parseNiche(params.filters.niche);
-            filters.niche = parsed.niche;
-            cleanNicheForKeyword = parsed.niche;
+        const { niche: cleanNiche, category: cleanCategory } = this.parseNiche(f.niche || "");
 
-            if (!category) {
-                category = parsed.category;
-            }
-            console.log(`[InfluencerClub:${requestId}] Parsed: Niche='${parsed.niche}', Category='${parsed.category}'`);
-        }
-
-        // Fallback for category from topics
-        if (!category && params.filters.topics && params.filters.topics !== 'any' && params.filters.topics !== 'Any Topic') {
-            category = Array.isArray(params.filters.topics) ? params.filters.topics[0] : params.filters.topics;
-        }
-        if (!category && params.filters.categories && params.filters.categories.length > 0) {
-            category = params.filters.categories[0];
-        }
-
-        if (category && category !== '' && category !== 'any') {
-            filters.category = category;
-            console.log(`[InfluencerClub:${requestId}] Using category filter: ${category}`);
-        }
-
-        // Keywords
-        const keywordInput = params.filters.keywords || params.filters.keyword;
-        let keywords = keywordInput ? (Array.isArray(keywordInput) ? keywordInput : [keywordInput]) : [];
-
-        // Always append Cleaned Niche as a keyword too
-        if (cleanNicheForKeyword && !keywords.includes(cleanNicheForKeyword)) {
-            keywords.push(cleanNicheForKeyword);
-        }
-
-        const cleanedKeywords = keywords.filter((k: any) => k && k.trim() !== '');
-        if (cleanedKeywords.length > 0) {
-            filters.keywords_in_bio = cleanedKeywords;
-            filters.keyword = cleanedKeywords.join(' ');
-            filters.keywords = cleanedKeywords;
-        }
-
-        // Location (Optional) -> location array
-        const locationInput = params.filters.location || params.filters.country || params.filters.geo_country;
-        const countryCode = this.getCountryCode(locationInput);
-        if (countryCode) {
-            filters.location = [countryCode];
-        }
-
-        // --- ADDED: Pass numeric filters to API to avoid "fetch and filter out everything" ---
-        const minFollowersVal = params.filters.minFollowers || params.filters.followersMin;
-        if (minFollowersVal) {
-            // Simplify: Send only one standard format.
-            // Using min_followers (snake_case) is safest for this API style.
-            filters.min_followers = Number(minFollowersVal);
-            // Redundancy for safety based on user hints
-            filters.followers_min = String(minFollowersVal);
-        }
-
-        const maxFollowersVal = params.filters.maxFollowers || params.filters.followersMax;
-        if (maxFollowersVal) {
-            filters.max_followers = Number(maxFollowersVal);
-            filters.followers_max = String(maxFollowersVal);
-        }
-        // ----------------------------------------------------------------------------------
-
-        // 2. Prepare Payload (Flattened as per User Spec)
-        // User Spec: platform, keyword, niche, min_followers, max_followers, limit
+        // Prepare Payload for Official API
         const body: any = {
             platform: params.platform.toLowerCase(),
             limit: params.limit || 50,
-            offset: params.offset || 0, // Using offset for paging
-            // Standard Fields
-            min_followers: filters.min_followers || 1000,
-            // Add max_followers only if defined
-            ...(filters.max_followers ? { max_followers: filters.max_followers } : {}),
-            // Keyword/Niche logic
-            niche: filters.niche || undefined,
-            category: filters.category || undefined,
-            keyword: filters.keyword || (filters.keywords_in_bio ? filters.keywords_in_bio.join(' ') : "influencer"),
+            offset: params.offset || 0,
+            min_followers: Number(minF),
+            sort_by: "relevancy",
+            sort_order: "desc"
         };
 
-        // Add location if present (flat)
-        if (filters.location) {
-            body.location = filters.location; // Array of codes e.g. ["US"]
-        }
+        if (maxF) body.max_followers = Number(maxF);
 
-        // Add sorting (flat)
-        body.sort_by = "relevancy";
-        body.sort_order = "desc";
+        // Niche/Category
+        if (f.category || cleanCategory) body.category = f.category || cleanCategory;
+        if (f.niche || cleanNiche) body.niche = cleanNiche;
 
-        // 3. Log Request
+        // Keywords
+        const keywordInput = f.keyword || f.keywords || "";
+        let keywords = Array.isArray(keywordInput) ? keywordInput.join(" ") : String(keywordInput);
+        if (!keywords && cleanNiche) keywords = cleanNiche;
+        body.keyword = keywords || "influencer";
+
+        // Location
+        const countryCode = this.getCountryCode(f.location || f.country);
+        if (countryCode) body.location = [countryCode];
+
         console.log(`[InfluencerClub:${requestId}] Official API Query:`, JSON.stringify(body, null, 2));
-        await logApiCall({
-            api_provider: 'influencer_club' as any,
-            api_action: 'discovery',
-            reason: `Searching for ${params.limit} creators on ${params.platform}`,
-        });
 
         try {
+            await logApiCall({
+                api_provider: 'influencer_club' as any,
+                api_action: 'discovery',
+                reason: `Searching for ${body.keyword}`,
+            });
+
             const url = `${this.baseUrl}/public/v1/discovery/`;
-            const authHeader = this.apiKey.startsWith('Bearer ') ? this.apiKey : `Bearer ${this.apiKey}`;
-            const maskedAuth = authHeader.substring(0, 15) + '...';
-
-            console.log(`[InfluencerClub:${requestId}] Calling URL: ${url}`);
-            console.log(`[InfluencerClub:${requestId}] Headers: Authorization: ${maskedAuth}`);
-
             const response = await fetch(url, {
                 method: "POST",
                 headers: {
-                    "Authorization": authHeader, // Per docs: Authorization: Bearer ...
+                    "Authorization": `Bearer ${this.apiKey}`,
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify(body)
             });
 
-            console.log(`[InfluencerClub:${requestId}] Response Status: ${response.status} ${response.statusText}`);
-
             if (!response.ok) {
                 const text = await response.text();
-                console.error(`[InfluencerClub:${requestId}] API Error Body:`, text);
-                throw new Error(`Influencer Club API error (${response.status}): ${text}`);
+                console.error(`[InfluencerClub:${requestId}] API Error:`, text);
+                return [];
             }
 
-            const rawText = await response.text();
-            let data;
-            try {
-                data = JSON.parse(rawText);
-            } catch (e) {
-                console.error(`[InfluencerClub:${requestId}] Failed to parse JSON response:`, rawText.substring(0, 500));
-                throw new Error(`Influencer Club returned invalid JSON`);
-            }
-
-            // Response Structure: { total, limit, credits_left, accounts: [...] }
+            const data = await response.json();
             const accounts = data.accounts || [];
 
-            if (accounts.length > 0 && accounts[0].profile) {
-                const sp = accounts[0].profile;
-                console.log(`[InfluencerClub:${requestId}] Debug Sample: ${sp.username} - followers: ${sp.followers}, ER: ${sp.engagement_percent}%`);
-            }
-
-            if (data.credits_left) {
-                console.log(`[InfluencerClub:${requestId}] Credits Remaining: ${data.credits_left}`);
-            }
-            console.log(`[InfluencerClub:${requestId}] Raw Return: ${accounts.length} / Total Matches: ${data.total}`);
-
-            // 4. Normalization & Local Filtering (Post-Fetch Strategy)
-            const normalizedCreators = accounts.map((p: any) => {
+            return accounts.map((p: any) => {
                 const profile = p.profile || {};
                 return {
                     creator_id: p.user_id || profile.username,
-                    handle: profile.username || p.user_id, // fallback
+                    handle: profile.username || p.user_id,
                     platform: params.platform,
                     followers: profile.followers || profile.followers_count || p.followers || 0,
-                    engagement_rate: profile.engagement_percent ? (profile.engagement_percent / 100) : (profile.engagement_rate || p.engagement_rate || 0),
-                    fullname: profile.full_name || profile.name || profile.fullname || profile.username,
-                    picture: profile.picture || profile.profile_pic_url || profile.avatar_url,
+                    engagement_rate: profile.engagement_percent ? (profile.engagement_percent / 100) : (profile.engagement_rate || 0),
+                    fullname: profile.full_name || profile.name || profile.username,
+                    picture: profile.picture || profile.profile_pic_url,
                     emails: profile.emails || p.emails || []
                 };
             });
-
-            // Local Numeric Filtering
-            const minFollowers = Number(params.filters.minFollowers || params.filters.followersMin || 1000);
-            const maxFollowers = params.filters.maxFollowers || params.filters.followersMax ? Number(params.filters.maxFollowers || params.filters.followersMax) : undefined;
-            const minEngagement = params.filters.minEngagementRate || params.filters.engagementRateMin ? Number(params.filters.minEngagementRate || params.filters.engagementRateMin) : undefined;
-
-            console.log(`[InfluencerClub:${requestId}] Filtering locally: minFollowers=${minFollowers}, minEngagement=${minEngagement}%`);
-
-            // Debug: Log first 3 creators before filtering
-            if (normalizedCreators.length > 0) {
-                console.log(`[InfluencerClub:${requestId}] Sample creators BEFORE filtering:`);
-                normalizedCreators.slice(0, 3).forEach((c: any, i: number) => {
-                    console.log(`  ${i + 1}. ${c.handle} - Followers: ${c.followers}, ER: ${(c.engagement_rate * 100).toFixed(2)}%`);
-                });
-            }
-
-            const filteredCreators = normalizedCreators.filter((c: any) => {
-                const followers = c.followers || 0;
-                const er = c.engagement_rate || 0;
-
-                // Debug logging for first 3 creators
-                const debugIndex = normalizedCreators.indexOf(c);
-                const shouldDebug = debugIndex < 3;
-
-                // Leniency: If followers is 0, it often means 'missing data' in the API.
-                // We allow these through so the user doesn't get 0 results.
-                if (minFollowers && followers > 0 && followers < minFollowers) {
-                    if (shouldDebug) console.log(`  ❌ ${c.handle}: Followers ${followers} < ${minFollowers}`);
-                    return false;
-                }
-                if (maxFollowers && followers > maxFollowers) {
-                    if (shouldDebug) console.log(`  ❌ ${c.handle}: Followers ${followers} > ${maxFollowers}`);
-                    return false;
-                }
-
-                if (minEngagement) {
-                    // Logic: If user enters '1', they mean 0.01 (1%). 
-                    // If they enter '0.01', they also mean 0.01 (1%).
-                    const threshold = minEngagement >= 1 ? minEngagement / 100 : minEngagement;
-
-                    if (shouldDebug) {
-                        console.log(`  🔍 ${c.handle}: ER=${(er * 100).toFixed(2)}% (${er}), threshold=${(threshold * 100).toFixed(2)}% (${threshold}), minEngagement=${minEngagement}`);
-                    }
-
-                    // Leniency: If engagement is 0, it often means 'missing data' in the API.
-                    // We allow these through so the user doesn't get 0 results.
-                    if (er > 0 && er < threshold) {
-                        if (shouldDebug) console.log(`  ❌ ${c.handle}: ER ${(er * 100).toFixed(2)}% < ${(threshold * 100).toFixed(2)}%`);
-                        return false;
-                    }
-                }
-
-                if (shouldDebug) console.log(`  ✅ ${c.handle}: PASSED all filters`);
-                return true;
-            });
-
-            console.log(`[InfluencerClub:${requestId}] Post-Filter Return: ${filteredCreators.length} (from ${accounts.length})`);
-
-            return filteredCreators;
-
         } catch (error) {
-            console.error(`[InfluencerClub:${requestId}] Influencer Club discovery error:`, error);
-            throw error;
+            console.error(`[InfluencerClub:${requestId}] Discovery exception:`, error);
+            return [];
         }
     }
 
-    // Helper for direct request if needed, but discoverCreators is primary
     private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
         return {} as T;
     }
 }
 
-// Export singleton instance (lazy initialization)
+// Export singleton
 let _influencerClubClient: InfluencerClubClient | null = null;
 export const influencerClubClient = (() => {
     if (!_influencerClubClient) {
