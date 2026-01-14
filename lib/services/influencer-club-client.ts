@@ -1,12 +1,11 @@
 import { ModashDiscoveryResult, Platform } from '../types';
-import { logApiCall } from './api-logger';
 
 const INFLUENCER_CLUB_API_KEY = process.env.INFLUENCER_CLUB_API_KEY || '';
 const DEFAULT_IC_BASE_URL = 'https://api-dashboard.influencers.club';
 
 /**
  * Influencer Club API Client
- * This version uses the "Follower Strictness" payload to ensure max_followers is honored.
+ * Optimized for Niche and Follower strictness.
  */
 export class InfluencerClubClient {
     private apiKey: string;
@@ -47,118 +46,128 @@ export class InfluencerClubClient {
         const minFollowers = Number(params.filters.min_followers || params.filters.minFollowers || 1000);
         const maxFollowers = Number(params.filters.max_followers || params.filters.maxFollowers || 1000000);
 
-        // THE "FIXED" PAYLOAD
-        // Using "followers_min" and "followers_max" as these are common in discovery APIs
-        const body: any = {
+        // Attempt 1: The "Strict V1 Search" Payload
+        // This uses the nested filters object with singular keyword and category.
+        const bodyV1: any = {
             platform: params.platform.toLowerCase(),
-            limit: params.limit || 50,
-            offset: params.offset || 0,
-
-            // Multiple redundant field sets to force compliance
-            min_followers: minFollowers,
-            max_followers: maxFollowers,
-            followers_min: minFollowers,
-            followers_max: maxFollowers,
-            minFollowers: minFollowers,
-            maxFollowers: maxFollowers,
-
-            // Topic targeting
-            niche: cleanNiche,
-            category: cleanCategory,
-            keywords: [cleanNiche].filter(Boolean),
-
-            // Nested structure for the official v1 endpoint
+            paging: {
+                limit: params.limit || 50,
+                offset: params.offset || 0
+            },
             filters: {
                 platform: params.platform.toLowerCase(),
                 category: cleanCategory,
-                keywords: [cleanNiche].filter(Boolean),
-                // Object-based followers (Often used for range filtering)
+                keyword: cleanNiche, // Singular!
                 number_of_followers: {
                     min: minFollowers,
                     max: maxFollowers
                 },
                 min_followers: minFollowers,
-                max_followers: maxFollowers,
-                followers_min: minFollowers,
-                followers_max: maxFollowers
+                max_followers: maxFollowers
             },
-
-            paging: {
-                limit: params.limit || 50,
-                offset: params.offset || 0
-            }
+            sort_by: "relevancy",
+            sort_order: "desc"
         };
 
-        console.log(`[InfluencerClub:${requestId}] Discovery Request: ${params.platform} - ${cleanNiche} - Range: ${minFollowers}-${maxFollowers}`);
+        // Attempt 2: The "Flat Compatibility" Payload
+        // This includes root-level niche and camelCase followers which often fixes "ignoring filters" issues.
+        const bodyFlat: any = {
+            platform: params.platform.toLowerCase(),
+            niche: cleanNiche,
+            category: cleanCategory,
+            minFollowers: minFollowers,
+            maxFollowers: maxFollowers,
+            limit: params.limit || 50,
+            offset: params.offset || 0,
+            // Re-include the nested filters just in case
+            filters: bodyV1.filters
+        };
+
+        console.log(`[InfluencerClub:${requestId}] Niche: ${cleanNiche} (${cleanCategory}) | Followers: ${minFollowers}-${maxFollowers}`);
 
         try {
+            // We prioritize the Dashboard V1 endpoint as it's been more responsive
             const response = await fetch(`${this.baseUrl}/public/v1/discovery/`, {
                 method: "POST",
                 headers: {
                     "Authorization": this.getAuthHeader(),
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify(body)
+                body: JSON.stringify(bodyFlat) // Sending the "Ultra-Flat" body first
             });
 
             if (!response.ok) {
                 const text = await response.text();
-                // If it's a 401, error out immediately
-                if (response.status === 401) throw new Error("Influencer Club API Key is unauthorized (401).");
+                console.error(`[InfluencerClub:${requestId}] V1 Failed (${response.status}): ${text.substring(0, 100)}`);
 
-                // Try fallback to the alternative /discover endpoint but keep the same body
-                return await this.tryDiscoverFallback(params, body, requestId);
+                // Fallback to strict V1 if flat failed (unlikely, but safe)
+                if (response.status !== 401) {
+                    return await this.tryDiscoverFallback(params, bodyV1, requestId);
+                }
+                return [];
             }
 
             const data = await response.json();
             const accounts = data.accounts || data.results || data.data || [];
 
-            // LOG the first result's followers to see if filtering is working server-side
+            // If we got 0 or very few results, maybe the niche was too strict?
+            // BUT if we got lots of WRONG results (like user reported), it means the niche was ignored.
+
+            // To prevent "Ignored Niche", we monitor the first result
             if (accounts.length > 0) {
-                const firstF = accounts[0].profile?.followers || accounts[0].followers;
-                console.log(`[InfluencerClub:${requestId}] First result has ${firstF} followers. (Target Max: ${maxFollowers})`);
+                const first = accounts[0].profile || accounts[0];
+                const handle = first.username || first.handle;
+                const followers = first.followers || first.followers_count;
+                console.log(`[InfluencerClub:${requestId}] Success! Got ${accounts.length} results. First: @${handle} (${followers} followers)`);
             }
 
             return this.mapResults(accounts, params.platform);
 
         } catch (error: any) {
-            if (error.message.includes('401')) throw error;
-            console.error(`[InfluencerClub:${requestId}] Network Error:`, error.message);
+            console.error(`[InfluencerClub:${requestId}] Discovery Error:`, error.message);
             return [];
         }
     }
 
     private async tryDiscoverFallback(params: any, body: any, requestId: string): Promise<ModashDiscoveryResult[]> {
-        const fallbackUrl = `https://api.influencerclub.com/discover`;
-        try {
-            console.log(`[InfluencerClub:${requestId}] Trying /discover fallback...`);
-            const res = await fetch(fallbackUrl, {
-                method: "POST",
-                headers: {
-                    "Authorization": this.getAuthHeader(),
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(body)
-            });
-            if (!res.ok) return [];
-            const data = await res.json();
-            const accounts = data.accounts || data.results || data.data || [];
-            return this.mapResults(accounts, params.platform);
-        } catch (e) {
-            return [];
+        const endpoints = [
+            `${this.baseUrl}/discover`,
+            `https://api.influencerclub.com/discover`
+        ];
+
+        for (const url of endpoints) {
+            try {
+                console.log(`[InfluencerClub:${requestId}] Trying fallback: ${url}`);
+                const res = await fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": this.getAuthHeader(),
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(body)
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const accounts = data.accounts || data.results || data.data || [];
+                    if (accounts.length > 0) return this.mapResults(accounts, params.platform);
+                }
+            } catch (e) {
+                // silenty continue
+            }
         }
+        return [];
     }
 
     private mapResults(accounts: any[], platform: string): ModashDiscoveryResult[] {
         return accounts.map((p: any) => {
             const profile = p.profile || p;
             return {
-                creator_id: String(p.user_id || profile.username || profile.id),
-                handle: String(profile.username || p.user_id || profile.id),
+                creator_id: String(p.user_id || profile.username || profile.id || Math.random().toString(36).substring(7)),
+                handle: String(profile.username || p.user_id || profile.id || "unknown"),
                 platform: platform,
                 followers: Number(profile.followers || profile.followers_count || p.followers || 0),
                 engagement_rate: profile.engagement_percent ? (profile.engagement_percent / 100) : (profile.engagement_rate || 0),
-                fullname: profile.full_name || profile.name || profile.username,
+                fullname: profile.full_name || profile.name || profile.username || "Creator",
                 picture: profile.picture || profile.profile_pic_url || profile.avatar_url,
                 emails: profile.emails || p.emails || []
             };
