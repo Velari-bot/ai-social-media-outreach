@@ -326,6 +326,31 @@ function SettingsContent() {
             </div>
           </div>
 
+          {/* Account Actions */}
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+            <h2 className="text-xl font-bold text-black mb-4">Account Actions</h2>
+            <div className="space-y-4">
+              <button
+                onClick={async () => {
+                  try {
+                    const { auth } = await import("@/lib/firebase");
+                    if (auth) {
+                      await auth.signOut();
+                      router.push("/login");
+                      toast.success("Logged out successfully");
+                    }
+                  } catch (e) {
+                    console.error("Logout failed", e);
+                    toast.error("Logout failed");
+                  }
+                }}
+                className="w-full sm:w-auto px-6 py-2 bg-gray-900 text-white rounded-xl hover:bg-black transition-colors text-sm font-medium"
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+
           {/* Cancel Subscription */}
           <div className="bg-white border border-red-200 rounded-xl shadow-sm p-6">
             <h2 className="text-xl font-bold text-red-600 mb-4">Danger Zone</h2>
