@@ -194,13 +194,15 @@ export async function POST(request: NextRequest) {
         });
       } catch (searchError: any) {
         console.error('[RequestsAPI] Search internal error:', searchError);
-        // We log the detailed error server-side, but return a generic message to the user
-        // to avoid leaking internal API details as per requirements.
+        // Delete the request record since it failed
+        try {
+          await adminDb.collection('creator_requests').doc(newRequest.id).delete();
+        } catch (e) { }
+
         return NextResponse.json({
-          success: true,
-          request: newRequest, // Returns 'pending' status
-          error: 'Search failed or timed out. Check results later.'
-        });
+          success: false,
+          error: searchError.message || 'Search failed. Please try again later.'
+        }, { status: 500 });
       }
     }
 

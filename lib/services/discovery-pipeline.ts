@@ -93,11 +93,7 @@ export class DiscoveryPipeline {
 
         } catch (error: any) {
             console.error('[Discovery] External Fetch Failed:', error);
-            // In strict mode "force external", we fail? Or fallback?
-            // User said "pulling from db ... shouldn't be". So we probably shouldn't return old data.
-            // But returning nothing is bad UI.
-            // Let's return empty if failed, or maybe internal cache if we really have to?
-            // "it needs to generate new creators eerytime" -> implication: if fail, show error.
+            throw error;
         }
 
         // Trim
