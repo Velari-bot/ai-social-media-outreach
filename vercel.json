@@ -1,22 +1,4 @@
 {
-    "crons": [
-        {
-            "path": "/api/cron/credits/reset",
-            "schedule": "0 0 * * *"
-        },
-        {
-            "path": "/api/cron/campaigns/daily",
-            "schedule": "0 9 * * *"
-        },
-        {
-            "path": "/api/cron/outreach/send",
-            "schedule": "*/5 * * * *"
-        },
-        {
-            "path": "/api/cron/outreach/monitor",
-            "schedule": "*/5 * * * *"
-        }
-    ],
     "headers": [
         {
             "source": "/api/webhooks/stripe",
