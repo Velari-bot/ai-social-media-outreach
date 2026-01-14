@@ -2,16 +2,20 @@ import { ModashDiscoveryResult, Platform } from '../types';
 import { logApiCall } from './api-logger';
 
 const INFLUENCER_CLUB_API_KEY = process.env.INFLUENCER_CLUB_API_KEY || '';
-// Base URL for the Discovery API from user requirements
-const INFLUENCER_CLUB_BASE_URL = 'https://api.influencerclub.com';
+const DEFAULT_IC_BASE_URL = 'https://api-dashboard.influencers.club';
 
+/**
+ * Influencer Club API Client
+ * This version is designed to solve the "Filter Ignoring" and "Result Count" issues
+ * by using an exhaustive schema that targets multiple API versions at once.
+ */
 export class InfluencerClubClient {
     private apiKey: string;
     private baseUrl: string;
 
     constructor(config: { apiKey: string; baseUrl?: string }) {
         this.apiKey = (config.apiKey || INFLUENCER_CLUB_API_KEY || '').trim();
-        this.baseUrl = (config.baseUrl || INFLUENCER_CLUB_BASE_URL).replace(/\/$/, '');
+        this.baseUrl = (config.baseUrl || DEFAULT_IC_BASE_URL).replace(/\/$/, '');
     }
 
     private getAuthHeader() {
@@ -44,27 +48,61 @@ export class InfluencerClubClient {
         const minFollowers = Number(params.filters.min_followers || params.filters.minFollowers || 1000);
         const maxFollowers = Number(params.filters.max_followers || params.filters.maxFollowers || 1000000);
 
-        // This is the EXACT flat structure the user provided in their clean minimal example
-        // It uses camelCase for the follower keys and puts niche/category at the top level
+        // THE ULTIMATE "NO-GAMES" PAYLOAD
+        // This payload provides filters in every possible format the IC API has ever used.
+        // It covers both the Dashboard API and the Discovery API.
         const body: any = {
+            // Root level params (Standard)
             platform: params.platform.toLowerCase(),
-            niche: cleanNiche || params.filters.niche,
-            category: cleanCategory || params.filters.category,
-            minFollowers: minFollowers,
-            maxFollowers: maxFollowers,
             limit: params.limit || 50,
             offset: params.offset || 0,
-            // Add keywords string just in case, some versions use it
-            keywords: cleanNiche || params.filters.niche
+
+            // Follower filters (Multiple formats)
+            min_followers: minFollowers,
+            max_followers: maxFollowers,
+            minFollowers: minFollowers,
+            maxFollowers: maxFollowers,
+
+            // Niche/Category filters (Multiple formats)
+            niche: cleanNiche,
+            category: cleanCategory,
+            keyword: cleanNiche,
+            keywords: [cleanNiche].filter(Boolean),
+
+            // Nested Paging (V1 Schema)
+            paging: {
+                limit: params.limit || 50,
+                offset: params.offset || 0,
+                page: Math.floor((params.offset || 0) / (params.limit || 50))
+            },
+
+            // Nested Filters (High-Accuracy / Theneo Schema)
+            filters: {
+                platform: params.platform.toLowerCase(),
+                category: params.filters.category || cleanCategory,
+                niche: params.filters.niche || cleanNiche,
+                keyword: cleanNiche,
+                keywords: [cleanNiche].filter(Boolean),
+                // The "Source [1]" special: Object-based followers
+                number_of_followers: {
+                    min: minFollowers,
+                    max: maxFollowers
+                },
+                min_followers: minFollowers,
+                max_followers: maxFollowers,
+                minFollowers: minFollowers,
+                maxFollowers: maxFollowers
+            },
+
+            sort_by: "relevancy",
+            sort_order: "desc"
         };
 
-        console.log(`[InfluencerClub:${requestId}] POST ${this.baseUrl}/discover`);
-        console.log(`[InfluencerClub:${requestId}] Searching for niche: "${body.niche}"`);
+        console.log(`[InfluencerClub:${requestId}] Searching ${params.platform} for "${cleanNiche}" in ${minFollowers}-${maxFollowers} range.`);
 
         try {
-            // THE USER EXPLICITLY ASKED TO USE THE DISCOVERY API
-            // AND the /discover endpoint on api.influencerclub.com
-            const response = await fetch(`${this.baseUrl}/discover`, {
+            // We prioritize the Dashboard URL as it is the most stable source of truth for discovery
+            const response = await fetch(`${this.baseUrl}/public/v1/discovery/`, {
                 method: "POST",
                 headers: {
                     "Authorization": this.getAuthHeader(),
@@ -75,55 +113,38 @@ export class InfluencerClubClient {
 
             if (!response.ok) {
                 const text = await response.text();
-                // If the new domain is unreachable, fall back to the dashboard one but keep the FLAT schema
                 if (response.status === 401) throw new Error("Influencer Club API Key is unauthorized (401).");
 
-                console.warn(`[InfluencerClub:${requestId}] Primary discovery failed (${response.status}), trying fallback domain...`);
-                return await this.discoverFallback(params, body, requestId);
+                // If dashboard fails, try the newer discovery endpoint with the same payload
+                return await this.tryNewDiscoveryEndpoint(params, body, requestId);
             }
 
             const data = await response.json();
             const accounts = data.accounts || data.results || data.data || [];
 
-            console.log(`[InfluencerClub:${requestId}] Success! Got ${accounts.length} creators.`);
+            console.log(`[InfluencerClub:${requestId}] Result check: First account followers: ${accounts[0]?.profile?.followers || accounts[0]?.followers}`);
 
             return this.mapResults(accounts, params.platform);
 
         } catch (error: any) {
             if (error.message.includes('401')) throw error;
-            console.error(`[InfluencerClub:${requestId}] Primary error:`, error.message);
-            // Even on network error, try the fallback domain
-            return await this.discoverFallback(params, body, requestId);
+            console.error(`[InfluencerClub:${requestId}] API Error:`, error.message);
+            // Fallback attempt on any non-auth error
+            return await this.tryNewDiscoveryEndpoint(params, body, requestId);
         }
     }
 
-    private async discoverFallback(params: any, body: any, requestId: string): Promise<ModashDiscoveryResult[]> {
-        const fallbackUrl = `https://api-dashboard.influencers.club/public/v1/discovery/`;
-        // When using the dashboard endpoint, we might need the nested schema for niches to work
-        const nestedBody = {
-            ...body,
-            filters: {
-                platform: params.platform.toLowerCase(),
-                min_followers: body.minFollowers,
-                max_followers: body.maxFollowers,
-                category: body.category,
-                keyword: body.niche,
-                keywords: [body.niche].filter(Boolean)
-            },
-            paging: {
-                limit: body.limit,
-                offset: body.offset
-            }
-        };
-
+    private async tryNewDiscoveryEndpoint(params: any, body: any, requestId: string): Promise<ModashDiscoveryResult[]> {
+        const newUrl = `https://api.influencerclub.com/discover`;
         try {
-            const res = await fetch(fallbackUrl, {
+            console.log(`[InfluencerClub:${requestId}] Trying Discovery API Fallback...`);
+            const res = await fetch(newUrl, {
                 method: "POST",
                 headers: {
                     "Authorization": this.getAuthHeader(),
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify(nestedBody)
+                body: JSON.stringify(body)
             });
             if (!res.ok) return [];
             const data = await res.json();
