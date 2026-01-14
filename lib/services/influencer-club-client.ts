@@ -104,12 +104,7 @@ export class InfluencerClubClient {
 
             if (!response.ok) {
                 const text = await response.text();
-                console.error(`[InfluencerClub:${requestId}] V1 Failed (${response.status}): ${text.substring(0, 100)}`);
-
-                // Fallback to strict V1 if flat failed (unlikely, but safe)
-                if (response.status !== 401) {
-                    return await this.tryDiscoverFallback(params, bodyV1, requestId);
-                }
+                console.error(`[InfluencerClub:${requestId}] Discovery API Failed (${response.status}): ${text.substring(0, 100)}`);
                 return [];
             }
 
@@ -133,35 +128,6 @@ export class InfluencerClubClient {
             console.error(`[InfluencerClub:${requestId}] Discovery Error:`, error.message);
             return [];
         }
-    }
-
-    private async tryDiscoverFallback(params: any, body: any, requestId: string): Promise<ModashDiscoveryResult[]> {
-        const endpoints = [
-            `${this.baseUrl}/discover`,
-            `https://api.influencerclub.com/discover`
-        ];
-
-        for (const url of endpoints) {
-            try {
-                console.log(`[InfluencerClub:${requestId}] Trying fallback: ${url}`);
-                const res = await fetch(url, {
-                    method: "POST",
-                    headers: {
-                        "Authorization": this.getAuthHeader(),
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(body)
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    const accounts = data.accounts || data.results || data.data || [];
-                    if (accounts.length > 0) return this.mapResults(accounts, params.platform);
-                }
-            } catch (e) {
-                // silenty continue
-            }
-        }
-        return [];
     }
 
     private mapResults(accounts: any[], platform: string): ModashDiscoveryResult[] {
