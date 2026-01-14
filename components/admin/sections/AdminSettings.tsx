@@ -97,6 +97,50 @@ export default function AdminSettings() {
                     </div>
                 </div>
 
+                {/* Data Correction Tools */}
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-white rounded-xl shadow-sm border border-gray-100">
+                                <Shield className="w-5 h-5 text-red-600" />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-black">Data Corrections</h3>
+                                <p className="text-xs text-gray-400 font-medium">Fix data integrity issues.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="p-8 space-y-4">
+                        <div className="flex items-center justify-between p-4 bg-red-50/50 border border-red-100 rounded-2xl">
+                            <div>
+                                <p className="font-bold text-sm text-gray-900">Fix MRR / Plan Bug</p>
+                                <p className="text-xs text-gray-500 mt-1">Downgrades users who were incorrectly assigned 'Pro' plan without payment.</p>
+                            </div>
+                            <button
+                                onClick={async () => {
+                                    if (confirm("Are you sure you want to scan and fix bugged Pro users? This will downgrade users without a subscription ID.")) {
+                                        try {
+                                            const res = await fetch('/api/admin/fix-price-bug', { method: 'POST' });
+                                            const data = await res.json();
+                                            if (data.success) {
+                                                alert(data.message);
+                                                window.location.reload();
+                                            } else {
+                                                alert("Error: " + data.error);
+                                            }
+                                        } catch (e) {
+                                            alert("Failed to execute fix.");
+                                        }
+                                    }
+                                }}
+                                className="px-4 py-2 bg-white border border-red-200 text-red-600 text-xs font-bold rounded-xl hover:bg-red-50 transition-colors shadow-sm"
+                            >
+                                Run Fix Script
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 {/* API & Keys */}
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
                     <div className="p-6 border-b border-gray-100 flex items-center gap-3 bg-gray-50/50">
