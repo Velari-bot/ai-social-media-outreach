@@ -11,19 +11,29 @@ interface InfluencerClubClientConfig {
     baseUrl?: string;
 }
 
+/**
+ * Influencer Club API Client
+ * Optimized for maximum compatibility and transparent error reporting.
+ */
 export class InfluencerClubClient {
     private apiKey: string;
     private baseUrl: string;
 
     constructor(config: InfluencerClubClientConfig) {
-        this.apiKey = config.apiKey || INFLUENCER_CLUB_API_KEY || '';
-        this.baseUrl = config.baseUrl || INFLUENCER_CLUB_BASE_URL;
+        this.apiKey = (config.apiKey || INFLUENCER_CLUB_API_KEY || '').trim();
+        this.baseUrl = (config.baseUrl || INFLUENCER_CLUB_BASE_URL).replace(/\/$/, '');
     }
 
     private ensureApiKey() {
         if (!this.apiKey) {
-            throw new Error('Influencer Club API key is required. Please check your environment variables.');
+            throw new Error('Influencer Club API Key is missing. Please set INFLUENCER_CLUB_API_KEY in your environment.');
         }
+    }
+
+    private getAuthHeader() {
+        // Remove existing Bearer prefix if user accidentally included it in the env var
+        const cleanKey = this.apiKey.replace(/^Bearer\s+/i, '');
+        return `Bearer ${cleanKey}`;
     }
 
     private parseNiche(rawNiche: string): { niche: string; category?: string } {
@@ -43,121 +53,91 @@ export class InfluencerClubClient {
         limit: number;
         offset?: number;
     }): Promise<ModashDiscoveryResult[]> {
-        const requestId = Math.random().toString(36).substring(7);
-        console.log(`[InfluencerClub:${requestId}] Discovery for ${params.platform}...`);
-
-        try {
-            // Attempt 1: The "Simple/Flat" Structure (Matches User's Clean Example)
-            console.log(`[InfluencerClub:${requestId}] Attempt 1: Simple/Flat Payload...`);
-            let results = await this.fetchWithPayload(params, 'flat');
-            if (results && results.length > 0) return results;
-
-            // Attempt 2: The "Nested" Structure (Verified in older debug scripts)
-            console.log(`[InfluencerClub:${requestId}] Attempt 2: Nested Payload...`);
-            results = await this.fetchWithPayload(params, 'nested');
-            if (results && results.length > 0) return results;
-
-            return [];
-        } catch (error: any) {
-            console.error(`[InfluencerClub:${requestId}] Fatal error:`, error.message);
-            throw error; // Re-throw to allow API route to handle correctly
-        }
-    }
-
-    private async fetchWithPayload(params: {
-        platform: Platform;
-        filters: Record<string, any>;
-        limit: number;
-        offset?: number;
-    }, type: 'flat' | 'nested'): Promise<ModashDiscoveryResult[]> {
         this.ensureApiKey();
         const requestId = Math.random().toString(36).substring(7);
         const f = params.filters;
-        const { niche: cleanNiche, category: cleanCategory } = this.parseNiche(f.niche || "");
+        const { niche: cleanNiche } = this.parseNiche(f.niche || "");
 
-        let body: any = {};
+        // 1. ATTEMPT A: The "Production Style" Flat Payload (Matches User Example)
+        // Try the base /discover endpoint first if supported
+        const flatBody = {
+            platform: params.platform.toLowerCase(),
+            niche: cleanNiche || f.niche,
+            minFollowers: Number(f.min_followers || f.minFollowers || f.followersMin || 1000),
+            maxFollowers: Number(f.max_followers || f.maxFollowers || f.followersMax || 1000000),
+            limit: params.limit || 50,
+            offset: params.offset || 0
+        };
 
-        if (type === 'flat') {
-            // Matching the "User Clean Example" style
-            body = {
-                platform: params.platform.toLowerCase(),
-                niche: f.niche || cleanNiche, // Try the original string first
-                keyword: cleanNiche,
-                minFollowers: Number(f.min_followers || f.minFollowers || f.followersMin || 1000),
-                maxFollowers: f.max_followers || f.maxFollowers || f.followersMax ? Number(f.max_followers || f.maxFollowers || f.followersMax) : undefined,
-                limit: params.limit || 50,
-                offset: params.offset || 0,
-                // Add snake_case aliases too for safety
-                min_followers: Number(f.min_followers || f.minFollowers || f.followersMin || 1000),
-                category: f.category || cleanCategory
-            };
-        } else {
-            // Nested structure
-            body = {
-                platform: params.platform.toLowerCase(),
-                paging: {
-                    limit: params.limit || 50,
-                    offset: params.offset || 0,
-                    page: Math.floor((params.offset || 0) / (params.limit || 50))
-                },
-                filters: {
-                    min_followers: Number(f.min_followers || f.minFollowers || f.followersMin || 1000),
-                    followers_min: String(f.min_followers || f.minFollowers || f.followersMin || 1000),
-                    category: f.category || cleanCategory,
-                    niche: cleanNiche,
-                    keyword: cleanNiche || "influencer"
-                },
-                sort_by: "relevancy",
-                sort_order: "desc"
-            };
-        }
-
-        const authHeader = this.apiKey.startsWith('Bearer ') ? this.apiKey : `Bearer ${this.apiKey}`;
-
-        // Try discovery endpoint
-        const finalUrl = `${this.baseUrl}/public/v1/discovery/`;
+        console.log(`[InfluencerClub:${requestId}] Attempting Discovery...`);
+        console.log(`[InfluencerClub:${requestId}] Payload:`, JSON.stringify(flatBody));
 
         try {
-            const response = await fetch(finalUrl, {
-                method: "POST",
-                headers: {
-                    "Authorization": authHeader,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(body)
-            });
+            // We prioritize the endpoint structure that matches the user's latest snippet
+            const results = await this.tryFetch(`${this.baseUrl}/public/v1/discovery/`, flatBody, requestId);
+            if (results && results.length > 0) return results;
 
-            if (!response.ok) {
-                const text = await response.text();
-                if (response.status === 401) throw new Error("Influencer Club API Key is unauthorized (401).");
-                console.warn(`[InfluencerClub:${requestId}] ${type} fetch failed (${response.status}): ${text.substring(0, 100)}`);
-                return [];
+            // 2. ATTEMPT B: The Nested Schema (Fallback for legacy or platform-specific support)
+            console.log(`[InfluencerClub:${requestId}] Attempt A returned 0. Trying Nested Schema...`);
+            const nestedBody = {
+                platform: params.platform.toLowerCase(),
+                paging: { limit: params.limit, offset: params.offset },
+                filters: {
+                    min_followers: flatBody.minFollowers,
+                    niche: flatBody.niche,
+                    keyword: flatBody.niche
+                }
+            };
+            const nestedResults = await this.tryFetch(`${this.baseUrl}/public/v1/discovery/`, nestedBody, requestId);
+            return nestedResults || [];
+
+        } catch (error: any) {
+            console.error(`[InfluencerClub:${requestId}] Client Error:`, error.message);
+            throw error; // Propagate to API route
+        }
+    }
+
+    private async tryFetch(url: string, body: any, requestId: string): Promise<ModashDiscoveryResult[]> {
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Authorization": this.getAuthHeader(),
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            console.error(`[InfluencerClub:${requestId}] API Failure (${response.status}): ${text}`);
+
+            // Critical: If it's a 401, we MUST stop and tell the user.
+            if (response.status === 401) {
+                throw new Error("Influencer Club API Key is unauthorized (401). Please check your credentials in the dashboard.");
             }
-
-            const data = await response.json();
-            const accounts = data.accounts || data.results || [];
-
-            return accounts.map((p: any) => {
-                const profile = p.profile || p || {};
-                return {
-                    creator_id: p.user_id || profile.username || profile.id,
-                    handle: profile.username || p.user_id || profile.id,
-                    platform: params.platform,
-                    followers: profile.followers || profile.followers_count || p.followers || 0,
-                    engagement_rate: profile.engagement_percent ? (profile.engagement_percent / 100) : (profile.engagement_rate || 0),
-                    fullname: profile.full_name || profile.name || profile.username,
-                    picture: profile.picture || profile.profile_pic_url || profile.avatar_url,
-                    emails: profile.emails || p.emails || []
-                };
-            });
-        } catch (e: any) {
-            if (e.message.includes('401')) throw e;
-            console.error(`[InfluencerClub:${requestId}] Error during ${type} fetch:`, e.message);
             return [];
         }
+
+        const data = await response.json();
+        const accounts = data.accounts || data.results || data.data || [];
+
+        return accounts.map((p: any) => {
+            const profile = p.profile || p;
+            return {
+                creator_id: p.user_id || profile.username || profile.id,
+                handle: profile.username || p.user_id || profile.id,
+                platform: profile.platform || p.platform || 'instagram',
+                followers: profile.followers || profile.followers_count || p.followers || 0,
+                engagement_rate: profile.engagement_percent ? (profile.engagement_percent / 100) : (profile.engagement_rate || 0),
+                fullname: profile.full_name || profile.name || profile.username,
+                picture: profile.picture || profile.profile_pic_url || profile.avatar_url,
+                emails: profile.emails || p.emails || []
+            };
+        });
     }
 }
 
+// Singleton
 let _influencerClubClient: InfluencerClubClient | null = null;
 export const influencerClubClient = (() => {
     if (!_influencerClubClient) {

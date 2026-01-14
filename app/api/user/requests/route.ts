@@ -109,6 +109,8 @@ export async function POST(request: NextRequest) {
     if (platforms.length > 0) {
       try {
         console.log(`[RequestsAPI] Initiating discovery for platform: ${platforms[0]}.`);
+        console.log(`[RequestsAPI] IC Key configured: ${!!process.env.INFLUENCER_CLUB_API_KEY}`);
+
         // 5. Run Discovery
         const { discoveryPipeline } = await import('@/lib/services/discovery-pipeline');
         const results = await discoveryPipeline.discover({
