@@ -9,21 +9,15 @@ import type { UserAccount } from "@/lib/database";
 import SubscriptionGuard from "@/components/SubscriptionGuard";
 import { Search, Loader2, AlertCircle, Download, Instagram, Youtube, Music, Info, ExternalLink, CheckCircle } from "lucide-react";
 
-// 1. Fixed Niches List (Required)
-const NICHES = [
-  "Fitness",
-  "Business",
-  "Beauty",
-  "Gaming",
-  "Education",
-  "Lifestyle",
-  "Tech",
-  "Fashion",
-  "Food",
-  "Travel",
-  "Real Estate",
-  "Other"
-];
+import { FLATTENED_TOPICS } from "@/lib/data/classifiers";
+
+// 1. Dynamic Niches List from Classifiers (API aligned)
+const NICHES = FLATTENED_TOPICS.map(t => t.name);
+
+// Fallback if data is missing
+if (NICHES.length === 0) {
+  NICHES.push("Gaming", "Fashion", "Tech", "Beauty");
+}
 
 // Helper for UI icons
 const getPlatformIcon = (platform: string, className = "h-4 w-4") => {
@@ -57,7 +51,7 @@ export default function CreatorRequestPage() {
 function CreatorRequestContent() {
   // State
   const [platform, setPlatform] = useState<string>("instagram");
-  const [niche, setNiche] = useState("Fitness"); // Default to first common niche
+  const [niche, setNiche] = useState(NICHES[0] || "Gaming"); // Default to first available niche
   const [followersMin, setFollowersMin] = useState(1000); // Lowered default to avoid 0 results
   const [followersMax, setFollowersMax] = useState(250000);
   const [requestedCreators, setRequestedCreators] = useState(50);

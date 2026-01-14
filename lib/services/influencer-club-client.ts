@@ -85,7 +85,62 @@ export class InfluencerClubClient {
      * Search Creators with strict credit safety
      * Strategy: Fetch broadly (Targeting Only) -> Filter Locally (Numeric Stats)
      */
+    /**
+     * Search Creators with Fallback Strategy
+     */
     async discoverCreators(params: {
+        platform: Platform;
+        filters: Record<string, any>;
+        limit: number;
+        offset?: number;
+    }): Promise<ModashDiscoveryResult[]> {
+        // 1. Initial Attempt
+        let results = await this.fetchCreators(params);
+
+        if (results.length > 0) return results;
+
+        console.log("[InfluencerClub] 0 results found. Attempting Fallback Strategy 1: Lax Category...");
+
+        // 2. Fallback 1: Deep lax (Remove Category, force Keyword mode)
+        // Many niches (e.g. "Gaming") fail as categories but work as keywords.
+        const laxFilters = { ...params.filters };
+        if (laxFilters.niche && laxFilters.niche !== 'any') {
+            // Remove niche as a strict category indicator
+            // But ensure it hits the keyword logic in fetchCreators
+            // We do this by unsetting 'category' mapping risk in the next call,
+            // or by explicitly setting it as keyword here to override.
+
+            // Hack: We rename 'niche' to 'keywords' to force keyword path
+            if (!laxFilters.keywords) laxFilters.keywords = [];
+            if (Array.isArray(laxFilters.keywords)) laxFilters.keywords.push(laxFilters.niche);
+            else laxFilters.keywords = [laxFilters.keywords, laxFilters.niche];
+
+            delete laxFilters.niche; // Remove niche trigger
+            delete laxFilters.category; // Remove strict category trigger
+        }
+
+        results = await this.fetchCreators({ ...params, filters: laxFilters });
+        if (results.length > 0) {
+            console.log(`[InfluencerClub] Fallback 1 Success: Found ${results.length} creators.`);
+            return results;
+        }
+
+        // 3. Fallback 2: Lower Followers (if originally high)
+        const minF = Number(params.filters.minFollowers || params.filters.followersMin || 0);
+        if (minF > 2000) {
+            console.log("[InfluencerClub] 0 results. Attempting Fallback 2: Lower Followers...");
+            const lowerFilters = { ...laxFilters, minFollowers: 1000 };
+            results = await this.fetchCreators({ ...params, filters: lowerFilters });
+            if (results.length > 0) return results;
+        }
+
+        return [];
+    }
+
+    /**
+     * Internal Fetch Implementation
+     */
+    private async fetchCreators(params: {
         platform: Platform;
         filters: Record<string, any>;
         limit: number;
@@ -97,7 +152,13 @@ export class InfluencerClubClient {
         // Debug: Log raw input filters
         console.log(`[InfluencerClub:${requestId}] Raw input filters:`, JSON.stringify(params.filters, null, 2));
 
-        this.validateFilters(params.filters);
+        try {
+            this.validateFilters(params.filters);
+        } catch (e) {
+            // If validation fails (e.g. no keywords because we stripped them in fallback), return []
+            console.warn(`[InfluencerClub:${requestId}] Validation failed, skipping fetch:`, e);
+            return [];
+        }
 
         // 1. Prepare Filters Object
         const filters: any = {};
@@ -115,9 +176,25 @@ export class InfluencerClubClient {
         // CATEGORY STRATEGY: 
         // We restore the mapping of Niche -> Category because for broad searches (e.g. "Education"), 
         // relying solely on keywords in bio is too restrictive and returns 0 results.
-        if (!category && params.filters.niche && params.filters.niche !== 'any') {
-            category = params.filters.niche;
-            console.log(`[InfluencerClub:${requestId}] Auto-mapping niche '${params.filters.niche}' to category.`);
+        if (params.filters.niche && params.filters.niche !== 'any') {
+            // New format parsing: "Action game (Gaming)" 
+            // Niche = "Action game", Category = "Gaming"
+            if (params.filters.niche.includes('(')) {
+                const parts = params.filters.niche.split(' (');
+                const nicheVal = parts[0].trim();
+                const catVal = parts[1].replace(')', '').trim();
+
+                filters.niche = nicheVal;
+                filters.category = catVal;
+                category = catVal; // for the check below
+
+                console.log(`[InfluencerClub:${requestId}] Parsed: Niche='${nicheVal}', Category='${catVal}' from input.`);
+            } else if (!category) {
+                category = params.filters.niche;
+                filters.niche = params.filters.niche;
+                filters.category = params.filters.niche;
+                console.log(`[InfluencerClub:${requestId}] Auto-mapping niche '${params.filters.niche}' to both category and niche.`);
+            }
         }
 
         if (category && category !== '' && category !== 'any') {

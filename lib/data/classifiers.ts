@@ -259,6 +259,72 @@ export const SEARCH_TOPICS = [
             "Christian music", "Classical music", "Country", "Electronic music", "Hip hop music", "Independent music",
             "Jazz", "Music of Asia", "Music of Latin America", "Pop music", "Reggae", "Rhythm and blues", "Rock music", "Soul music"
         ]
+    },
+    {
+        "topic_details": "Fashion & Beauty",
+        "sub_topic_details": [
+            "Cosmetics", "Makeup", "Streetwear", "Luxury Fashion", "Jewelry", "Hair", "Clothing", "Skincare"
+        ]
+    },
+    {
+        "topic_details": "Travel & Tourism",
+        "sub_topic_details": [
+            "Hotels", "Luxury Travel", "Backpacking", "Adventure Travel", "Beaches", "City Life", "Cruises", "Airlines"
+        ]
+    },
+    {
+        "topic_details": "Food & Drink",
+        "sub_topic_details": [
+            "Cooking", "Restaurants", "Baking", "Vegan", "Vegetarian", "Coffee", "Wine & Spirits", "Healthy Eating", "Fast Food"
+        ]
+    },
+    {
+        "topic_details": "Fitness & Health",
+        "sub_topic_details": [
+            "Bodybuilding", "Yoga", "Crossfit", "Running", "Meditation", "Mental Health", "Nutrition", "Personal Training"
+        ]
+    },
+    {
+        "topic_details": "Business & Finance",
+        "sub_topic_details": [
+            "Entrepreneurship", "Real Estate", "Crypto & Web3", "Investing", "Ecommerce", "SaaS", "Network Marketing"
+        ]
+    },
+    {
+        "topic_details": "Technology",
+        "sub_topic_details": [
+            "AI & Machine Learning", "Smartphones", "Laptops", "Software", "Photography", "Gadgets", "Cybersecurity"
+        ]
+    },
+    {
+        "topic_details": "Family & Parenting",
+        "sub_topic_details": [
+            "Motherhood", "Fatherhood", "Babies", "Toys", "Education", "Family Lifestyle"
+        ]
+    },
+    {
+        "topic_details": "Art & Design",
+        "sub_topic_details": [
+            "Graphic Design", "Architecture", "Interior Design", "Painting", "Digital Art", "NFTs"
+        ]
+    },
+    {
+        "topic_details": "Pets & Animals",
+        "sub_topic_details": [
+            "Dogs", "Cats", "Horses", "Exotic Pets", "Wildlife"
+        ]
+    },
+    {
+        "topic_details": "Automotive",
+        "sub_topic_details": [
+            "Supercars", "Classic Cars", "Motorcycles", "Offroading", "Electric Vehicles"
+        ]
+    },
+    {
+        "topic_details": "Home & Garden",
+        "sub_topic_details": [
+            "Interior Design", "DIY Projects", "Gardening", "Real Estate", "Organization"
+        ]
     }
 ];
 
