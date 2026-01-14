@@ -142,6 +142,10 @@ export class InfluencerClubClient {
         limit: number;
         offset?: number;
     }): Promise<ModashDiscoveryResult[]> {
+        if (!this.apiKey) {
+            console.error("[InfluencerClub] CRITICAL: API Key is missing. Check INFLUENCER_CLUB_API_KEY environment variable.");
+            return [];
+        }
         this.ensureApiKey();
         const requestId = Math.random().toString(36).substring(7);
 
@@ -206,8 +210,13 @@ export class InfluencerClubClient {
 
             if (!response.ok) {
                 const text = await response.text();
-                console.error(`[InfluencerClub:${requestId}] API Error:`, text);
-                return [];
+                const errMsg = `Influencer Club API Error (${response.status}): ${text}`;
+                console.error(`[InfluencerClub:${requestId}] ${errMsg}`);
+
+                if (response.status === 401) {
+                    throw new Error("Influencer Club API Key is missing or invalid. Please check your environment variables.");
+                }
+                throw new Error(errMsg);
             }
 
             const data = await response.json();
