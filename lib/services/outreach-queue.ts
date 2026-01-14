@@ -79,11 +79,6 @@ export interface UserEmailSettings {
     gmail_connected: boolean;
     gmail_email?: string;
 
-    // Sending limits (per day)
-    max_emails_per_day: number;
-    emails_sent_today: number;
-    last_email_sent_at?: Timestamp | string;
-
     // Pacing (distribute throughout day)
     min_minutes_between_emails: number; // Default: 5-10 minutes
     sending_hours_start: number; // Default: 9 (9 AM)
@@ -103,6 +98,7 @@ export interface UserEmailSettings {
 
 /**
  * Add creators to outreach queue with smart scheduling
+ * Uses user's daily credit quota (credits = emails)
  */
 export async function queueCreatorsForOutreach(params: {
     userId: string;
@@ -115,13 +111,30 @@ export async function queueCreatorsForOutreach(params: {
     }>;
     campaignId?: string;
     requestId?: string;
-}): Promise<{ queued: number; skipped: number }> {
+}): Promise<{ queued: number; skipped: number; creditsUsed: number }> {
     const { userId, creators, campaignId, requestId } = params;
+
+    // Get user account to check credits
+    const userDoc = await db.collection('user_accounts').doc(userId).get();
+    if (!userDoc.exists) {
+        throw new Error('User not found');
+    }
+
+    const userData = userDoc.data()!;
+    const dailyCredits = userData.email_quota_daily || 0;
+    const creditsUsedToday = userData.email_used_today || 0;
+    const creditsAvailable = dailyCredits - creditsUsedToday;
+
+    console.log(`[Queue] User ${userId}: ${creditsAvailable}/${dailyCredits} credits available`);
+
+    if (creditsAvailable <= 0) {
+        console.log(`[Queue] User ${userId} has no credits available today`);
+        return { queued: 0, skipped: creators.length, creditsUsed: 0 };
+    }
 
     // Get user's email settings
     const settingsDoc = await db.collection('user_email_settings').doc(userId).get();
     const settings = settingsDoc.data() as UserEmailSettings || {
-        max_emails_per_day: 100,
         min_minutes_between_emails: 10,
         sending_hours_start: 9,
         sending_hours_end: 17
@@ -130,10 +143,17 @@ export async function queueCreatorsForOutreach(params: {
     let queued = 0;
     let skipped = 0;
 
+    // Limit to available credits (1 credit = 1 email)
+    const creatorsToQueue = creators.slice(0, creditsAvailable);
+    const exceededLimit = creators.length - creatorsToQueue.length;
+
+    if (exceededLimit > 0) {
+        console.log(`[Queue] ${exceededLimit} creators skipped due to credit limit`);
+    }
+
     // Calculate send times distributed throughout the day
-    const now = new Date();
     const sendTimes = distributeEmailsOverDay(
-        creators.length,
+        creatorsToQueue.length,
         settings.min_minutes_between_emails,
         settings.sending_hours_start,
         settings.sending_hours_end
@@ -141,8 +161,8 @@ export async function queueCreatorsForOutreach(params: {
 
     const batch = db.batch();
 
-    for (let i = 0; i < creators.length; i++) {
-        const creator = creators[i];
+    for (let i = 0; i < creatorsToQueue.length; i++) {
+        const creator = creatorsToQueue[i];
 
         // Check if already contacted
         const existingQuery = await db.collection('outreach_queue')
@@ -178,13 +198,27 @@ export async function queueCreatorsForOutreach(params: {
         queued++;
     }
 
+    // Reserve credits for queued emails (1 credit per email)
+    if (queued > 0) {
+        batch.update(db.collection('user_accounts').doc(userId), {
+            email_used_today: creditsUsedToday + queued,
+            email_used_this_month: (userData.email_used_this_month || 0) + queued,
+            updated_at: Timestamp.now()
+        });
+    }
+
     await batch.commit();
 
-    return { queued, skipped };
+    skipped += exceededLimit;
+
+    console.log(`[Queue] Queued ${queued} emails, skipped ${skipped}, used ${queued} credits`);
+
+    return { queued, skipped, creditsUsed: queued };
 }
 
 /**
  * Distribute emails evenly throughout the day
+ * Ensures all credits are used by spreading emails across business hours
  */
 function distributeEmailsOverDay(
     count: number,
@@ -199,7 +233,7 @@ function distributeEmailsOverDay(
     const hoursPerDay = endHour - startHour;
     const minutesPerDay = hoursPerDay * 60;
 
-    // Calculate interval between emails
+    // Calculate interval between emails to use all available time
     const interval = Math.max(minMinutesBetween, Math.floor(minutesPerDay / count));
 
     let currentTime = new Date(now);
@@ -243,8 +277,6 @@ export async function getUserEmailSettings(userId: string): Promise<UserEmailSet
     const defaultSettings: UserEmailSettings = {
         user_id: userId,
         gmail_connected: false,
-        max_emails_per_day: 100,
-        emails_sent_today: 0,
         min_minutes_between_emails: 10,
         sending_hours_start: 9,
         sending_hours_end: 17,

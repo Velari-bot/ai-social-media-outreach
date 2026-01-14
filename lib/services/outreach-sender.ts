@@ -87,16 +87,7 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
     const settingsDoc = await db.collection('user_email_settings').doc(userId).get();
     const settings = settingsDoc.data() || {};
 
-    // Check daily limit
-    const emailsSentToday = settings.emails_sent_today || 0;
-    const maxPerDay = settings.max_emails_per_day || 100;
-
-    if (emailsSentToday >= maxPerDay) {
-        console.log(`[Outreach Sender] User ${userId} has reached daily limit`);
-        return { sent: 0, failed: 0 };
-    }
-
-    // Setup Gmail client
+    // Setup Gmail client (using user's connected Gmail account)
     const oauth2Client = new google.auth.OAuth2(
         process.env.NEXT_PUBLIC_GMAIL_CLIENT_ID,
         process.env.GMAIL_CLIENT_SECRET
@@ -110,17 +101,13 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
     const userName = userData.name || userData.first_name || 'Cory';
     const userEmail = userData.email || settings.gmail_email;
 
+    console.log(`[Outreach Sender] Sending from ${userEmail} (user's Gmail)`);
+
     let sent = 0;
     let failed = 0;
 
-    // Send emails one by one
+    // Send emails one by one (credits already reserved when queued)
     for (const emailItem of emails) {
-        // Check if we've hit the limit
-        if (emailsSentToday + sent >= maxPerDay) {
-            console.log(`[Outreach Sender] Daily limit reached for user ${userId}`);
-            break;
-        }
-
         try {
             // Generate AI email
             const emailContent = await generateOutreachEmail({
@@ -188,9 +175,8 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
         }
     }
 
-    // Update user's email count
+    // Update user's email tracking
     await db.collection('user_email_settings').doc(userId).update({
-        emails_sent_today: emailsSentToday + sent,
         total_emails_sent: (settings.total_emails_sent || 0) + sent,
         last_email_sent_at: Timestamp.now(),
         updated_at: Timestamp.now()
