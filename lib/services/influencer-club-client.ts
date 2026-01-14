@@ -43,6 +43,10 @@ export class InfluencerClubClient {
         const requestId = Math.random().toString(36).substring(7);
         const { niche: cleanNiche, category: cleanCategory } = this.parseTopics(params.filters.niche || "");
 
+        // Use user-provided keywords if available, otherwise fallback to niche name
+        const userKeywords = params.filters.keywords || "";
+        const searchKeyword = userKeywords.trim() || cleanNiche;
+
         const minFollowers = Number(params.filters.min_followers || params.filters.minFollowers || 1000);
         const maxFollowers = Number(params.filters.max_followers || params.filters.maxFollowers || 1000000);
 
@@ -54,10 +58,11 @@ export class InfluencerClubClient {
                 limit: params.limit || 50,
                 offset: params.offset || 0
             },
+            search: searchKeyword, // Root level search
             filters: {
                 platform: params.platform.toLowerCase(),
                 category: cleanCategory,
-                keyword: cleanNiche, // Singular!
+                keyword: searchKeyword, // Singular!
                 number_of_followers: {
                     min: minFollowers,
                     max: maxFollowers
@@ -73,8 +78,9 @@ export class InfluencerClubClient {
         // This includes root-level niche and camelCase followers which often fixes "ignoring filters" issues.
         const bodyFlat: any = {
             platform: params.platform.toLowerCase(),
-            niche: cleanNiche,
+            niche: searchKeyword,
             category: cleanCategory,
+            search: searchKeyword,
             minFollowers: minFollowers,
             maxFollowers: maxFollowers,
             limit: params.limit || 50,
@@ -83,7 +89,7 @@ export class InfluencerClubClient {
             filters: bodyV1.filters
         };
 
-        console.log(`[InfluencerClub:${requestId}] Niche: ${cleanNiche} (${cleanCategory}) | Followers: ${minFollowers}-${maxFollowers}`);
+        console.log(`[InfluencerClub:${requestId}] Targeting: "${searchKeyword}" (${cleanCategory}) | Followers: ${minFollowers}-${maxFollowers}`);
 
         try {
             // We prioritize the Dashboard V1 endpoint as it's been more responsive

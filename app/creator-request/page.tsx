@@ -52,6 +52,7 @@ function CreatorRequestContent() {
   // State
   const [platform, setPlatform] = useState<string>("instagram");
   const [niche, setNiche] = useState(NICHES[0] || "Gaming"); // Default to first available niche
+  const [keywords, setKeywords] = useState("");
   const [followersMin, setFollowersMin] = useState(1000);
   const [followersMax, setFollowersMax] = useState(250000);
   const [requestedCreators, setRequestedCreators] = useState(50);
@@ -103,12 +104,13 @@ function CreatorRequestContent() {
       const criteria: any = {
         batchSize: requestedCreators,
         niche: niche.trim(),
+        keywords: keywords.trim(),
         min_followers: followersMin,
         max_followers: followersMax
       };
 
       const res = await createRequest({
-        name: `${niche}`,
+        name: keywords.trim() ? `${niche} - ${keywords.trim()}` : `${niche}`,
         platforms: [platform],
         criteria
       });
@@ -146,6 +148,7 @@ function CreatorRequestContent() {
         // Sync the form filters for convenience
         if (req.platforms?.[0]) setPlatform(req.platforms[0].toLowerCase());
         if (req.criteria?.niche) setNiche(req.criteria.niche);
+        if (req.criteria?.keywords) setKeywords(req.criteria.keywords);
         if (req.criteria?.min_followers) setFollowersMin(req.criteria.min_followers);
         if (req.criteria?.max_followers) setFollowersMax(req.criteria.max_followers);
         if (req.criteria?.batchSize) setRequestedCreators(req.criteria.batchSize);
@@ -289,6 +292,18 @@ function CreatorRequestContent() {
                   >
                     {NICHES.map(n => <option key={n} value={n}>{n}</option>)}
                   </select>
+                </div>
+
+                {/* 4. Keywords */}
+                <div>
+                  <label className="block text-xs font-extrabold text-gray-900 uppercase tracking-widest mb-2">Keywords (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Baseball, Pitcher, MLB"
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-black/5 outline-none"
+                    value={keywords}
+                    onChange={e => setKeywords(e.target.value)}
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
