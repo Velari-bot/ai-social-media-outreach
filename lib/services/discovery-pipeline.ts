@@ -85,6 +85,14 @@ export class DiscoveryPipeline {
 
                 console.log(`[Discovery] Batch ${batchesChecked}: Added ${addedInBatch} unique new creators. Total: ${finalCreators.length}/${requestedCount}`);
 
+                // SAFETY CHECK: If we got results but added NOTHING new, the API is likely
+                // ignoring our pagination (common in Trial/Free plans) or we've exhausted the niche.
+                // We must break to avoid infinite loops of duplicates.
+                if (externalResults.length > 0 && addedInBatch === 0) {
+                    console.warn(`[Discovery] DETECTED PAGINATION FAILURE: API returned ${externalResults.length} creators but all were duplicates. Stopping search.`);
+                    break;
+                }
+
                 // If we got 0 results, we've truly hit the end
                 if (!externalResults || externalResults.length === 0) {
                     break;
