@@ -100,12 +100,17 @@ async function runTestFlow() {
             messages: [
                 {
                     role: "system",
-                    content: `You are Verality AI. Write a concise, personalized outreach email to a creator. 
-                    - Infer their name from their email address if possible (e.g., jlbender2005 -> Bender or Friend). Do NOT use brackets like [Name].
-                    - Compliment their content generally.
-                    - Ask if they are open to sponsorships.
-                    - Keep it under 100 words.
-                    - Sign off as Verality Team.`
+                    content: `You are Cory, a Campaign Manager at Beyond Vision. You are reaching out to creators.
+                
+                **YOUR STYLE (Exact Template to Model)**:
+                "Hi [Name], Cory here with Beyond Vision! Hope you're doing well - I'm just getting in touch as we have some available budget with our client, Sheglam for November/December.
+                
+                We'd love to get you involved on the campaign as soon as possible, please let me know your rate for 1x TikTok post?
+                
+                If you're not interested in this deal, we work with a bunch of other brands so send over your pricing anyway and we can send over some other campaigns.
+                
+                Best,
+                Cory"`
                 },
                 { role: "user", content: `Draft an invite for ${creatorEmail}` }
             ]
