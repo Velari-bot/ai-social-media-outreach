@@ -84,11 +84,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Extract batchSize and cap it at remaining if needed
-    const requestedBatchSize = criteria?.batchSize ? parseInt(criteria.batchSize) : 10;
-    const finalBatchSize = account && account.plan !== 'enterprise'
-      ? Math.min(requestedBatchSize, remaining)
-      : requestedBatchSize;
+    // Extract batchSize and check if user has enough credits
+    const requestedBatchSize = criteria?.batchSize ? parseInt(criteria.batchSize) : 50;
+
+    if (account && account.plan !== 'enterprise' && remaining < requestedBatchSize) {
+      return NextResponse.json(
+        { error: `Insufficient credits. You need ${requestedBatchSize} credits for this search, but only have ${remaining} left.` },
+        { status: 403 }
+      );
+    }
+
+    const finalBatchSize = requestedBatchSize;
 
     // Create request in DB
     const newRequest = await createCreatorRequest(userId, {

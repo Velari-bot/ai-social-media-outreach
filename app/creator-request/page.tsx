@@ -67,7 +67,7 @@ function CreatorRequestContent() {
   const [recentRequests, setRecentRequests] = useState<any[]>([]);
 
   // Computed
-  const creditsCost = 1; // 1 credit per batch of 50 roughly, or explicitly defined
+  const creditsCost = requestedCreators; // 1 credit per creator as per new requirement
   const remainingQuota = userAccount ? Math.max(0, userAccount.email_quota_daily - userAccount.email_used_today) : 0;
   const isQuotaExceeded = creditsCost > remainingQuota;
 
@@ -266,7 +266,7 @@ function CreatorRequestContent() {
                 <div className="pt-4 border-t border-gray-100">
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-xs font-bold text-gray-500">Estimated Cost</span>
-                    <span className="text-sm font-black text-black">1 Credit</span>
+                    <span className="text-sm font-black text-black">{creditsCost} Credits</span>
                   </div>
 
                   <button
