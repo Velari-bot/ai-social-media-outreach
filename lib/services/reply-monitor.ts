@@ -214,11 +214,21 @@ async function checkUserReplies(userId: string) {
                 }
             });
 
+            // Deduct 1 credit for the reply (replies consume credits)
+            const currentCreditsUsed = userData.email_used_today || 0;
+            await db.collection('user_accounts').doc(userId).update({
+                email_used_today: currentCreditsUsed + 1,
+                email_used_this_month: (userData.email_used_this_month || 0) + 1,
+                updated_at: Timestamp.now()
+            });
+
             // Update user stats
             await db.collection('user_email_settings').doc(userId).update({
                 total_replies_received: (settings.total_replies_received || 0) + 1,
                 updated_at: Timestamp.now()
             });
+
+            console.log(`[Reply Monitor] Deducted 1 credit for reply (${currentCreditsUsed + 1} used today)`);
 
         } catch (error: any) {
             console.error(`[Reply Monitor] Error processing thread ${thread.id}:`, error.message);

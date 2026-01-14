@@ -1,8 +1,12 @@
 {
     "crons": [
         {
-            "path": "/api/cron/campaigns/run",
-            "schedule": "0 8 * * *"
+            "path": "/api/cron/credits/reset",
+            "schedule": "0 0 * * *"
+        },
+        {
+            "path": "/api/cron/campaigns/daily",
+            "schedule": "0 9 * * *"
         },
         {
             "path": "/api/cron/outreach/send",

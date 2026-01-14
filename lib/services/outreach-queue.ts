@@ -217,8 +217,8 @@ export async function queueCreatorsForOutreach(params: {
 }
 
 /**
- * Distribute emails evenly throughout the day
- * Ensures all credits are used by spreading emails across business hours
+ * Distribute emails evenly throughout TODAY ONLY (9 AM - 5 PM)
+ * All emails must be sent same day - no multi-day spreading
  */
 function distributeEmailsOverDay(
     count: number,
@@ -229,36 +229,49 @@ function distributeEmailsOverDay(
     const now = new Date();
     const sendTimes: Date[] = [];
 
-    // Calculate available sending window in minutes
+    // Calculate available sending window in minutes for TODAY
     const hoursPerDay = endHour - startHour;
     const minutesPerDay = hoursPerDay * 60;
 
-    // Calculate interval between emails to use all available time
-    const interval = Math.max(minMinutesBetween, Math.floor(minutesPerDay / count));
+    // Calculate interval to fit ALL emails in today's window
+    // If we have 200 emails and 480 minutes (8 hours), interval = 2.4 minutes
+    const interval = Math.max(2, Math.floor(minutesPerDay / count)); // Min 2 minutes between emails
 
     let currentTime = new Date(now);
-    currentTime.setHours(startHour, 0, 0, 0);
 
-    // If we're past start hour today, start tomorrow
-    if (now.getHours() >= endHour) {
+    // Determine start time for today
+    if (now.getHours() < startHour) {
+        // Before business hours - start at startHour
+        currentTime.setHours(startHour, 0, 0, 0);
+    } else if (now.getHours() >= endHour) {
+        // After business hours - start tomorrow at startHour
         currentTime.setDate(currentTime.getDate() + 1);
-    } else if (now.getHours() >= startHour) {
-        // Start from next available slot
+        currentTime.setHours(startHour, 0, 0, 0);
+    } else {
+        // During business hours - start ASAP (next minute)
         currentTime = new Date(now);
-        currentTime.setMinutes(currentTime.getMinutes() + minMinutesBetween);
+        currentTime.setMinutes(currentTime.getMinutes() + 1);
+        currentTime.setSeconds(0, 0);
     }
 
+    const startOfDay = new Date(currentTime);
+    startOfDay.setHours(startHour, 0, 0, 0);
+    const endOfDay = new Date(currentTime);
+    endOfDay.setHours(endHour, 0, 0, 0);
+
+    // Schedule all emails for TODAY only
     for (let i = 0; i < count; i++) {
-        // Check if we've exceeded today's window
-        if (currentTime.getHours() >= endHour) {
-            // Move to next day
-            currentTime.setDate(currentTime.getDate() + 1);
-            currentTime.setHours(startHour, 0, 0, 0);
+        // If we've exceeded today's window, cap at end time
+        if (currentTime >= endOfDay) {
+            // All remaining emails get scheduled at the last possible moment
+            sendTimes.push(new Date(endOfDay.getTime() - 60000)); // 1 minute before end
+        } else {
+            sendTimes.push(new Date(currentTime));
+            currentTime.setMinutes(currentTime.getMinutes() + interval);
         }
-
-        sendTimes.push(new Date(currentTime));
-        currentTime.setMinutes(currentTime.getMinutes() + interval);
     }
+
+    console.log(`[Queue] Scheduled ${count} emails for today between ${startOfDay.toLocaleTimeString()} - ${endOfDay.toLocaleTimeString()}`);
 
     return sendTimes;
 }

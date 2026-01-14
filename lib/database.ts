@@ -33,10 +33,13 @@ export interface CreatorRequest {
   criteria: Record<string, any>;
 
   // Recurring Campaign Fields
-  is_recurring?: boolean; // If true, this request acts as a campaign template
-  is_active?: boolean; // Can be paused
+  is_recurring?: boolean; // If true, runs daily for max_runs days
+  is_active?: boolean; // Can be paused/stopped
   last_run_at?: Timestamp | string;
   frequency?: 'daily'; // Default daily
+  run_count?: number; // How many times it has run
+  max_runs?: number; // Default 30 days
+  contacted_creator_ids?: string[]; // Track contacted creators to avoid duplicates
 
   created_at: Timestamp | string;
   updated_at: Timestamp | string;
