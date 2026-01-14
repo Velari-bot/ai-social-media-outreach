@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth-helpers';
 import { queueCreatorsForOutreach } from '@/lib/services/outreach-queue';
 
 export async function POST(request: NextRequest) {
@@ -33,13 +33,18 @@ export async function POST(request: NextRequest) {
 
         // Filter creators that have emails
         const creatorsWithEmails = creators.filter((c: any) => c.email && c.email.trim());
+        const creatorsWithoutEmails = creators.length - creatorsWithEmails.length;
 
         if (creatorsWithEmails.length === 0) {
             return NextResponse.json({
                 success: true,
                 queued: 0,
                 skipped: 0,
-                message: 'No creators with emails found'
+                creditsUsed: 0,
+                totalCreators: creators.length,
+                creatorsWithEmails: 0,
+                creatorsWithoutEmails: creatorsWithoutEmails,
+                message: `Found ${creators.length} creators, but none have emails. Only creators with emails can be contacted.`
             });
         }
 
@@ -60,7 +65,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             success: true,
             ...result,
-            message: `Queued ${result.queued} creators for outreach`
+            totalCreators: creators.length,
+            creatorsWithEmails: creatorsWithEmails.length,
+            creatorsWithoutEmails: creatorsWithoutEmails,
+            message: `Queued ${result.queued} creators for outreach. ${creatorsWithoutEmails} creators skipped (no email). ${result.creditsUsed} credits used.`
         });
 
     } catch (error: any) {

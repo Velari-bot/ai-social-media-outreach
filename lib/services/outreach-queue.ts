@@ -1,4 +1,4 @@
-import { db } from './firebase-admin';
+import { db } from '../firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 
 /**
