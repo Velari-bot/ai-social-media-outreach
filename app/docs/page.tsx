@@ -17,7 +17,7 @@ export default function DocsPage() {
                     {/* Header */}
                     <div className="text-center space-y-4">
                         <h1 className="text-4xl sm:text-5xl font-black text-black tracking-tight">
-                            Documentation & Setup
+                            Documentation &amp; Setup
                         </h1>
                         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
                             A comprehensive guide to configuring Verality, connecting your accounts, and launching your first outreach campaign.
@@ -42,7 +42,7 @@ export default function DocsPage() {
                             </li>
                             <li>
                                 <a href="#managing-replies" className="text-blue-600 hover:text-blue-800 font-medium underline">
-                                    3. Managing Inbox & Replies
+                                    3. Managing Inbox &amp; Replies
                                 </a>
                             </li>
                             <li>
@@ -67,7 +67,7 @@ export default function DocsPage() {
                             </p>
 
                             <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-100 my-4 text-sm text-yellow-800">
-                                <strong>Important Note:</strong> The app is currently in "Testing" mode with Google. You will see a "Google hasn't verified this app" warning. This is expected and safe for internal use.
+                                <strong>Important Note:</strong> The app is currently in &quot;Testing&quot; mode with Google. You will see a &quot;Google hasn&apos;t verified this app&quot; warning. This is expected and safe for internal use.
                             </div>
 
                             <h4 className="text-xl font-bold text-black mt-6 mb-3">Step-by-Step Instructions</h4>
@@ -80,18 +80,18 @@ export default function DocsPage() {
                                     Click the <strong>Connect Gmail</strong> button.
                                 </li>
                                 <li>
-                                    You will be redirected to Google's sign-in page. Select the Gmail account you wish to use for outreach.
+                                    You will be redirected to Google&apos;s sign-in page. Select the Gmail account you wish to use for outreach.
                                 </li>
                             </ol>
 
                             <div className="mt-8 space-y-2">
-                                <h5 className="font-bold text-black">Handling the "Go to Verality (unsafe)" Screen</h5>
+                                <h5 className="font-bold text-black">Handling the &quot;Go to Verality (unsafe)&quot; Screen</h5>
                                 <p className="text-sm">Since the app is unverified, you will likely see a warning screen. You must bypass this to proceed.</p>
                             </div>
 
                             {/* Step 1 Image */}
                             <div className="mt-6">
-                                <p className="font-bold mb-2">1. When you see the warning, click the "Advanced" link:</p>
+                                <p className="font-bold mb-2">1. When you see the warning, click the &quot;Advanced&quot; link:</p>
                                 <div className="relative w-full rounded-xl overflow-hidden shadow-lg border border-gray-200">
                                     <Image
                                         src="/Click advanced.png"
@@ -105,7 +105,7 @@ export default function DocsPage() {
 
                             {/* Step 2 Image */}
                             <div className="mt-8">
-                                <p className="font-bold mb-2">2. Then, click "Go to verality.io (unsafe)" at the bottom:</p>
+                                <p className="font-bold mb-2">2. Then, click &quot;Go to verality.io (unsafe)&quot; at the bottom:</p>
                                 <div className="relative w-full rounded-xl overflow-hidden shadow-lg border border-gray-200">
                                     <Image
                                         src="/Shown advanced.png"
@@ -133,7 +133,7 @@ export default function DocsPage() {
                             </div>
 
                             <p className="mt-6">
-                                Once authorized, you will be redirected back to Verality, and your Settings page should show "Connected".
+                                Once authorized, you will be redirected back to Verality, and your Settings page should show &quot;Connected&quot;.
                             </p>
                         </div>
                     </section>
@@ -150,9 +150,9 @@ export default function DocsPage() {
                             </p>
                             <ul className="list-disc pl-5 mt-4 space-y-2">
                                 <li>Navigate to <strong>Creator Request</strong> in the dashboard.</li>
-                                <li>Enter a descriptive name for your search (e.g., "Tech YouTubers < 100k").</li>
+                                <li>Enter a descriptive name for your search (e.g., &quot;Tech YouTubers &lt; 100k&quot;).</li>
                                 <li>Select the platforms you want to target (YouTube, Instagram, TikTok).</li>
-                                <li>In the description, be specific about the niche (e.g., "Gaming channels that focus on Strategy games").</li>
+                                <li>In the description, be specific about the niche (e.g., &quot;Gaming channels that focus on Strategy games&quot;).</li>
                             </ul>
                             <p className="mt-4">
                                 The system will automatically scan millions of creators, filter them by your criteria, and enrich their contact data.
