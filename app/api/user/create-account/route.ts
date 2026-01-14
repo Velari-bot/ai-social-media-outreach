@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     const accountData = {
       email: email || decodedToken.email || '',
       name: name || '',
-      plan: 'pro',
+      plan: 'free',
       email_quota_daily: 0,
       email_quota_monthly: 3000,
       email_used_today: 0,
