@@ -103,31 +103,41 @@ export class DiscoveryPipeline {
 
                         const creator = await this.resolveCreator(raw, platform);
 
-                        if (!userSeenIds.has(String(creator.id)) && !finalCreators.some(c => c.id === creator.id)) {
-                            // Double check uniqueness (against DB history AND current batch)
-                            finalCreators.push(creator);
-                            userSeenIds.add(String(creator.id));
-                            addedForKeyword++;
+                        // MANAGEMENT CHECK (for 'custom_no_email' plan)
+                        const excludeManagement = (filters as any).excludeManagement === true;
+                        if (excludeManagement) {
+                            const bio = (creator.biography || "").toLowerCase();
+                            const hasManagement = bio.includes("management") || bio.includes("agency") || bio.includes("@mngt") || bio.includes("manager") || bio.includes("mgmt");
+                            if (hasManagement) {
+                                // Skip this creator
+                                continue;
+                            }
                         }
-                    }
-                    console.log(`[Discovery] Keyword "${currentKeyword}" yielded ${addedForKeyword} NEW creators.`);
-                }
-            } catch (e) {
-                console.error(`[Discovery] Search failed for keyword "${currentKeyword}":`, e);
-            }
 
-            keywordIndex++;
+                        // Double check uniqueness (against DB history AND current batch)
+                        finalCreators.push(creator);
+                        userSeenIds.add(String(creator.id));
+                        addedForKeyword++;
+                    }
+                }
+                console.log(`[Discovery] Keyword "${currentKeyword}" yielded ${addedForKeyword} NEW creators.`);
+            }
+            } catch (e) {
+            console.error(`[Discovery] Search failed for keyword "${currentKeyword}":`, e);
         }
+
+        keywordIndex++;
+    }
 
         // Trim to requested size if we went over
         // (Though sending a few extra is usually better than under-delivering)
         // finalCreators = finalCreators.slice(0, requestedCount); 
 
-        console.log(`[Discovery] Pipeline Complete. Found ${finalCreators.length} unique creators across ${keywordIndex} keywords.`);
+        console.log(`[Discovery] Pipeline Complete. Found ${finalCreators.length} unique creators across ${ keywordIndex } keywords.`);
 
         // 5. Clay Enrichment
         if (!skipEnrichment && finalCreators.length > 0) {
-            console.log(`[Discovery] Sending ${finalCreators.length} creators to Clay...`);
+            console.log(`[Discovery] Sending ${ finalCreators.length } creators to Clay...`);
             finalCreators = await this.bulkEnrichWithClay(finalCreators, userId, campaignId);
         }
 
@@ -159,7 +169,7 @@ export class DiscoveryPipeline {
                     },
                     {
                         role: "user",
-                        content: `Generate ${count} specific, diverse, and popular social media bio keywords or sub-niches related to "${baseNiche}". 
+                        content: `Generate ${ count } specific, diverse, and popular social media bio keywords or sub - niches related to "${baseNiche}". 
                         For example, if the niche is "Travel", return ["backpacker", "luxury hotel", "digital nomad", "van life", "tourism"].
                         Return PURE JSON array.`
                     }
@@ -168,181 +178,181 @@ export class DiscoveryPipeline {
             });
 
             const content = completion.choices[0].message.content || "[]";
-            const keywords = JSON.parse(content.replace(/```json/g, '').replace(/```/g, '').trim());
+            const keywords = JSON.parse(content.replace(/```json / g, '').replace(/```/g, '').trim());
 
-            if (Array.isArray(keywords)) {
-                return keywords.map(k => String(k).toLowerCase());
-            }
-            return [baseNiche];
+if (Array.isArray(keywords)) {
+    return keywords.map(k => String(k).toLowerCase());
+}
+return [baseNiche];
 
         } catch (e) {
-            console.error("[Discovery] AI Expansion Failed:", e);
-            // Fallback: simple heuristics if AI fails
-            return [`${baseNiche} lover`, `${baseNiche} life`, `best ${baseNiche}`, `my ${baseNiche}`];
-        }
+    console.error("[Discovery] AI Expansion Failed:", e);
+    // Fallback: simple heuristics if AI fails
+    return [`${baseNiche} lover`, `${baseNiche} life`, `best ${baseNiche}`, `my ${baseNiche}`];
+}
     }
 
     /**
      * Get Set of Creator IDs the user has already requested/seen.
      */
-    private async getUserSeenCreatorIds(userId: string): Promise<Set<string>> {
-        const seen = new Set<string>();
-        try {
-            // Optimization: If this gets huge, we need a "user_seen_creators" subcollection.
-            // For now, reading creator_requests is okay.
-            const snapshot = await db.collection('creator_requests')
-                .where('user_id', '==', userId)
-                .select('creator_ids')
-                .get();
+    private async getUserSeenCreatorIds(userId: string): Promise < Set < string >> {
+    const seen = new Set<string>();
+    try {
+        // Optimization: If this gets huge, we need a "user_seen_creators" subcollection.
+        // For now, reading creator_requests is okay.
+        const snapshot = await db.collection('creator_requests')
+            .where('user_id', '==', userId)
+            .select('creator_ids')
+            .get();
 
-            snapshot.docs.forEach(doc => {
-                const ids = doc.data().creator_ids;
-                if (Array.isArray(ids)) {
-                    ids.forEach(id => seen.add(String(id)));
-                }
-            });
-        } catch (e) {
-            console.error('Failed to fetch user history', e);
-        }
-        return seen;
+        snapshot.docs.forEach(doc => {
+            const ids = doc.data().creator_ids;
+            if (Array.isArray(ids)) {
+                ids.forEach(id => seen.add(String(id)));
+            }
+        });
+    } catch(e) {
+        console.error('Failed to fetch user history', e);
     }
+        return seen;
+}
 
     /**
      * Find existing creator or create new one in Global DB
      */
-    private async resolveCreator(raw: any, platform: Platform): Promise<Creator> {
-        const handle = (raw.handle || raw.username || '').toLowerCase();
+    private async resolveCreator(raw: any, platform: Platform): Promise < Creator > {
+    const handle = (raw.handle || raw.username || '').toLowerCase();
 
-        // 1. Try to find by handle & platform
-        const snapshot = await db.collection('creators')
-            .where('platform', '==', platform)
-            .where('handle', '==', handle)
-            .limit(1)
-            .get();
+    // 1. Try to find by handle & platform
+    const snapshot = await db.collection('creators')
+        .where('platform', '==', platform)
+        .where('handle', '==', handle)
+        .limit(1)
+        .get();
 
-        if (!snapshot.empty) {
-            // Found existing in Global DB
-            return this.docToCreator(snapshot.docs[0]);
-        }
+    if(!snapshot.empty) {
+    // Found existing in Global DB
+    return this.docToCreator(snapshot.docs[0]);
+}
 
-        // 2. Create New
-        const now = Timestamp.now();
-        const creatorData: Omit<Creator, 'id' | 'created_at' | 'updated_at'> = {
-            platform: platform,
-            handle: handle,
-            verality_id: raw.creator_id || raw.id || null,
-            name: raw.fullname || raw.full_name || raw.name || handle,
-            full_name: raw.fullname || raw.full_name || raw.name || handle,
-            followers: raw.followers || 0,
-            engagement_rate: raw.engagement_rate || 0,
-            picture: raw.picture || raw.profile_pic_url,
-            location: raw.location || raw.country || raw.geo_country || null,
-            has_basic_profile: true,
-            has_detailed_profile: false,
-            enrichment_status: 'pending' as const,
-            source: 'influencers_club',
-            basic_profile_data: raw,
-            niche: raw.category || raw.niche || null,
-            email_found: raw.emails && raw.emails.length > 0,
-            email: raw.emails && raw.emails.length > 0 ? raw.emails[0] : null,
-            clay_enriched_at: null,
-            detailed_profile_fetched_at: null,
-            detailed_profile_data: null
-        };
+// 2. Create New
+const now = Timestamp.now();
+const creatorData: Omit<Creator, 'id' | 'created_at' | 'updated_at'> = {
+    platform: platform,
+    handle: handle,
+    verality_id: raw.creator_id || raw.id || null,
+    name: raw.fullname || raw.full_name || raw.name || handle,
+    full_name: raw.fullname || raw.full_name || raw.name || handle,
+    followers: raw.followers || 0,
+    engagement_rate: raw.engagement_rate || 0,
+    picture: raw.picture || raw.profile_pic_url,
+    location: raw.location || raw.country || raw.geo_country || null,
+    has_basic_profile: true,
+    has_detailed_profile: false,
+    enrichment_status: 'pending' as const,
+    source: 'influencers_club',
+    basic_profile_data: raw,
+    niche: raw.category || raw.niche || null,
+    email_found: raw.emails && raw.emails.length > 0,
+    email: raw.emails && raw.emails.length > 0 ? raw.emails[0] : null,
+    clay_enriched_at: null,
+    detailed_profile_fetched_at: null,
+    detailed_profile_data: null
+};
 
-        const docRef = await db.collection('creators').add({
-            ...creatorData,
-            created_at: now,
-            updated_at: now,
-        });
+const docRef = await db.collection('creators').add({
+    ...creatorData,
+    created_at: now,
+    updated_at: now,
+});
 
-        const newDoc = await docRef.get();
-        return this.docToCreator(newDoc);
+const newDoc = await docRef.get();
+return this.docToCreator(newDoc);
     }
 
     /**
      * Enrich batch of creators with Clay
      */
-    private async bulkEnrichWithClay(creators: Creator[], userId: string, campaignId?: string): Promise<Creator[]> {
-        const enriched: Creator[] = [];
+    private async bulkEnrichWithClay(creators: Creator[], userId: string, campaignId ?: string): Promise < Creator[] > {
+    const enriched: Creator[] = [];
 
-        // Use Promise.all for parallel enrichment, but keep it robust
-        const enrichmentPromises = creators.map(async (creator) => {
-            try {
-                // Update status to processing
-                await db.collection('creators').doc(String(creator.id)).update({
-                    enrichment_status: 'processing',
-                    updated_at: Timestamp.now()
-                });
+    // Use Promise.all for parallel enrichment, but keep it robust
+    const enrichmentPromises = creators.map(async (creator) => {
+        try {
+            // Update status to processing
+            await db.collection('creators').doc(String(creator.id)).update({
+                enrichment_status: 'processing',
+                updated_at: Timestamp.now()
+            });
 
-                const clayResult = await clayClient.enrichCreator({
-                    handle: creator.handle,
-                    platform: creator.platform,
-                    userId: userId,
-                    campaignId: campaignId,
-                    creatorId: creator.id,
-                    niche: creator.niche || undefined,
-                    followers: creator.followers,
-                    bio: creator.basic_profile_data?.biography || creator.bio || undefined,
-                    website: creator.website || undefined,
-                    name: creator.name || undefined
-                });
+            const clayResult = await clayClient.enrichCreator({
+                handle: creator.handle,
+                platform: creator.platform,
+                userId: userId,
+                campaignId: campaignId,
+                creatorId: creator.id,
+                niche: creator.niche || undefined,
+                followers: creator.followers,
+                bio: creator.basic_profile_data?.biography || creator.bio || undefined,
+                website: creator.website || undefined,
+                name: creator.name || undefined
+            });
 
-                const updateData: Partial<Creator> = {
-                    email: clayResult.email || null,
-                    email_found: !!clayResult.email,
-                    phone: clayResult.phone || null,
-                    bio: clayResult.bio || null,
-                    website: clayResult.website || null,
-                    enrichment_status: (clayResult as any).is_pending ? 'processing' : 'enriched',
-                    clay_enriched_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                };
+            const updateData: Partial<Creator> = {
+                email: clayResult.email || null,
+                email_found: !!clayResult.email,
+                phone: clayResult.phone || null,
+                bio: clayResult.bio || null,
+                website: clayResult.website || null,
+                enrichment_status: (clayResult as any).is_pending ? 'processing' : 'enriched',
+                clay_enriched_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            };
 
-                // If Clay provides cross-platform profiles, we could store them too
+            // If Clay provides cross-platform profiles, we could store them too
 
-                await db.collection('creators').doc(String(creator.id)).update(updateData as any);
+            await db.collection('creators').doc(String(creator.id)).update(updateData as any);
 
-                return { ...creator, ...updateData };
-            } catch (error) {
-                console.error(`Clay enrichment failed for ${creator.handle}:`, error);
+            return { ...creator, ...updateData };
+        } catch (error) {
+            console.error(`Clay enrichment failed for ${creator.handle}:`, error);
 
-                // Fail gracefully: update status but return the discovery data
-                await db.collection('creators').doc(String(creator.id)).update({
-                    enrichment_status: 'failed' as const,
-                    updated_at: Timestamp.now()
-                });
+            // Fail gracefully: update status but return the discovery data
+            await db.collection('creators').doc(String(creator.id)).update({
+                enrichment_status: 'failed' as const,
+                updated_at: Timestamp.now()
+            });
 
-                return { ...creator, enrichment_status: 'failed' as const };
-            }
-        });
+            return { ...creator, enrichment_status: 'failed' as const };
+        }
+    });
 
-        return Promise.all(enrichmentPromises);
-    }
+    return Promise.all(enrichmentPromises);
+}
 
     /**
      * Helper to convert Firestore doc to Creator type
      */
     private docToCreator(doc: any): Creator {
-        const data = doc.data();
-        const basic = data.basic_profile_data || {};
-        const profile = basic.profile || {};
+    const data = doc.data();
+    const basic = data.basic_profile_data || {};
+    const profile = basic.profile || {};
 
-        return {
-            id: doc.id,
-            ...data,
-            // Fallbacks for display fields (Legacy/Cache support)
-            name: data.name || basic.fullname || basic.full_name || profile.full_name || data.handle,
-            followers: data.followers || basic.followers || profile.followers || 0,
-            engagement_rate: data.engagement_rate || basic.engagement_rate || (profile.engagement_percent ? profile.engagement_percent / 100 : 0),
-            picture: data.picture || basic.picture || basic.profile_pic_url || profile.picture,
-            location: data.location || basic.location || basic.country || basic.geo_country,
-            email: data.email || basic.email || (basic.emails && basic.emails[0]) || null,
+    return {
+        id: doc.id,
+        ...data,
+        // Fallbacks for display fields (Legacy/Cache support)
+        name: data.name || basic.fullname || basic.full_name || profile.full_name || data.handle,
+        followers: data.followers || basic.followers || profile.followers || 0,
+        engagement_rate: data.engagement_rate || basic.engagement_rate || (profile.engagement_percent ? profile.engagement_percent / 100 : 0),
+        picture: data.picture || basic.picture || basic.profile_pic_url || profile.picture,
+        location: data.location || basic.location || basic.country || basic.geo_country,
+        email: data.email || basic.email || (basic.emails && basic.emails[0]) || null,
 
-            created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at,
-            updated_at: data.updated_at?.toDate?.()?.toISOString() || data.updated_at,
-        } as Creator;
-    }
+        created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at,
+        updated_at: data.updated_at?.toDate?.()?.toISOString() || data.updated_at,
+    } as Creator;
+}
 }
 
 export const discoveryPipeline = new DiscoveryPipeline();

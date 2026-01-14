@@ -128,9 +128,12 @@ function CreatorRequestContent() {
         max_followers: followersMax,
         min_avg_views: minAvgViews,
         location: location,
-        // If testing plan, we DO want to find emails (skipEnrichment = false)
-        // Otherwise (custom_no_email), we skip enrichment
-        skipEnrichment: !isTestingPlan
+        // For "custom_no_email" plan (which actually means NO OUTREACH, but yes emails):
+        // 1. skipEnrichment = false (we WANT emails)
+        // 2. We trigger a filter for "no management" keywords in the backend or client.
+        // The user clarified: "custom_no_email means ... find their emails on clay, but ai will not auto email ... only finds creators with no business."
+        skipEnrichment: false,
+        excludeManagement: userAccount?.plan === 'custom_no_email'
       };
 
       const res = await createRequest({
@@ -486,8 +489,8 @@ function CreatorRequestContent() {
                           <th className="px-4 py-3 text-right">Followers</th>
                           <th className="px-4 py-3 text-right">Avg Views</th>
                           <th className="px-4 py-3">Location</th>
-                          {/* SHOW EMAIL COLUMN FOR TESTING USERS */}
-                          {userAccount?.plan === 'testing' && <th className="px-4 py-3">Email</th>}
+                          {/* SHOW EMAIL COLUMN FOR TESTING OR DB ONLY USERS */}
+                          {['testing', 'custom_no_email'].includes(userAccount?.plan || '') && <th className="px-4 py-3">Email</th>}
                           <th className="px-4 py-3">Profile Link</th>
                         </tr>
                       </thead>
@@ -527,8 +530,8 @@ function CreatorRequestContent() {
                             <td className="px-4 py-2 text-gray-600">
                               {c.location || location === "Anywhere" ? (c.location || "Unknown") : location}
                             </td>
-                            {/* SHOW EMAIL DATA FOR TESTING USERS */}
-                            {userAccount?.plan === 'testing' && (
+                            {/* SHOW EMAIL DATA FOR TESTING OR DB ONLY USERS */}
+                            {['testing', 'custom_no_email'].includes(userAccount?.plan || '') && (
                               <td className="px-4 py-2 font-mono text-gray-700">
                                 {c.email || <span className="text-gray-400 italic">Not found</span>}
                               </td>
