@@ -13,6 +13,9 @@ export class DiscoveryPipeline {
     /**
      * Main entry point for the discovery pipeline
      */
+    /**
+     * Main entry point for the discovery pipeline
+     */
     async discover(params: {
         userId: string;
         filters: CreatorSearchFilters;
@@ -23,89 +26,100 @@ export class DiscoveryPipeline {
     }): Promise<DiscoveryPipelineResponse> {
         const { userId, filters, requestedCount, platform, skipEnrichment, campaignId } = params;
 
-        console.log(`[Discovery] Starting search for User ${userId}. Force External: YES`);
+        console.log(`[Discovery] Starting search for User ${userId}. Requested: ${requestedCount}`);
 
         // 1. Build User's "Seen" Cache (Deduplication)
         const userSeenIds = await this.getUserSeenCreatorIds(userId);
-        console.log(`[Discovery] User has already seen ${userSeenIds.size} creators.`);
-
-        // 2. ALWAYS Fetch from Influencer Club (Fresh Data)
-        // We fetch slightly more than requested to account for duplicates we might filter out
-        const fetchLimit = Math.min(requestedCount, 50);
+        let finalCreators: Creator[] = [];
         let externalFetches = 0;
         let creditsConsumed = 0;
-        let finalCreators: Creator[] = [];
 
-        let batchesChecked = 0;
-        const MAX_BATCHES = 5; // Safety limit (check up to 250 creators)
+        // --- STRATEGY: SEMANTIC FAN-OUT ---
+        // If the API limits us to 5 results per query, we must use multiple DIFFERENT queries.
+        // We will start with the user's provided niche, and if we need more, we ask AI for related keywords.
 
-        try {
-            // Loop until we have enough creators or hit safety limit
-            while (finalCreators.length < requestedCount && batchesChecked < MAX_BATCHES) {
-                const currentOffset = batchesChecked * 50;
-                console.log(`[Discovery] Fetching batch ${batchesChecked + 1} (Offset ${currentOffset})...`);
+        let searchKeywords: string[] = [];
 
-                const externalResults = await influencerClubClient.discoverCreators({
-                    platform,
-                    filters,
-                    limit: 50, // Always fetch full page
-                    offset: currentOffset
-                });
-
-                if (!externalResults || externalResults.length === 0) {
-                    console.log(`[Discovery] Batch ${batchesChecked + 1} returned 0 results. Stopping.`);
-                    break;
-                }
-
-                externalFetches += externalResults.length; // Track total fetched
-                batchesChecked++;
-                creditsConsumed += 1; // 1 credit per batch of 50
-
-                console.log(`[Discovery] External API returned ${externalResults.length} raw results in batch ${batchesChecked}`);
-
-                // 3. Process & Resolve to Internal DB (Global Deduplication)
-                const resolvedCreators = await Promise.all(externalResults.map(async (raw) => {
-                    return await this.resolveCreator(raw, platform);
-                }));
-
-                // 4. Per-User Deduplication
-                let addedInBatch = 0;
-                for (const creator of resolvedCreators) {
-                    // Stop if we have enough
-                    if (finalCreators.length >= requestedCount) break;
-
-                    if (userSeenIds.has(String(creator.id))) {
-                        // console.log(`[Discovery] Skipping duplicate for user: ${creator.handle}`);
-                        continue;
-                    }
-                    finalCreators.push(creator);
-                    userSeenIds.add(String(creator.id)); // Add to set
-                    addedInBatch++;
-                }
-
-                console.log(`[Discovery] Batch ${batchesChecked}: Added ${addedInBatch} unique new creators. Total: ${finalCreators.length}/${requestedCount}`);
-
-                // SAFETY CHECK: If we got results but added NOTHING new, the API is likely
-                // ignoring our pagination (common in Trial/Free plans) or we've exhausted the niche.
-                // We must break to avoid infinite loops of duplicates.
-                if (externalResults.length > 0 && addedInBatch === 0) {
-                    console.warn(`[Discovery] DETECTED PAGINATION FAILURE: API returned ${externalResults.length} creators but all were duplicates. Stopping search.`);
-                    break;
-                }
-
-                // If we got 0 results, we've truly hit the end
-                if (!externalResults || externalResults.length === 0) {
-                    break;
-                }
-            }
-
-        } catch (error: any) {
-            console.error('[Discovery] External Fetch Failed:', error);
-            throw error;
+        // Initial keyword (user provided)
+        if (filters.niche) {
+            searchKeywords.push(filters.niche);
+        } else {
+            // Fallback if no niche provided (unlikely but safe)
+            searchKeywords.push("lifestyle");
         }
 
-        // Trim
-        finalCreators = finalCreators.slice(0, requestedCount);
+        // Processing Loop
+        let keywordIndex = 0;
+        const TARGET_COUNT = Math.max(requestedCount, 50); // Ensure we aim for 50 "no matter what" as requested
+
+        // Safety: Don't run forever. Cap at 15 keywords max.
+        const MAX_KEYWORDS = 15;
+
+        while (finalCreators.length < TARGET_COUNT && keywordIndex < searchKeywords.length) {
+
+            const currentKeyword = searchKeywords[keywordIndex];
+            console.log(`[Discovery] Searching for keyword: "${currentKeyword}" (${finalCreators.length}/${TARGET_COUNT} found)`);
+
+            // Check if we need to generate more keywords?
+            // If we are at the last keyword and still need more creators, generate expansion
+            if (keywordIndex === searchKeywords.length - 1 && finalCreators.length < TARGET_COUNT && searchKeywords.length < MAX_KEYWORDS) {
+                console.log(`[Discovery] Almost out of keywords. Generating variations for "${filters.niche}"...`);
+                const newKeywords = await this.generateRelatedKeywords(filters.niche || currentKeyword, 10);
+
+                // Add only new unique keywords
+                for (const k of newKeywords) {
+                    if (!searchKeywords.includes(k)) {
+                        searchKeywords.push(k);
+                    }
+                }
+                console.log(`[Discovery] Expanded keyword list to: ${searchKeywords.length} items.`);
+            }
+
+            // Perform Search for this keyword
+            // We force the 'niche' filter to be the current keyword for this iteration
+            const currentFilters = { ...filters, niche: currentKeyword };
+
+            try {
+                // Try fetching - we know pagination might be broken so we just ask for 50 and take what we get
+                const externalResults = await influencerClubClient.discoverCreators({
+                    platform,
+                    filters: currentFilters,
+                    limit: 50,
+                    offset: 0
+                });
+
+                if (externalResults) {
+                    externalFetches += externalResults.length;
+                    creditsConsumed += 1; // 1 credit per API call
+
+                    // Deduplicate and Add
+                    let addedForKeyword = 0;
+                    for (const raw of externalResults) {
+                        if (finalCreators.length >= TARGET_COUNT) break;
+
+                        const creator = await this.resolveCreator(raw, platform);
+
+                        if (!userSeenIds.has(String(creator.id)) && !finalCreators.some(c => c.id === creator.id)) {
+                            // Double check uniqueness (against DB history AND current batch)
+                            finalCreators.push(creator);
+                            userSeenIds.add(String(creator.id));
+                            addedForKeyword++;
+                        }
+                    }
+                    console.log(`[Discovery] Keyword "${currentKeyword}" yielded ${addedForKeyword} NEW creators.`);
+                }
+            } catch (e) {
+                console.error(`[Discovery] Search failed for keyword "${currentKeyword}":`, e);
+            }
+
+            keywordIndex++;
+        }
+
+        // Trim to requested size if we went over
+        // (Though sending a few extra is usually better than under-delivering)
+        // finalCreators = finalCreators.slice(0, requestedCount); 
+
+        console.log(`[Discovery] Pipeline Complete. Found ${finalCreators.length} unique creators across ${keywordIndex} keywords.`);
 
         // 5. Clay Enrichment
         if (!skipEnrichment && finalCreators.length > 0) {
@@ -117,11 +131,51 @@ export class DiscoveryPipeline {
             creators: finalCreators,
             meta: {
                 total_requested: requestedCount,
-                internal_hits: 0, // We intentionally ignored internal cache as source
+                internal_hits: 0,
                 external_fetches: externalFetches,
                 credits_consumed: creditsConsumed
             }
         };
+    }
+
+    /**
+     * Generate related keywords using OpenAI to expand search breadth
+     */
+    private async generateRelatedKeywords(baseNiche: string, count: number = 5): Promise<string[]> {
+        try {
+            const { default: OpenAI } = await import('openai');
+            const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+            const completion = await openai.chat.completions.create({
+                model: "gpt-4",
+                messages: [
+                    {
+                        role: "system",
+                        content: "You remain a JSON generator. Return only a JSON array of strings."
+                    },
+                    {
+                        role: "user",
+                        content: `Generate ${count} specific, diverse, and popular social media bio keywords or sub-niches related to "${baseNiche}". 
+                        For example, if the niche is "Travel", return ["backpacker", "luxury hotel", "digital nomad", "van life", "tourism"].
+                        Return PURE JSON array.`
+                    }
+                ],
+                temperature: 0.7
+            });
+
+            const content = completion.choices[0].message.content || "[]";
+            const keywords = JSON.parse(content.replace(/```json/g, '').replace(/```/g, '').trim());
+
+            if (Array.isArray(keywords)) {
+                return keywords.map(k => String(k).toLowerCase());
+            }
+            return [baseNiche];
+
+        } catch (e) {
+            console.error("[Discovery] AI Expansion Failed:", e);
+            // Fallback: simple heuristics if AI fails
+            return [`${baseNiche} lover`, `${baseNiche} life`, `best ${baseNiche}`, `my ${baseNiche}`];
+        }
     }
 
     /**
