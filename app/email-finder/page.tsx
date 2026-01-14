@@ -118,6 +118,9 @@ function CreatorRequestContent() {
     setSearchResults(null);
 
     try {
+      // Check if user is on "testing" plan
+      const isTestingPlan = userAccount?.plan === 'testing';
+
       const criteria: any = {
         batchSize: requestedCreators,
         niche: niche.trim(),
@@ -125,11 +128,13 @@ function CreatorRequestContent() {
         max_followers: followersMax,
         min_avg_views: minAvgViews,
         location: location,
-        skipEnrichment: true  // Do not find emails
+        // If testing plan, we DO want to find emails (skipEnrichment = false)
+        // Otherwise (custom_no_email), we skip enrichment
+        skipEnrichment: !isTestingPlan
       };
 
       const res = await createRequest({
-        name: `${niche} (DB Search)`,
+        name: `${niche} ${isTestingPlan ? '(Testing)' : '(DB Search)'}`,
         platforms: [platform],
         criteria
       });
@@ -481,6 +486,8 @@ function CreatorRequestContent() {
                           <th className="px-4 py-3 text-right">Followers</th>
                           <th className="px-4 py-3 text-right">Avg Views</th>
                           <th className="px-4 py-3">Location</th>
+                          {/* SHOW EMAIL COLUMN FOR TESTING USERS */}
+                          {userAccount?.plan === 'testing' && <th className="px-4 py-3">Email</th>}
                           <th className="px-4 py-3">Profile Link</th>
                         </tr>
                       </thead>
@@ -520,6 +527,12 @@ function CreatorRequestContent() {
                             <td className="px-4 py-2 text-gray-600">
                               {c.location || location === "Anywhere" ? (c.location || "Unknown") : location}
                             </td>
+                            {/* SHOW EMAIL DATA FOR TESTING USERS */}
+                            {userAccount?.plan === 'testing' && (
+                              <td className="px-4 py-2 font-mono text-gray-700">
+                                {c.email || <span className="text-gray-400 italic">Not found</span>}
+                              </td>
+                            )}
                             <td className="px-4 py-2">
                               <a
                                 href={getPlatformUrl(c.platform, c.handle)}

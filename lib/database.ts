@@ -8,7 +8,7 @@ export interface UserAccount {
   name?: string;
   first_name?: string;
   last_name?: string;
-  plan: 'free' | 'basic' | 'pro' | 'growth' | 'scale' | 'enterprise';
+  plan: 'free' | 'basic' | 'pro' | 'growth' | 'scale' | 'enterprise' | 'custom_no_email' | 'testing';
   role?: 'user' | 'admin' | 'affiliate';
   outreach_intent?: string; // What are they asking for?
   ai_autopilot_enabled?: boolean; // If true, auto-finds creators daily
