@@ -41,10 +41,14 @@ export class DiscoveryPipeline {
         let searchKeywords: string[] = [];
 
         // Initial keyword (user provided)
-        if (filters.niche) {
+        // Note: If niche is empty string, we respect it as "Broad Search"
+        if (filters.niche !== undefined && filters.niche !== null && filters.niche.trim() !== '') {
             searchKeywords.push(filters.niche);
+        } else if (filters.niche === "") {
+            // User explicitly wants broad search (empty string)
+            searchKeywords.push("");
         } else {
-            // Fallback if no niche provided (unlikely but safe)
+            // Fallback if no niche provided at all (e.g. legacy call)
             searchKeywords.push("lifestyle");
         }
 

@@ -60,14 +60,19 @@ export class InfluencerClubClient {
             }
         };
 
-        // Add platform-specific niche filter
+        // Add platform-specific niche filter ONLY if a niche is provided
         const platform = params.platform.toLowerCase();
-        if (platform === 'instagram' || platform === 'tiktok') {
-            // Instagram & TikTok: Use "keywords_in_bio" filter (most reliable)
-            body.filters.keywords_in_bio = cleanNiche.toLowerCase();
-        } else if (platform === 'youtube') {
-            // YouTube: Use "topics" filter
-            body.filters.topics = [cleanNiche];
+
+        if (cleanNiche && cleanNiche.trim().length > 0) {
+            if (platform === 'instagram' || platform === 'tiktok') {
+                // Instagram & TikTok: Use "keywords_in_bio" filter (most reliable)
+                body.filters.keywords_in_bio = cleanNiche.toLowerCase();
+            } else if (platform === 'youtube') {
+                // YouTube: Use "topics" filter
+                body.filters.topics = [cleanNiche];
+            }
+        } else {
+            console.log(`[InfluencerClub:${requestId}] Broad Search (No Niche) - expecting higher volume.`);
         }
 
         console.log(`[InfluencerClub:${requestId}] ${platform.toUpperCase()} - Targeting: "${cleanNiche}" | Followers: ${minFollowers}-${maxFollowers}`);

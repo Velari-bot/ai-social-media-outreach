@@ -55,6 +55,7 @@ function CreatorRequestContent() {
   const [followersMin, setFollowersMin] = useState(1000);
   const [followersMax, setFollowersMax] = useState(250000);
   const [requestedCreators, setRequestedCreators] = useState(50);
+  const [isAnyNiche, setIsAnyNiche] = useState(false);
 
   // App State
   const [userId, setUserId] = useState<string | null>(null);
@@ -71,7 +72,7 @@ function CreatorRequestContent() {
   const isQuotaExceeded = creditsCost > remainingQuota;
 
   const isValid =
-    niche.length > 0 &&
+    (niche.length > 0 || isAnyNiche) &&
     followersMin < followersMax &&
     followersMin > 0;
 
@@ -281,14 +282,32 @@ function CreatorRequestContent() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-extrabold text-gray-900 uppercase tracking-widest mb-2">Niche <span className="text-red-500">*</span></label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-extrabold text-gray-900 uppercase tracking-widest">Niche <span className="text-red-500">*</span></label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isAnyNiche}
+                        onChange={e => {
+                          setIsAnyNiche(e.target.checked);
+                          if (e.target.checked) setNiche(""); // Clear niche if "Any" is selected
+                          else setNiche(NICHES[0] || "Gaming");
+                        }}
+                        className="h-3 w-3 rounded border-gray-300 text-black focus:ring-black"
+                      />
+                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">No preference (Broad Search)</span>
+                    </label>
+                  </div>
                   <select
-                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-black/5 outline-none appearance-none cursor-pointer"
+                    className={`w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-black/5 outline-none appearance-none cursor-pointer ${isAnyNiche ? 'opacity-50 cursor-not-allowed bg-gray-100' : ''}`}
                     value={niche}
                     onChange={e => setNiche(e.target.value)}
+                    disabled={isAnyNiche}
                   >
-                    {NICHES.map(n => <option key={n} value={n}>{n}</option>)}
+                    {!isAnyNiche && NICHES.map(n => <option key={n} value={n}>{n}</option>)}
+                    {isAnyNiche && <option value="">Any Niche</option>}
                   </select>
+                  {isAnyNiche && <p className="text-[10px] text-blue-600 font-bold mt-1.5">Note: Searching without a specific niche yields significantly more results (up to 50).</p>}
                 </div>
 
 
