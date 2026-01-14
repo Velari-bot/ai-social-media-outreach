@@ -43,53 +43,21 @@ export class InfluencerClubClient {
         const requestId = Math.random().toString(36).substring(7);
         const { niche: cleanNiche, category: cleanCategory } = this.parseTopics(params.filters.niche || "");
 
-        // Use user-provided keywords if available, otherwise fallback to niche name
-        const userKeywords = params.filters.keywords || "";
-        const searchKeyword = userKeywords.trim() || cleanNiche;
-
         const minFollowers = Number(params.filters.min_followers || params.filters.minFollowers || 1000);
         const maxFollowers = Number(params.filters.max_followers || params.filters.maxFollowers || 1000000);
 
-        // Attempt 1: The "Strict V1 Search" Payload
-        // This uses the nested filters object with singular keyword and category.
-        const bodyV1: any = {
+        // Build a clean payload using only niche
+        const body: any = {
             platform: params.platform.toLowerCase(),
-            paging: {
-                limit: params.limit || 50,
-                offset: params.offset || 0
-            },
-            search: searchKeyword, // Root level search
-            filters: {
-                platform: params.platform.toLowerCase(),
-                category: cleanCategory,
-                keyword: searchKeyword, // Singular!
-                number_of_followers: {
-                    min: minFollowers,
-                    max: maxFollowers
-                },
-                min_followers: minFollowers,
-                max_followers: maxFollowers
-            },
-            sort_by: "relevancy",
-            sort_order: "desc"
-        };
-
-        // Attempt 2: The "Flat Compatibility" Payload
-        // This includes root-level niche and camelCase followers which often fixes "ignoring filters" issues.
-        const bodyFlat: any = {
-            platform: params.platform.toLowerCase(),
-            niche: searchKeyword,
+            niche: cleanNiche,
             category: cleanCategory,
-            search: searchKeyword,
             minFollowers: minFollowers,
             maxFollowers: maxFollowers,
             limit: params.limit || 50,
-            offset: params.offset || 0,
-            // Re-include the nested filters just in case
-            filters: bodyV1.filters
+            offset: params.offset || 0
         };
 
-        console.log(`[InfluencerClub:${requestId}] Targeting: "${searchKeyword}" (${cleanCategory}) | Followers: ${minFollowers}-${maxFollowers}`);
+        console.log(`[InfluencerClub:${requestId}] Targeting: "${cleanNiche}" (${cleanCategory}) | Followers: ${minFollowers}-${maxFollowers}`);
 
         try {
             // We prioritize the Dashboard V1 endpoint as it's been more responsive
@@ -99,7 +67,7 @@ export class InfluencerClubClient {
                     "Authorization": this.getAuthHeader(),
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify(bodyFlat) // Sending the "Ultra-Flat" body first
+                body: JSON.stringify(body)
             });
 
             if (!response.ok) {
