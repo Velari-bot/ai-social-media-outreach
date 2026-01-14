@@ -1,0 +1,261 @@
+import { db } from './firebase-admin';
+import { Timestamp } from 'firebase-admin/firestore';
+
+/**
+ * Outreach Queue Item
+ * Represents a creator that needs to be contacted
+ */
+export interface OutreachQueueItem {
+    id: string;
+    user_id: string;
+    creator_id: string;
+    creator_email: string;
+    creator_handle: string;
+    creator_platform: string;
+    creator_name?: string;
+
+    // Scheduling
+    status: 'pending' | 'scheduled' | 'sent' | 'replied' | 'failed' | 'bounced';
+    scheduled_send_time: Timestamp | string;
+    sent_at?: Timestamp | string;
+
+    // Email tracking
+    gmail_thread_id?: string;
+    gmail_message_id?: string;
+    email_subject?: string;
+    email_body?: string;
+
+    // Campaign tracking
+    campaign_id?: string;
+    request_id?: string;
+
+    // Retry logic
+    retry_count: number;
+    last_error?: string;
+
+    created_at: Timestamp | string;
+    updated_at: Timestamp | string;
+}
+
+/**
+ * Email Thread Tracking
+ * Tracks conversation state with creators
+ */
+export interface EmailThread {
+    id: string; // Gmail thread ID
+    user_id: string;
+    creator_id: string;
+    creator_email: string;
+
+    // Thread state
+    status: 'active' | 'replied' | 'closed' | 'archived';
+    last_message_from: 'user' | 'creator';
+    last_message_at: Timestamp | string;
+
+    // AI tracking
+    ai_enabled: boolean;
+    ai_reply_count: number;
+
+    // Extracted data
+    phone_number?: string;
+    tiktok_rate?: number;
+    sound_promo_rate?: number;
+
+    // Labels
+    gmail_labels: string[];
+
+    created_at: Timestamp | string;
+    updated_at: Timestamp | string;
+}
+
+/**
+ * User Email Settings
+ * Per-user configuration for automated outreach
+ */
+export interface UserEmailSettings {
+    user_id: string;
+
+    // Gmail OAuth
+    gmail_connected: boolean;
+    gmail_email?: string;
+
+    // Sending limits (per day)
+    max_emails_per_day: number;
+    emails_sent_today: number;
+    last_email_sent_at?: Timestamp | string;
+
+    // Pacing (distribute throughout day)
+    min_minutes_between_emails: number; // Default: 5-10 minutes
+    sending_hours_start: number; // Default: 9 (9 AM)
+    sending_hours_end: number; // Default: 17 (5 PM)
+
+    // AI settings
+    ai_auto_reply_enabled: boolean;
+    ai_persona?: string; // e.g., "Cory from Beyond Vision"
+
+    // Tracking
+    total_emails_sent: number;
+    total_replies_received: number;
+
+    created_at: Timestamp | string;
+    updated_at: Timestamp | string;
+}
+
+/**
+ * Add creators to outreach queue with smart scheduling
+ */
+export async function queueCreatorsForOutreach(params: {
+    userId: string;
+    creators: Array<{
+        creator_id: string;
+        email: string;
+        handle: string;
+        platform: string;
+        name?: string;
+    }>;
+    campaignId?: string;
+    requestId?: string;
+}): Promise<{ queued: number; skipped: number }> {
+    const { userId, creators, campaignId, requestId } = params;
+
+    // Get user's email settings
+    const settingsDoc = await db.collection('user_email_settings').doc(userId).get();
+    const settings = settingsDoc.data() as UserEmailSettings || {
+        max_emails_per_day: 100,
+        min_minutes_between_emails: 10,
+        sending_hours_start: 9,
+        sending_hours_end: 17
+    };
+
+    let queued = 0;
+    let skipped = 0;
+
+    // Calculate send times distributed throughout the day
+    const now = new Date();
+    const sendTimes = distributeEmailsOverDay(
+        creators.length,
+        settings.min_minutes_between_emails,
+        settings.sending_hours_start,
+        settings.sending_hours_end
+    );
+
+    const batch = db.batch();
+
+    for (let i = 0; i < creators.length; i++) {
+        const creator = creators[i];
+
+        // Check if already contacted
+        const existingQuery = await db.collection('outreach_queue')
+            .where('user_id', '==', userId)
+            .where('creator_email', '==', creator.email)
+            .where('status', 'in', ['sent', 'replied'])
+            .limit(1)
+            .get();
+
+        if (!existingQuery.empty) {
+            skipped++;
+            continue;
+        }
+
+        const queueRef = db.collection('outreach_queue').doc();
+        const queueItem: Partial<OutreachQueueItem> = {
+            user_id: userId,
+            creator_id: creator.creator_id,
+            creator_email: creator.email,
+            creator_handle: creator.handle,
+            creator_platform: creator.platform,
+            creator_name: creator.name,
+            status: 'scheduled',
+            scheduled_send_time: Timestamp.fromDate(sendTimes[i]),
+            campaign_id: campaignId,
+            request_id: requestId,
+            retry_count: 0,
+            created_at: Timestamp.now(),
+            updated_at: Timestamp.now()
+        };
+
+        batch.set(queueRef, queueItem);
+        queued++;
+    }
+
+    await batch.commit();
+
+    return { queued, skipped };
+}
+
+/**
+ * Distribute emails evenly throughout the day
+ */
+function distributeEmailsOverDay(
+    count: number,
+    minMinutesBetween: number,
+    startHour: number,
+    endHour: number
+): Date[] {
+    const now = new Date();
+    const sendTimes: Date[] = [];
+
+    // Calculate available sending window in minutes
+    const hoursPerDay = endHour - startHour;
+    const minutesPerDay = hoursPerDay * 60;
+
+    // Calculate interval between emails
+    const interval = Math.max(minMinutesBetween, Math.floor(minutesPerDay / count));
+
+    let currentTime = new Date(now);
+    currentTime.setHours(startHour, 0, 0, 0);
+
+    // If we're past start hour today, start tomorrow
+    if (now.getHours() >= endHour) {
+        currentTime.setDate(currentTime.getDate() + 1);
+    } else if (now.getHours() >= startHour) {
+        // Start from next available slot
+        currentTime = new Date(now);
+        currentTime.setMinutes(currentTime.getMinutes() + minMinutesBetween);
+    }
+
+    for (let i = 0; i < count; i++) {
+        // Check if we've exceeded today's window
+        if (currentTime.getHours() >= endHour) {
+            // Move to next day
+            currentTime.setDate(currentTime.getDate() + 1);
+            currentTime.setHours(startHour, 0, 0, 0);
+        }
+
+        sendTimes.push(new Date(currentTime));
+        currentTime.setMinutes(currentTime.getMinutes() + interval);
+    }
+
+    return sendTimes;
+}
+
+/**
+ * Get user's email settings (create if doesn't exist)
+ */
+export async function getUserEmailSettings(userId: string): Promise<UserEmailSettings> {
+    const doc = await db.collection('user_email_settings').doc(userId).get();
+
+    if (doc.exists) {
+        return doc.data() as UserEmailSettings;
+    }
+
+    // Create default settings
+    const defaultSettings: UserEmailSettings = {
+        user_id: userId,
+        gmail_connected: false,
+        max_emails_per_day: 100,
+        emails_sent_today: 0,
+        min_minutes_between_emails: 10,
+        sending_hours_start: 9,
+        sending_hours_end: 17,
+        ai_auto_reply_enabled: true,
+        ai_persona: "Cory from Beyond Vision",
+        total_emails_sent: 0,
+        total_replies_received: 0,
+        created_at: Timestamp.now(),
+        updated_at: Timestamp.now()
+    };
+
+    await db.collection('user_email_settings').doc(userId).set(defaultSettings);
+    return defaultSettings;
+}
