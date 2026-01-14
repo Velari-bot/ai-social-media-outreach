@@ -349,9 +349,19 @@ function CreatorRequestContent() {
                             <h4 className="font-bold text-gray-900 truncate">{c.full_name || c.name || c.handle}</h4>
                             {getPlatformIcon(c.platform)}
                           </div>
-                          <p className="text-xs text-gray-500 truncate flex items-center gap-1">
-                            @{c.handle} • {new Intl.NumberFormat('en-US', { notation: "compact" }).format(c.followers)} Followers
-                          </p>
+                          <div className="text-xs text-gray-500 truncate flex items-center gap-1">
+                            <a
+                              href={getPlatformUrl(c.platform, c.handle)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors flex items-center gap-0.5"
+                            >
+                              @{c.handle?.replace(/^@+/, "")}
+                              <ExternalLink className="h-2.5 w-2.5" />
+                            </a>
+                            <span className="mx-1">•</span>
+                            <span>{new Intl.NumberFormat('en-US', { notation: "compact" }).format(c.followers)} Followers</span>
+                          </div>
                           {c.bio && (
                             <p className="text-[11px] text-gray-400 mt-1 line-clamp-1 italic">{c.bio}</p>
                           )}
