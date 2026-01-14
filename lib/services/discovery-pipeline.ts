@@ -85,8 +85,8 @@ export class DiscoveryPipeline {
 
                 console.log(`[Discovery] Batch ${batchesChecked}: Added ${addedInBatch} unique new creators. Total: ${finalCreators.length}/${requestedCount}`);
 
-                // If we got fewer results than requested in this batch (i.e. end of list), break
-                if (externalResults.length < 50) {
+                // If we got 0 results, we've truly hit the end
+                if (!externalResults || externalResults.length === 0) {
                     break;
                 }
             }
