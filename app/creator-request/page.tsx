@@ -133,13 +133,66 @@ function CreatorRequestContent() {
     }
   };
 
-  const handleRecentClick = (req: any) => {
-    if (req.platforms?.[0]) setPlatform(req.platforms[0].toLowerCase());
-    if (req.criteria?.niche) setNiche(req.criteria.niche);
-    if (req.criteria?.min_followers) setFollowersMin(req.criteria.min_followers);
-    if (req.criteria?.max_followers) setFollowersMax(req.criteria.max_followers);
-    if (req.criteria?.batchSize) setRequestedCreators(req.criteria.batchSize);
-    toast.success("Filters applied!");
+  const handleRecentClick = async (req: any) => {
+    const loadingToast = toast.loading("Loading campaign results...");
+    try {
+      const token = await (await getCurrentUser())?.getIdToken();
+      const res = await fetch(`/api/user/requests/${req.id}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        // Sync the form filters for convenience
+        if (req.platforms?.[0]) setPlatform(req.platforms[0].toLowerCase());
+        if (req.criteria?.niche) setNiche(req.criteria.niche);
+        if (req.criteria?.min_followers) setFollowersMin(req.criteria.min_followers);
+        if (req.criteria?.max_followers) setFollowersMax(req.criteria.max_followers);
+        if (req.criteria?.batchSize) setRequestedCreators(req.criteria.batchSize);
+
+        // Show results
+        setSearchResults(data.creators || []);
+        toast.success(`Loaded ${data.creators?.length || 0} creators from history.`, { id: loadingToast });
+      } else {
+        toast.error("Could not load campaign results.", { id: loadingToast });
+      }
+    } catch (e) {
+      toast.error("Error loading results.", { id: loadingToast });
+    }
+  };
+
+  const handleRefreshAll = async () => {
+    if (!searchResults || searchResults.length === 0) return;
+
+    // Find the latest request ID from recentRequests that matches current search?
+    // Actually, let's just re-fetch by IDs if we have them. 
+    // To keep it simple, we'll try to find which request this result set belongs to.
+    const loadingToast = toast.loading("Checking for new emails...");
+    try {
+      // Get all current IDs
+      const ids = searchResults.map(c => c.id);
+      const token = await (await getCurrentUser())?.getIdToken();
+
+      // We'll hit an endpoint that just resolves multiple IDs without triggering logic
+      const res = await fetch(`/api/creators/batch`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ ids })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setSearchResults(data.creators);
+        toast.success("Statuses updated!", { id: loadingToast });
+      } else {
+        toast.error("Refresh failed.", { id: loadingToast });
+      }
+    } catch (e) {
+      toast.error("Error refreshing.", { id: loadingToast });
+    }
   };
 
   const handleRefreshEnrichment = async (creatorId: string) => {
@@ -330,7 +383,16 @@ function CreatorRequestContent() {
                     <p className="text-xs text-blue-600 font-medium mt-1 animate-pulse">Emails usually arrive in 2–5 minutes.</p>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => setSearchResults(null)} className="text-xs font-bold bg-white border border-gray-200 px-3 py-2 rounded-lg hover:bg-gray-50 flex items-center gap-1">
+                    <button
+                      onClick={handleRefreshAll}
+                      className="text-xs font-bold bg-white border border-gray-200 px-3 py-2 rounded-lg hover:bg-gray-50 flex items-center gap-1.5 text-blue-600 shadow-sm"
+                    >
+                      <Loader2 className="h-3 w-3" /> Refresh Status
+                    </button>
+                    <button
+                      onClick={() => setSearchResults(null)}
+                      className="text-xs font-bold bg-white border border-gray-200 px-3 py-2 rounded-lg hover:bg-gray-50 flex items-center gap-1 text-gray-500"
+                    >
                       New Search
                     </button>
                     <button onClick={handleExportCSV} className="text-xs font-bold bg-white border border-gray-200 px-3 py-2 rounded-lg hover:bg-gray-50 text-black">
