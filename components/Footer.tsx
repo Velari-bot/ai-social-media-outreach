@@ -22,7 +22,7 @@ export default function Footer() {
                         <ul className="space-y-3 text-sm font-medium text-gray-500">
                             <li><Link href="/ai-outreach" className="hover:text-black transition-colors">AI Outreach Tool</Link></li>
                             <li><Link href="/creator-discovery" className="hover:text-black transition-colors">Influencer Discovery</Link></li>
-                            <li><Link href="/email-finder" className="hover:text-black transition-colors">Email Finder</Link></li>
+                            <li><Link href="/email-finder" className="hover:text-black transition-colors">Creator Database</Link></li>
                             <li><Link href="/dm-automation" className="hover:text-black transition-colors">DM Automation</Link></li>
                             <li><Link href="/campaigns" className="hover:text-black transition-colors">CRM & Campaigns</Link></li>
                         </ul>
@@ -57,6 +57,7 @@ export default function Footer() {
                         <Link href="/tos" className="hover:text-black">Terms</Link>
                         <Link href="/privacy-policy" className="hover:text-black">Privacy</Link>
                         <Link href="/support" className="hover:text-black">Support</Link>
+                        <Link href="/docs" className="hover:text-black">Docs</Link>
                     </div>
                 </div>
             </div>

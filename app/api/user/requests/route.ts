@@ -111,6 +111,15 @@ export async function POST(request: NextRequest) {
     }
     console.log(`[RequestsAPI] Request ${newRequest.id} created successfully.`);
 
+    // --- Audit Log ---
+    const { logAudit } = await import('@/lib/audit-logger');
+    await logAudit('create_request', userId, {
+      request_id: newRequest.id,
+      platforms: platforms,
+      criteria: criteria
+    }, String(newRequest.id), 'request');
+
+
     // Trigger search for the first platform (primary support)
     if (platforms.length > 0) {
       try {
@@ -124,7 +133,7 @@ export async function POST(request: NextRequest) {
           platform: platforms[0].toLowerCase() as any,
           filters: criteria,
           requestedCount: finalBatchSize,
-          // skipEnrichment: false, // ENABLED: We need to send to Clay!
+          skipEnrichment: criteria.skipEnrichment === true, // Check criteria for explicit skip
         });
 
         const foundCount = results.creators?.length || 0;
@@ -176,8 +185,8 @@ export async function POST(request: NextRequest) {
           // We continue anyway so user gets their creators
         }
 
-        // 8. Charge based on found creators
-        if (foundCount > 0) {
+        // 8. Charge based on found creators (ONLY if emails were requested)
+        if (foundCount > 0 && criteria.skipEnrichment !== true) {
           try {
             console.log(`[RequestsAPI] Charging user ${userId} for ${foundCount} creators.`);
             const { incrementEmailQuota } = await import('@/lib/database');

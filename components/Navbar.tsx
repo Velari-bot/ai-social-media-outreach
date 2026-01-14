@@ -91,6 +91,9 @@ function NavbarContent() {
               Dashboard
             </Link>
           )}
+          <Link href="/docs" className="text-sm font-medium text-gray-600 hover:text-black transition-colors">
+            Docs
+          </Link>
         </div>
 
         {/* Center Section: Logo (Desktop: Center, Mobile: Left) */}
@@ -189,12 +192,14 @@ function NavbarContent() {
               <Link href={getLink("/creator-request")} onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium text-black">Find Creators</Link>
               <Link href={getLink("/inbox")} onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium text-black">Inbox</Link>
               <Link href={getLink("/settings")} onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium text-black">Settings</Link>
+              <Link href="/docs" onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium text-black">Docs</Link>
               <button onClick={() => { handleLogout(); setMobileMenuOpen(false); }} className="p-4 hover:bg-gray-50 rounded-xl font-medium text-left text-red-600">Log out</button>
             </>
           ) : (
             <>
               <Link href="/" onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium text-black">Home</Link>
               <Link href="/pricing" onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium text-black">Pricing</Link>
+              <Link href="/docs" onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium text-black">Docs</Link>
               <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium text-black">Log in</Link>
               <Link href="/book" onClick={() => setMobileMenuOpen(false)} className="p-4 bg-black text-white rounded-xl font-bold text-center mt-2">Book a call</Link>
             </>

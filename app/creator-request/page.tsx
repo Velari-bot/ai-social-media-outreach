@@ -12,6 +12,7 @@ import { Search, Loader2, Download, Instagram, Youtube, Music, ExternalLink, Che
 import { FLATTENED_TOPICS } from "@/lib/data/classifiers";
 
 // 1. Dynamic Niches List from Classifiers (API aligned)
+// Updated with new filters
 const NICHES = FLATTENED_TOPICS.map(t => t.name);
 
 // Fallback if data is missing
@@ -54,6 +55,8 @@ function CreatorRequestContent() {
   const [niche, setNiche] = useState(NICHES[0] || "Gaming"); // Default to first available niche
   const [followersMin, setFollowersMin] = useState(1000);
   const [followersMax, setFollowersMax] = useState(250000);
+  const [minAvgViews, setMinAvgViews] = useState(0);
+  const [location, setLocation] = useState("United States");
   const [requestedCreators, setRequestedCreators] = useState(50);
   const [isAnyNiche, setIsAnyNiche] = useState(false);
 
@@ -105,7 +108,9 @@ function CreatorRequestContent() {
         batchSize: requestedCreators,
         niche: niche.trim(),
         min_followers: followersMin,
-        max_followers: followersMax
+        max_followers: followersMax,
+        min_avg_views: minAvgViews,
+        location: location
       };
 
       const res = await createRequest({
@@ -149,6 +154,8 @@ function CreatorRequestContent() {
         if (req.criteria?.niche) setNiche(req.criteria.niche);
         if (req.criteria?.min_followers) setFollowersMin(req.criteria.min_followers);
         if (req.criteria?.max_followers) setFollowersMax(req.criteria.max_followers);
+        if (req.criteria?.min_avg_views) setMinAvgViews(req.criteria.min_avg_views);
+        if (req.criteria?.location) setLocation(req.criteria.location);
         if (req.criteria?.batchSize) setRequestedCreators(req.criteria.batchSize);
 
         // Show results
@@ -310,6 +317,34 @@ function CreatorRequestContent() {
                   {isAnyNiche && <p className="text-[10px] text-blue-600 font-bold mt-1.5">Note: Searching without a specific niche yields significantly more results (up to 50).</p>}
                 </div>
 
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-extrabold text-gray-900 uppercase tracking-widest mb-2">Location</label>
+                    <select
+                      className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-black/5 outline-none appearance-none cursor-pointer"
+                      value={location}
+                      onChange={e => setLocation(e.target.value)}
+                    >
+                      <option value="">Anywhere</option>
+                      <option value="United States">United States</option>
+                      <option value="United Kingdom">United Kingdom</option>
+                      <option value="Canada">Canada</option>
+                      <option value="Australia">Australia</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-extrabold text-gray-900 uppercase tracking-widest mb-2">Min Avg Views</label>
+                    <input
+                      type="number"
+                      className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-black/5 outline-none"
+                      value={minAvgViews}
+                      onChange={e => setMinAvgViews(Number(e.target.value))}
+                      placeholder="e.g. 10000"
+                      step={1000}
+                    />
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>

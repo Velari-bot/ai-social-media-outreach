@@ -41,15 +41,17 @@ export class InfluencerClubClient {
         if (!this.apiKey) throw new Error('Influencer Club API Key is missing.');
 
         const requestId = Math.random().toString(36).substring(7);
+
         const { niche: cleanNiche, category: cleanCategory } = this.parseTopics(params.filters.niche || "");
 
         const minFollowers = Number(params.filters.min_followers || params.filters.minFollowers || 1000);
         const maxFollowers = Number(params.filters.max_followers || params.filters.maxFollowers || 1000000);
 
-        // Build platform-specific payload based on Influencer Club's documentation
-        // Instagram: uses "niche" filter
-        // YouTube: uses "topics" filter
-        // TikTok: uses "keywords_in_bio" filter
+        // New Filters
+        const locationFilter = params.filters.location || params.filters.country || null;
+        const minAvgViews = Number(params.filters.min_avg_views || 0);
+
+        // Build base payload
         const body: any = {
             platform: params.platform.toLowerCase(),
             limit: params.limit || 50,
@@ -60,22 +62,25 @@ export class InfluencerClubClient {
             }
         };
 
-        // Add platform-specific niche filter ONLY if a niche is provided
+        // Add location if present (Attempting multiple keys to increase hit rate)
+        if (locationFilter) {
+            body.filters.location = locationFilter;
+        }
+
+        // Add platform-specific filters
         const platform = params.platform.toLowerCase();
 
         if (cleanNiche && cleanNiche.trim().length > 0) {
             if (platform === 'instagram' || platform === 'tiktok') {
-                // Instagram & TikTok: Use "keywords_in_bio" filter (most reliable)
                 body.filters.keywords_in_bio = cleanNiche.toLowerCase();
             } else if (platform === 'youtube') {
-                // YouTube: Use "topics" filter
                 body.filters.topics = [cleanNiche];
             }
         } else {
             console.log(`[InfluencerClub:${requestId}] Broad Search (No Niche) - expecting higher volume.`);
         }
 
-        console.log(`[InfluencerClub:${requestId}] ${platform.toUpperCase()} - Targeting: "${cleanNiche}" | Followers: ${minFollowers}-${maxFollowers}`);
+        console.log(`[InfluencerClub:${requestId}] ${platform.toUpperCase()} - Targeting: "${cleanNiche}" | Loc: ${locationFilter} | Views: ${minAvgViews}+`);
 
         try {
             const response = await fetch(`${this.baseUrl}/public/v1/discovery/`, {
@@ -97,15 +102,44 @@ export class InfluencerClubClient {
             const accounts = data.accounts || data.results || data.data || [];
 
             if (accounts.length > 0) {
-                const first = accounts[0].profile || accounts[0];
-                const handle = first.username || first.handle;
-                const followers = first.followers || first.followers_count;
-                console.log(`[InfluencerClub:${requestId}] Success! Got ${accounts.length} results. First: @${handle} (${followers} followers)`);
+                console.log(`[InfluencerClub:${requestId}] Raw API returned ${accounts.length} candidates.`);
             } else {
                 console.log(`[InfluencerClub:${requestId}] No results found for niche: "${cleanNiche}"`);
             }
 
-            return this.mapResults(accounts, params.platform);
+            // Map Results
+            let mapped = this.mapResults(accounts, params.platform);
+
+            // --- CLIENT-SIDE POST-FILTERING ---
+            // Because standardizing location filters is hard, we enforce it here if provided.
+
+            if (locationFilter) {
+                const targetLoc = locationFilter.toLowerCase();
+                const beforeCount = mapped.length;
+                mapped = mapped.filter(c => {
+                    const cLoc = (c.location || "").toLowerCase();
+                    // Loose matching: "United States" matches "US", "USA", "United States", "New York, US"
+                    if (!cLoc) return false; // Strict: if they have no location, drop them? Or keep? Let's drop.
+                    return cLoc.includes(targetLoc) ||
+                        (targetLoc === 'united states' && (cLoc === 'us' || cLoc === 'usa')) ||
+                        (targetLoc === 'united kingdom' && (cLoc === 'uk' || cLoc === 'gb'));
+                });
+                console.log(`[InfluencerClub:${requestId}] Location Filter ("${locationFilter}"): ${beforeCount} -> ${mapped.length}`);
+            }
+
+            if (minAvgViews > 0) {
+                const beforeCount = mapped.length;
+                mapped = mapped.filter(c => {
+                    // Estimate views = followers * engagement
+                    // Or just pass if we don't have enough data
+                    if (!c.followers || !c.engagement_rate) return true; // Give benefit of doubt
+                    const estViews = c.followers * c.engagement_rate;
+                    return estViews >= minAvgViews;
+                });
+                console.log(`[InfluencerClub:${requestId}] Avg Views Filter (${minAvgViews}+): ${beforeCount} -> ${mapped.length}`);
+            }
+
+            return mapped;
 
         } catch (error: any) {
             console.error(`[InfluencerClub:${requestId}] Discovery Error:`, error.message);

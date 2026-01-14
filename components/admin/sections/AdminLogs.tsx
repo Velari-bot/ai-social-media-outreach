@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { FileText, Shield, Info, AlertTriangle, Search, Filter, Download, Loader2 } from "lucide-react";
+import { getCurrentUser } from '@/lib/auth-helpers';
 
 export default function AdminLogs() {
     const [logs, setLogs] = useState<any[]>([]);
@@ -10,10 +11,19 @@ export default function AdminLogs() {
 
     useEffect(() => {
         async function fetchLogs() {
+            setLoading(true);
             try {
-                const res = await fetch('/api/admin/logs');
+                const user = await getCurrentUser();
+                const token = await user?.getIdToken();
+                const res = await fetch('/api/admin/audit-logs', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
                 const data = await res.json();
-                if (data.success) setLogs(data.logs);
+                if (data.success && Array.isArray(data.logs)) {
+                    setLogs(data.logs);
+                } else {
+                    console.error("Failed to load audit logs", data);
+                }
             } catch (err) {
                 console.error("Failed to fetch logs", err);
             } finally {
@@ -23,14 +33,15 @@ export default function AdminLogs() {
         fetchLogs();
     }, []);
 
-    const getTypeStyles = (type: string) => {
-        switch (type) {
-            case 'info': return { bg: 'bg-blue-50', text: 'text-blue-600', icon: Info };
-            case 'warning': return { bg: 'bg-amber-50', text: 'text-amber-600', icon: AlertTriangle };
-            case 'success': return { bg: 'bg-green-50', text: 'text-green-600', icon: Shield };
-            case 'error': return { bg: 'bg-red-50', text: 'text-red-600', icon: AlertTriangle };
-            default: return { bg: 'bg-gray-50', text: 'text-gray-600', icon: Info };
-        }
+    const getTypeStyles = (action: string) => {
+        const lower = action.toLowerCase();
+        if (lower.includes('delete') || lower.includes('fail') || lower.includes('error'))
+            return { bg: 'bg-red-50', text: 'text-red-600', icon: AlertTriangle };
+        if (lower.includes('create') || lower.includes('success') || lower.includes('add'))
+            return { bg: 'bg-green-50', text: 'text-green-600', icon: Shield };
+        if (lower.includes('update') || lower.includes('edit'))
+            return { bg: 'bg-amber-50', text: 'text-amber-600', icon: Info };
+        return { bg: 'bg-gray-50', text: 'text-gray-600', icon: Info };
     };
 
     return (
@@ -69,36 +80,52 @@ export default function AdminLogs() {
                         <thead className="bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest">
                             <tr>
                                 <th className="px-6 py-6">Log Event</th>
-                                <th className="px-6 py-6">Subject</th>
-                                <th className="px-6 py-6 font-center">IP Address</th>
+                                <th className="px-6 py-6">Actor</th>
+                                <th className="px-6 py-6 font-center">Details</th>
                                 <th className="px-6 py-6 text-right">Timestamp</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {logs.map((log) => {
-                                const styles = getTypeStyles(log.type);
-                                return (
-                                    <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
-                                        <td className="px-6 py-5">
-                                            <div className="flex items-center gap-4">
-                                                <div className={`p-2 rounded-lg ${styles.bg} ${styles.text}`}>
-                                                    <styles.icon className="w-4 h-4" />
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={4} className="p-8 text-center text-gray-500">
+                                        <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                                        Loading logs...
+                                    </td>
+                                </tr>
+                            ) : logs.length === 0 ? (
+                                <tr>
+                                    <td colSpan={4} className="p-8 text-center text-gray-500">No logs found.</td>
+                                </tr>
+                            ) : (
+                                logs.map((log) => {
+                                    const styles = getTypeStyles(log.action);
+                                    return (
+                                        <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
+                                            <td className="px-6 py-5">
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`p-2 rounded-lg ${styles.bg} ${styles.text}`}>
+                                                        <styles.icon className="w-4 h-4" />
+                                                    </div>
+                                                    <div className="font-bold text-black">{log.action}</div>
                                                 </div>
-                                                <div className="font-bold text-black">{log.title}</div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <div className="text-sm font-medium text-black">{log.user}</div>
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <code className="bg-gray-100 px-2 py-1 rounded text-[10px] font-bold text-gray-500">{log.ip}</code>
-                                        </td>
-                                        <td className="px-6 py-5 text-right text-xs text-gray-400 font-bold uppercase tracking-wider">
-                                            {log.time}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <div className="text-sm font-medium text-black">{log.actor_id}</div>
+                                                {log.target_type && <div className="text-[10px] text-gray-400 uppercase">{log.target_type}</div>}
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <div className="text-xs text-gray-500 font-mono max-w-sm truncate">
+                                                    {JSON.stringify(log.details)}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-5 text-right text-xs text-gray-400 font-bold uppercase tracking-wider">
+                                                {new Date(log.created_at).toLocaleString()}
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
                         </tbody>
                     </table>
                 </div>

@@ -237,7 +237,7 @@ export const SEARCH_TOPICS = [
     {
         "topic_details": "Entertainment",
         "sub_topic_details": [
-            "Humor", "Movies", "Performing arts", "Professional wrestling", "TV shows"
+            "Humor", "Movies", "Performing arts", "Professional wrestling", "TV shows", "Lip Sync", "Dancing"
         ]
     },
     {

@@ -16,7 +16,8 @@ import {
     LogOut,
     Menu,
     X,
-    TrendingDown
+    TrendingDown,
+    Bot
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
@@ -33,8 +34,9 @@ import AdminCreators from "./sections/AdminCreators";
 import AdminSettings from "./sections/AdminSettings";
 import AdminLogs from "./sections/AdminLogs";
 import AdminExpenses from "./AdminExpenses";
+import AdminAiHelp from "./sections/AdminAiHelp";
 
-type AdminSection = 'overview' | 'calls' | 'users' | 'pricing' | 'payments' | 'affiliates' | 'creators' | 'emails' | 'demo' | 'settings' | 'logs' | 'expenses';
+type AdminSection = 'overview' | 'calls' | 'users' | 'pricing' | 'payments' | 'affiliates' | 'creators' | 'emails' | 'demo' | 'settings' | 'logs' | 'expenses' | 'ai-help';
 
 export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     const [activeSection, setActiveSection] = useState<AdminSection>('overview');
@@ -50,6 +52,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         { id: 'creators', label: 'Creator DB', icon: Database },
         { id: 'emails', label: 'Email System', icon: Mail },
         { id: 'expenses', label: 'Expenses & Profit', icon: TrendingDown },
+        { id: 'ai-help', label: 'AI Assistant', icon: Bot },
         { id: 'demo', label: 'Demo Mode', icon: TestTube, href: '/admin/demo' },
         { id: 'settings', label: 'Settings', icon: Settings },
         { id: 'logs', label: 'Logs & Audit', icon: FileText },
@@ -66,6 +69,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             case 'creators': return <AdminCreators />;
             case 'emails': return <AdminEmails />;
             case 'expenses': return <AdminExpenses />;
+            case 'ai-help': return <AdminAiHelp />;
             case 'settings': return <AdminSettings />;
             case 'logs': return <AdminLogs />;
             default: return (

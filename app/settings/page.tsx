@@ -440,7 +440,7 @@ function SettingsContent() {
           </div>
 
           <div className="text-center pt-8">
-            <p className="text-sm text-gray-400">Verality.io v0.1.0 • <Link href="/terms" className="hover:underline">Terms</Link> • <Link href="/privacy" className="hover:underline">Privacy</Link></p>
+            <p className="text-sm text-gray-400">Verality.io v0.1.0 • <Link href="/terms" className="hover:underline">Terms</Link> • <Link href="/privacy" className="hover:underline">Privacy</Link> • <Link href="/docs" className="hover:underline">Docs</Link></p>
           </div>
         </div>
       </div>
