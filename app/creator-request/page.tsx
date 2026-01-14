@@ -7,7 +7,7 @@ import { getCurrentUser } from "@/lib/auth-helpers";
 import { fetchUserAccount, fetchUserStats, fetchRecentRequests, createRequest } from "@/lib/api-client";
 import type { UserAccount } from "@/lib/database";
 import SubscriptionGuard from "@/components/SubscriptionGuard";
-import { Search, Loader2, AlertCircle, Download, Instagram, Youtube, Music, Info, ExternalLink, CheckCircle } from "lucide-react";
+import { Search, Loader2, Download, Instagram, Youtube, Music, ExternalLink, CheckCircle } from "lucide-react";
 
 import { FLATTENED_TOPICS } from "@/lib/data/classifiers";
 
@@ -52,7 +52,7 @@ function CreatorRequestContent() {
   // State
   const [platform, setPlatform] = useState<string>("instagram");
   const [niche, setNiche] = useState(NICHES[0] || "Gaming"); // Default to first available niche
-  const [followersMin, setFollowersMin] = useState(1000); // Lowered default to avoid 0 results
+  const [followersMin, setFollowersMin] = useState(1000);
   const [followersMax, setFollowersMax] = useState(250000);
   const [requestedCreators, setRequestedCreators] = useState(50);
 
@@ -60,19 +60,17 @@ function CreatorRequestContent() {
   const [userId, setUserId] = useState<string | null>(null);
   const [userAccount, setUserAccount] = useState<UserAccount | null>(null);
   const [loading, setLoading] = useState(false);
-  const [isTestMode, setIsTestMode] = useState(false);
 
   // Results State
   const [searchResults, setSearchResults] = useState<any[] | null>(null);
   const [recentRequests, setRecentRequests] = useState<any[]>([]);
 
   // Computed
-  const creditsCost = requestedCreators; // 1 credit per creator as per new requirement
+  const creditsCost = requestedCreators;
   const remainingQuota = userAccount ? Math.max(0, userAccount.email_quota_daily - userAccount.email_used_today) : 0;
   const isQuotaExceeded = creditsCost > remainingQuota;
 
   const isValid =
-    niche.length > 0 &&
     niche.length > 0 &&
     followersMin < followersMax &&
     followersMin > 0;
@@ -99,19 +97,15 @@ function CreatorRequestContent() {
     if (!isValid || loading) return;
 
     setLoading(true);
-    setSearchResults(null); // Reset results to show loading state cleanly
+    setSearchResults(null);
 
     try {
-      // Build Paylod: Clean empty values as per best integration practices
       const criteria: any = {
-        batchSize: requestedCreators
+        batchSize: requestedCreators,
+        niche: niche.trim(),
+        min_followers: followersMin,
+        max_followers: followersMax
       };
-
-      if (niche?.trim()) criteria.niche = niche.trim();
-      if (followersMin && followersMin > 0) criteria.min_followers = followersMin;
-      if (followersMax && followersMax > 0) criteria.max_followers = followersMax;
-
-      console.log("Submitting Request:", { platform, ...criteria });
 
       const res = await createRequest({
         name: `${niche}`,
@@ -121,38 +115,61 @@ function CreatorRequestContent() {
 
       if (res.success) {
         toast.success("Request sent!");
-
-        // Show creators immediately
         if (res.creators && res.creators.length > 0) {
           setSearchResults(res.creators);
           toast.success(`${res.creators.length} creators found!`);
         } else {
-          // Handle 0 results gracefully if returned with 200 OK
           toast.error("No creators found. Try adjusting your filters.");
         }
-
-        // Refresh stats
         fetchUserAccount().then(r => r.success && setUserAccount(r.account));
         fetchRecentRequests().then(r => r.success && setRecentRequests(r.requests || []));
-
-      } else {
-        // This branch is rarely reached because createRequest throws on error, 
-        // but handling it just in case api-client changes.
-        toast.error((res as any).error || "Search failed.");
       }
 
     } catch (error: any) {
       console.error("Search error:", error);
-      // extracting the specific error message from the backend (e.g. "No creators found...")
-      const msg = error.message || "An error occurred.";
-
-      if (msg.includes("No creators found")) {
-        toast.error("No creators found. Try broader filters (e.g. lower follower count).", { duration: 5000 });
-      } else {
-        toast.error(msg);
-      }
+      toast.error(error.message || "An error occurred.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRecentClick = (req: any) => {
+    if (req.platforms?.[0]) setPlatform(req.platforms[0].toLowerCase());
+    if (req.criteria?.niche) setNiche(req.criteria.niche);
+    if (req.criteria?.min_followers) setFollowersMin(req.criteria.min_followers);
+    if (req.criteria?.max_followers) setFollowersMax(req.criteria.max_followers);
+    if (req.criteria?.batchSize) setRequestedCreators(req.criteria.batchSize);
+    toast.success("Filters applied!");
+  };
+
+  const handleRefreshEnrichment = async (creatorId: string) => {
+    const loadingToast = toast.loading("Refreshing emails...");
+    try {
+      const token = await (await getCurrentUser())?.getIdToken();
+      const res = await fetch(`/api/creators/${creatorId}/enrich`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Enriched successfully!", { id: loadingToast });
+        setSearchResults(prev => prev?.map(c => c.id === creatorId ? { ...c, ...data.creator } : c) || null);
+      } else {
+        toast.error(data.error || "Failed to refresh.", { id: loadingToast });
+      }
+    } catch (e) {
+      toast.error("Error refreshing enrichment.", { id: loadingToast });
+    }
+  };
+
+  const formatDate = (dateVal: any) => {
+    if (!dateVal) return "Just now";
+    try {
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return "Recently";
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch (e) {
+      return "Recently";
     }
   };
 
@@ -193,8 +210,6 @@ function CreatorRequestContent() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
-
-                {/* 1. Platform */}
                 <div>
                   <label className="block text-xs font-extrabold text-gray-900 uppercase tracking-widest mb-2">Platform</label>
                   <div className="grid grid-cols-3 gap-2">
@@ -212,9 +227,6 @@ function CreatorRequestContent() {
                   </div>
                 </div>
 
-
-
-                {/* 3. Niche */}
                 <div>
                   <label className="block text-xs font-extrabold text-gray-900 uppercase tracking-widest mb-2">Niche <span className="text-red-500">*</span></label>
                   <select
@@ -226,7 +238,6 @@ function CreatorRequestContent() {
                   </select>
                 </div>
 
-                {/* 4. Follower Range */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-extrabold text-gray-900 uppercase tracking-widest mb-2">Min Followers</label>
@@ -250,7 +261,6 @@ function CreatorRequestContent() {
                   </div>
                 </div>
 
-                {/* 5. Results Count */}
                 <div>
                   <label className="block text-xs font-extrabold text-gray-900 uppercase tracking-widest mb-2">Results Limit</label>
                   <select
@@ -282,100 +292,95 @@ function CreatorRequestContent() {
                   </button>
                   {isQuotaExceeded && <p className="text-center text-xs text-red-500 font-bold mt-2">You need more credits.</p>}
                 </div>
-
               </form>
             </div>
           </div>
 
           {/* RIGHT: Results Area */}
           <div className="flex-1 min-h-[500px]">
-
             {!searchResults && !loading && recentRequests.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in">
                 <div className="col-span-full mb-2">
                   <h3 className="font-bold text-gray-900">Recent Searches</h3>
                 </div>
                 {recentRequests.slice(0, 6).map((req, i) => (
-                  <div key={i} className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm opacity-60 hover:opacity-100 transition-opacity">
-                    <div className="font-bold text-sm text-gray-900 truncate">{req.name}</div>
-                    <div className="text-xs text-gray-500 mt-1">{new Date(req.createdAt?.seconds * 1000 || req.createdAt).toLocaleDateString()}</div>
-                  </div>
+                  <button
+                    key={i}
+                    onClick={() => handleRecentClick(req)}
+                    className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm text-left hover:border-black transition-all group"
+                  >
+                    <div className="font-bold text-sm text-gray-900 truncate group-hover:text-black">{req.name}</div>
+                    <div className="text-xs text-gray-500 mt-1 flex items-center justify-between">
+                      {formatDate(req.created_at || req.date_submitted)}
+                      <span className="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded uppercase font-bold">{req.platforms?.[0]}</span>
+                    </div>
+                  </button>
                 ))}
               </div>
             )}
 
             {searchResults && (
               <div className="bg-white rounded-3xl border border-gray-200 shadow-xl overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-500">
-                {/* Header */}
                 <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                   <div>
                     <h3 className="font-black text-xl text-gray-900 flex items-center gap-2">
                       {searchResults.length} Creators Found
                       <span className="bg-green-100 text-green-700 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full">Success</span>
                     </h3>
-                    <p className="text-xs text-blue-600 font-medium mt-1 animate-pulse">
-                      Emails usually arrive in 2–5 minutes.
-                    </p>
+                    <p className="text-xs text-blue-600 font-medium mt-1 animate-pulse">Emails usually arrive in 2–5 minutes.</p>
                   </div>
-                  <button onClick={handleExportCSV} className="text-xs font-bold bg-white border border-gray-200 px-3 py-2 rounded-lg hover:bg-gray-50">
-                    <Download className="h-3 w-3 inline mr-1" /> Export CSV
-                  </button>
+                  <div className="flex gap-2">
+                    <button onClick={() => setSearchResults(null)} className="text-xs font-bold bg-white border border-gray-200 px-3 py-2 rounded-lg hover:bg-gray-50 flex items-center gap-1">
+                      New Search
+                    </button>
+                    <button onClick={handleExportCSV} className="text-xs font-bold bg-white border border-gray-200 px-3 py-2 rounded-lg hover:bg-gray-50 text-black">
+                      <Download className="h-3 w-3 inline mr-1 text-black" /> Export CSV
+                    </button>
+                  </div>
                 </div>
 
-                {/* List */}
                 <div className="divide-y divide-gray-100">
                   {searchResults.map((c, i) => {
-                    // Status Logic
                     const isEnriched = c.email_found || c.email;
                     const statusText = isEnriched ? "Email Found" : "Finding email...";
                     const statusClass = isEnriched ? "text-green-600 bg-green-50" : "text-blue-600 bg-blue-50 animate-pulse";
 
                     return (
                       <div key={i} className="p-6 flex items-center gap-4 hover:bg-gray-50 transition-colors group">
-                        {/* Avatar */}
                         <div className="h-12 w-12 bg-gray-100 rounded-full flex-shrink-0 overflow-hidden relative border border-gray-200">
                           {c.picture ? (
                             <img src={c.picture} alt={c.handle} className="h-full w-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
                           ) : (
-                            <div className="h-full w-full flex items-center justify-center">
-                              {getPlatformIcon(c.platform)}
-                            </div>
+                            <div className="h-full w-full flex items-center justify-center">{getPlatformIcon(c.platform)}</div>
                           )}
                         </div>
 
-                        {/* Info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <h4 className="font-bold text-gray-900 truncate">{c.full_name || c.name || c.handle}</h4>
                             {getPlatformIcon(c.platform)}
                           </div>
                           <div className="text-xs text-gray-500 truncate flex items-center gap-1">
-                            <a
-                              href={getPlatformUrl(c.platform, c.handle)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors flex items-center gap-0.5"
-                            >
+                            <a href={getPlatformUrl(c.platform, c.handle)} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors flex items-center gap-0.5">
                               @{c.handle?.replace(/^@+/, "")}
                               <ExternalLink className="h-2.5 w-2.5" />
                             </a>
                             <span className="mx-1">•</span>
                             <span>{new Intl.NumberFormat('en-US', { notation: "compact" }).format(c.followers)} Followers</span>
                           </div>
-                          {c.bio && (
-                            <p className="text-[11px] text-gray-400 mt-1 line-clamp-1 italic">{c.bio}</p>
+                          {!isEnriched && (
+                            <button onClick={() => handleRefreshEnrichment(c.id)} className="mt-2 text-[10px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded">
+                              <Loader2 className="h-2.5 w-2.5" /> Refetch Email
+                            </button>
                           )}
                         </div>
 
-                        {/* Status Badge */}
                         <div className="text-right flex-shrink-0">
                           <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 ${statusClass}`}>
                             {isEnriched ? <CheckCircle className="h-3 w-3" /> : <Loader2 className="h-3 w-3 animate-spin" />}
                             {statusText}
                           </div>
-                          {c.email && (
-                            <div className="text-[10px] font-medium text-gray-900 mt-1">{c.email}</div>
-                          )}
+                          {c.email && <div className="text-[10px] font-medium text-gray-900 mt-1">{c.email}</div>}
                         </div>
                       </div>
                     );
@@ -384,7 +389,6 @@ function CreatorRequestContent() {
               </div>
             )}
 
-            {/* Loading State */}
             {loading && (
               <div className="h-full flex flex-col items-center justify-center min-h-[400px]">
                 <Loader2 className="h-10 w-10 text-black animate-spin mb-4" />
@@ -393,7 +397,6 @@ function CreatorRequestContent() {
               </div>
             )}
           </div>
-
         </div>
       </div>
     </main>

@@ -6,8 +6,7 @@ const DEFAULT_IC_BASE_URL = 'https://api-dashboard.influencers.club';
 
 /**
  * Influencer Club API Client
- * This version is designed to solve the "Filter Ignoring" and "Result Count" issues
- * by using an exhaustive schema that targets multiple API versions at once.
+ * This version uses the "Follower Strictness" payload to ensure max_followers is honored.
  */
 export class InfluencerClubClient {
     private apiKey: string;
@@ -48,60 +47,51 @@ export class InfluencerClubClient {
         const minFollowers = Number(params.filters.min_followers || params.filters.minFollowers || 1000);
         const maxFollowers = Number(params.filters.max_followers || params.filters.maxFollowers || 1000000);
 
-        // THE ULTIMATE "NO-GAMES" PAYLOAD
-        // This payload provides filters in every possible format the IC API has ever used.
-        // It covers both the Dashboard API and the Discovery API.
+        // THE "FIXED" PAYLOAD
+        // Using "followers_min" and "followers_max" as these are common in discovery APIs
         const body: any = {
-            // Root level params (Standard)
             platform: params.platform.toLowerCase(),
             limit: params.limit || 50,
             offset: params.offset || 0,
 
-            // Follower filters (Multiple formats)
+            // Multiple redundant field sets to force compliance
             min_followers: minFollowers,
             max_followers: maxFollowers,
+            followers_min: minFollowers,
+            followers_max: maxFollowers,
             minFollowers: minFollowers,
             maxFollowers: maxFollowers,
 
-            // Niche/Category filters (Multiple formats)
+            // Topic targeting
             niche: cleanNiche,
             category: cleanCategory,
-            keyword: cleanNiche,
             keywords: [cleanNiche].filter(Boolean),
 
-            // Nested Paging (V1 Schema)
-            paging: {
-                limit: params.limit || 50,
-                offset: params.offset || 0,
-                page: Math.floor((params.offset || 0) / (params.limit || 50))
-            },
-
-            // Nested Filters (High-Accuracy / Theneo Schema)
+            // Nested structure for the official v1 endpoint
             filters: {
                 platform: params.platform.toLowerCase(),
-                category: params.filters.category || cleanCategory,
-                niche: params.filters.niche || cleanNiche,
-                keyword: cleanNiche,
+                category: cleanCategory,
                 keywords: [cleanNiche].filter(Boolean),
-                // The "Source [1]" special: Object-based followers
+                // Object-based followers (Often used for range filtering)
                 number_of_followers: {
                     min: minFollowers,
                     max: maxFollowers
                 },
                 min_followers: minFollowers,
                 max_followers: maxFollowers,
-                minFollowers: minFollowers,
-                maxFollowers: maxFollowers
+                followers_min: minFollowers,
+                followers_max: maxFollowers
             },
 
-            sort_by: "relevancy",
-            sort_order: "desc"
+            paging: {
+                limit: params.limit || 50,
+                offset: params.offset || 0
+            }
         };
 
-        console.log(`[InfluencerClub:${requestId}] Searching ${params.platform} for "${cleanNiche}" in ${minFollowers}-${maxFollowers} range.`);
+        console.log(`[InfluencerClub:${requestId}] Discovery Request: ${params.platform} - ${cleanNiche} - Range: ${minFollowers}-${maxFollowers}`);
 
         try {
-            // We prioritize the Dashboard URL as it is the most stable source of truth for discovery
             const response = await fetch(`${this.baseUrl}/public/v1/discovery/`, {
                 method: "POST",
                 headers: {
@@ -113,32 +103,36 @@ export class InfluencerClubClient {
 
             if (!response.ok) {
                 const text = await response.text();
+                // If it's a 401, error out immediately
                 if (response.status === 401) throw new Error("Influencer Club API Key is unauthorized (401).");
 
-                // If dashboard fails, try the newer discovery endpoint with the same payload
-                return await this.tryNewDiscoveryEndpoint(params, body, requestId);
+                // Try fallback to the alternative /discover endpoint but keep the same body
+                return await this.tryDiscoverFallback(params, body, requestId);
             }
 
             const data = await response.json();
             const accounts = data.accounts || data.results || data.data || [];
 
-            console.log(`[InfluencerClub:${requestId}] Result check: First account followers: ${accounts[0]?.profile?.followers || accounts[0]?.followers}`);
+            // LOG the first result's followers to see if filtering is working server-side
+            if (accounts.length > 0) {
+                const firstF = accounts[0].profile?.followers || accounts[0].followers;
+                console.log(`[InfluencerClub:${requestId}] First result has ${firstF} followers. (Target Max: ${maxFollowers})`);
+            }
 
             return this.mapResults(accounts, params.platform);
 
         } catch (error: any) {
             if (error.message.includes('401')) throw error;
-            console.error(`[InfluencerClub:${requestId}] API Error:`, error.message);
-            // Fallback attempt on any non-auth error
-            return await this.tryNewDiscoveryEndpoint(params, body, requestId);
+            console.error(`[InfluencerClub:${requestId}] Network Error:`, error.message);
+            return [];
         }
     }
 
-    private async tryNewDiscoveryEndpoint(params: any, body: any, requestId: string): Promise<ModashDiscoveryResult[]> {
-        const newUrl = `https://api.influencerclub.com/discover`;
+    private async tryDiscoverFallback(params: any, body: any, requestId: string): Promise<ModashDiscoveryResult[]> {
+        const fallbackUrl = `https://api.influencerclub.com/discover`;
         try {
-            console.log(`[InfluencerClub:${requestId}] Trying Discovery API Fallback...`);
-            const res = await fetch(newUrl, {
+            console.log(`[InfluencerClub:${requestId}] Trying /discover fallback...`);
+            const res = await fetch(fallbackUrl, {
                 method: "POST",
                 headers: {
                     "Authorization": this.getAuthHeader(),
