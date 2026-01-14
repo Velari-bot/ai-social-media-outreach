@@ -1,0 +1,38 @@
+const INFLUENCER_CLUB_API_KEY = "388a101b-c74b-48ae-94d7-18451f2f01f4";
+const INFLUENCER_CLUB_BASE_URL = 'https://api-dashboard.influencers.club';
+
+async function testDiscovery() {
+    const body = {
+        platform: "youtube",
+        paging: { limit: 10, page: 0 },
+        filters: {
+            min_followers: 1000,
+            category: "Gaming",
+            keyword: "Action game"
+        },
+        sort_by: "relevancy",
+        sort_order: "desc"
+    };
+
+    console.log("Testing Influencer Club API (NESTED)...");
+
+    try {
+        const response = await fetch(`${INFLUENCER_CLUB_BASE_URL}/public/v1/discovery/`, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${INFLUENCER_CLUB_API_KEY}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(body)
+        });
+
+        console.log("Status:", response.status, response.statusText);
+        const text = await response.text();
+        console.log("Response Body:", text);
+
+    } catch (error) {
+        console.error("Fetch Exception:", error);
+    }
+}
+
+testDiscovery();

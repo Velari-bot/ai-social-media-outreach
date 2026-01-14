@@ -12,6 +12,7 @@ interface InfluencerClubClientConfig {
 
 /**
  * Influencer Club API Client
+ * Updated to use the NESTED Schema required by the API
  */
 export class InfluencerClubClient {
     private apiKey: string;
@@ -28,7 +29,7 @@ export class InfluencerClubClient {
 
     private ensureApiKey() {
         if (!this.apiKey) {
-            throw new Error('Influencer Club API key is required.');
+            throw new Error('Influencer Club API key is required. Please check your environment variables.');
         }
     }
 
@@ -55,7 +56,6 @@ export class InfluencerClubClient {
     }
 
     private validateFilters(filters: any) {
-        // Robust check for targeting criteria
         const niche = filters.niche || filters.category || filters.topic || filters.topics;
         const keywords = filters.keywords || filters.keyword || filters.keywords_in_bio;
 
@@ -90,46 +90,27 @@ export class InfluencerClubClient {
         const requestId = Math.random().toString(36).substring(7);
         console.log(`[InfluencerClub:${requestId}] Starting discovery for ${params.platform}...`);
 
-        // 1. Attempt A: Strict (Taxonomy aligned)
+        // Attempt 1: Strict Niche + Category
         let results = await this.fetchCreators(params);
-        if (results.length > 0) {
-            console.log(`[InfluencerClub:${requestId}] Attempt A (Strict) Success: Found ${results.length} creators.`);
-            return results;
-        }
+        if (results.length > 0) return results;
 
-        console.log(`[InfluencerClub:${requestId}] Attempt A failed (0 results). Trying Attempt B: Keyword-Only...`);
+        console.log(`[InfluencerClub:${requestId}] Attempt A failed. Trying Attempt B: Broad Keyword...`);
 
-        // 2. Attempt B: Keyword-Only
+        // Attempt 2: Keyword Broad
         const { niche: cleanNiche } = this.parseNiche(params.filters.niche || "");
-        const attemptBFilters = { ...params.filters };
-
-        // Move everything to keywords
-        const existingKeywords = attemptBFilters.keywords || attemptBFilters.keyword || [];
-        const keywordList = Array.isArray(existingKeywords) ? [...existingKeywords] : [existingKeywords];
+        const broadFilters = { ...params.filters };
+        const keywordInput = broadFilters.keywords || broadFilters.keyword || "";
+        let keywordList = Array.isArray(keywordInput) ? [...keywordInput] : [keywordInput];
         if (cleanNiche && !keywordList.includes(cleanNiche)) keywordList.push(cleanNiche);
 
-        attemptBFilters.keyword = keywordList.join(" ").trim();
-        delete attemptBFilters.niche;
-        delete attemptBFilters.category;
-        delete attemptBFilters.topics;
+        broadFilters.keyword = keywordList.filter(Boolean).join(" ");
+        delete broadFilters.niche;
+        delete broadFilters.category;
 
-        results = await this.fetchCreators({ ...params, filters: attemptBFilters });
-        if (results.length > 0) {
-            console.log(`[InfluencerClub:${requestId}] Attempt B (Keyword-Only) Success: Found ${results.length} creators.`);
-            return results;
-        }
+        results = await this.fetchCreators({ ...params, filters: broadFilters });
+        if (results.length > 0) return results;
 
-        console.log(`[InfluencerClub:${requestId}] Attempt B failed. Trying Attempt C: Broad Keyword + No Followers...`);
-
-        // 3. Attempt C: Broad Keyword + Min Followers = 0
-        const attemptCFilters = { ...attemptBFilters, minFollowers: 0, min_followers: 0, followersMin: 0 };
-        results = await this.fetchCreators({ ...params, filters: attemptCFilters });
-        if (results.length > 0) {
-            console.log(`[InfluencerClub:${requestId}] Attempt C (Broad Keyword + No Followers) Success: Found ${results.length} creators.`);
-            return results;
-        }
-
-        console.log(`[InfluencerClub:${requestId}] All discovery attempts failed.`);
+        console.log(`[InfluencerClub:${requestId}] All attempts failed.`);
         return [];
     }
 
@@ -143,59 +124,57 @@ export class InfluencerClubClient {
         offset?: number;
     }): Promise<ModashDiscoveryResult[]> {
         if (!this.apiKey) {
-            console.error("[InfluencerClub] CRITICAL: API Key is missing. Check INFLUENCER_CLUB_API_KEY environment variable.");
+            console.error("[InfluencerClub] CRITICAL: API Key is missing.");
             return [];
         }
-        this.ensureApiKey();
+
         const requestId = Math.random().toString(36).substring(7);
-
-        try {
-            this.validateFilters(params.filters);
-        } catch (e) {
-            console.warn(`[InfluencerClub:${requestId}] Validation failed, skipping fetch:`, e);
-            return [];
-        }
-
-        // Normalize Filters (Handle snake_case vs camelCase)
         const f = params.filters;
-        const minF = f.min_followers || f.minFollowers || f.followersMin || 1000;
-        const maxF = f.max_followers || f.maxFollowers || f.followersMax || undefined;
 
-        const { niche: cleanNiche, category: cleanCategory } = this.parseNiche(f.niche || "");
-
-        // Prepare Payload for Official API
+        // 1. Prepare NESTED Payload
         const body: any = {
             platform: params.platform.toLowerCase(),
-            limit: params.limit || 50,
-            offset: params.offset || 0,
-            min_followers: Number(minF),
+            paging: {
+                limit: params.limit || 50,
+                offset: params.offset || 0,
+                page: Math.floor((params.offset || 0) / (params.limit || 50))
+            },
+            filters: {
+                // Followers (Using both aliases for safety)
+                min_followers: Number(f.min_followers || f.minFollowers || f.followersMin || 1000),
+                followers_min: String(f.min_followers || f.minFollowers || f.followersMin || 1000),
+            },
             sort_by: "relevancy",
             sort_order: "desc"
         };
 
-        if (maxF) body.max_followers = Number(maxF);
+        if (f.max_followers || f.maxFollowers || f.followersMax) {
+            const maxF = f.max_followers || f.maxFollowers || f.followersMax;
+            body.filters.max_followers = Number(maxF);
+            body.filters.followers_max = String(maxF);
+        }
 
-        // Niche/Category
-        if (f.category || cleanCategory) body.category = f.category || cleanCategory;
-        if (f.niche || cleanNiche) body.niche = cleanNiche;
+        // Niche/Category/Keyword
+        const { niche: cleanNiche, category: cleanCategory } = this.parseNiche(f.niche || "");
+        if (f.category || cleanCategory) body.filters.category = f.category || cleanCategory;
+        if (f.niche || cleanNiche) body.filters.niche = cleanNiche;
 
-        // Keywords
         const keywordInput = f.keyword || f.keywords || "";
         let keywords = Array.isArray(keywordInput) ? keywordInput.join(" ") : String(keywordInput);
         if (!keywords && cleanNiche) keywords = cleanNiche;
-        body.keyword = keywords || "influencer";
+        body.filters.keyword = keywords || "influencer";
 
         // Location
         const countryCode = this.getCountryCode(f.location || f.country);
-        if (countryCode) body.location = [countryCode];
+        if (countryCode) body.filters.location = [countryCode];
 
-        console.log(`[InfluencerClub:${requestId}] Official API Query:`, JSON.stringify(body, null, 2));
+        console.log(`[InfluencerClub:${requestId}] API Request:`, JSON.stringify(body));
 
         try {
             await logApiCall({
                 api_provider: 'influencer_club' as any,
                 api_action: 'discovery',
-                reason: `Searching for ${body.keyword}`,
+                reason: `Discovery for ${body.filters.keyword}`,
             });
 
             const url = `${this.baseUrl}/public/v1/discovery/`;
@@ -210,13 +189,9 @@ export class InfluencerClubClient {
 
             if (!response.ok) {
                 const text = await response.text();
-                const errMsg = `Influencer Club API Error (${response.status}): ${text}`;
-                console.error(`[InfluencerClub:${requestId}] ${errMsg}`);
-
-                if (response.status === 401) {
-                    throw new Error("Influencer Club API Key is missing or invalid. Please check your environment variables.");
-                }
-                throw new Error(errMsg);
+                console.error(`[InfluencerClub:${requestId}] API Error (${response.status}):`, text);
+                if (response.status === 401) throw new Error("Invalid Influencer Club API Key.");
+                return [];
             }
 
             const data = await response.json();
@@ -235,14 +210,10 @@ export class InfluencerClubClient {
                     emails: profile.emails || p.emails || []
                 };
             });
-        } catch (error) {
-            console.error(`[InfluencerClub:${requestId}] Discovery exception:`, error);
+        } catch (error: any) {
+            console.error(`[InfluencerClub:${requestId}] Exception:`, error.message);
             return [];
         }
-    }
-
-    private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-        return {} as T;
     }
 }
 
