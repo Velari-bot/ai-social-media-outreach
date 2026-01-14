@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       const newAccountData = {
         email: decodedToken.email || '',
         name: decodedToken.name || '',
-        plan: 'pro', // Default plan
+        plan: 'free', // Default plan
         email_quota_daily: 100,
         email_quota_monthly: 3000,
         email_used_today: 0,
