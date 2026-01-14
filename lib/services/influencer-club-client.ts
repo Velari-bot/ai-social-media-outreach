@@ -46,21 +46,33 @@ export class InfluencerClubClient {
         const minFollowers = Number(params.filters.min_followers || params.filters.minFollowers || 1000);
         const maxFollowers = Number(params.filters.max_followers || params.filters.maxFollowers || 1000000);
 
-        // Build a clean payload using only niche
+        // Build platform-specific payload based on Influencer Club's documentation
+        // Instagram: uses "niche" filter
+        // YouTube: uses "topics" filter
+        // TikTok: uses "keywords_in_bio" filter
         const body: any = {
             platform: params.platform.toLowerCase(),
-            niche: cleanNiche,
-            category: cleanCategory,
-            minFollowers: minFollowers,
-            maxFollowers: maxFollowers,
             limit: params.limit || 50,
-            offset: params.offset || 0
+            offset: params.offset || 0,
+            filters: {
+                min_followers: minFollowers,
+                max_followers: maxFollowers
+            }
         };
 
-        console.log(`[InfluencerClub:${requestId}] Targeting: "${cleanNiche}" (${cleanCategory}) | Followers: ${minFollowers}-${maxFollowers}`);
+        // Add platform-specific niche filter
+        const platform = params.platform.toLowerCase();
+        if (platform === 'instagram' || platform === 'tiktok') {
+            // Instagram & TikTok: Use "keywords_in_bio" filter (most reliable)
+            body.filters.keywords_in_bio = cleanNiche.toLowerCase();
+        } else if (platform === 'youtube') {
+            // YouTube: Use "topics" filter
+            body.filters.topics = [cleanNiche];
+        }
+
+        console.log(`[InfluencerClub:${requestId}] ${platform.toUpperCase()} - Targeting: "${cleanNiche}" | Followers: ${minFollowers}-${maxFollowers}`);
 
         try {
-            // We prioritize the Dashboard V1 endpoint as it's been more responsive
             const response = await fetch(`${this.baseUrl}/public/v1/discovery/`, {
                 method: "POST",
                 headers: {
@@ -79,15 +91,13 @@ export class InfluencerClubClient {
             const data = await response.json();
             const accounts = data.accounts || data.results || data.data || [];
 
-            // If we got 0 or very few results, maybe the niche was too strict?
-            // BUT if we got lots of WRONG results (like user reported), it means the niche was ignored.
-
-            // To prevent "Ignored Niche", we monitor the first result
             if (accounts.length > 0) {
                 const first = accounts[0].profile || accounts[0];
                 const handle = first.username || first.handle;
                 const followers = first.followers || first.followers_count;
                 console.log(`[InfluencerClub:${requestId}] Success! Got ${accounts.length} results. First: @${handle} (${followers} followers)`);
+            } else {
+                console.log(`[InfluencerClub:${requestId}] No results found for niche: "${cleanNiche}"`);
             }
 
             return this.mapResults(accounts, params.platform);
