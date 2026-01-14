@@ -79,6 +79,7 @@ function DashboardContent() {
   });
 
   const [outreachIntent, setOutreachIntent] = useState<string>("");
+  const [aiAutopilot, setAiAutopilot] = useState<boolean>(false);
 
   const [recentCampaigns, setRecentCampaigns] = useState<Campaign[]>([]);
   const [viewingCampaign, setViewingCampaign] = useState<any | null>(null);
@@ -122,6 +123,7 @@ function DashboardContent() {
         if (accountRes.success && accountRes.account) {
           setUserName(accountRes.account.name || accountRes.account.first_name || accountRes.account.business_name || null);
           setOutreachIntent(accountRes.account.outreach_intent || "");
+          setAiAutopilot(!!accountRes.account.ai_autopilot_enabled);
 
           // Update credits info and email count
           const totalCredits = accountRes.account.email_quota_daily || 0;
@@ -442,7 +444,30 @@ function DashboardContent() {
 
             {/* System Status - Clean */}
             <div className="bg-white rounded-2xl border-2 border-gray-100 p-6">
-              <h3 className="font-bold text-black mb-4 text-sm uppercase tracking-wide">System Health</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-black text-sm uppercase tracking-wide">System Health</h3>
+                {/* Autopilot Toggle */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase text-gray-400">Autopilot</span>
+                  <button
+                    onClick={async () => {
+                      const newState = !aiAutopilot;
+                      setAiAutopilot(newState);
+                      try {
+                        const { updateUserAccount } = await import("@/lib/api-client");
+                        await updateUserAccount({ ai_autopilot_enabled: newState });
+                        toast.success(newState ? "Autopilot enabled" : "Autopilot disabled");
+                      } catch (e) {
+                        setAiAutopilot(!newState);
+                        toast.error("Failed to update autopilot");
+                      }
+                    }}
+                    className={`w-10 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out relative ${aiAutopilot ? 'bg-green-500' : 'bg-gray-200'}`}
+                  >
+                    <div className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-200 ${aiAutopilot ? 'translate-x-4' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+              </div>
               <div className="space-y-4">
                 <StatusRow label="Gmail Connected" active={status.gmail} />
                 <StatusRow label="AI Agent" active={status.aiOutreach} />
@@ -452,6 +477,14 @@ function DashboardContent() {
                 <Link href="/settings" className="mt-4 block w-full py-2 border-2 border-red-100 bg-red-50 text-red-600 rounded-lg text-xs font-bold text-center hover:bg-red-100">
                   Fix Connection
                 </Link>
+              )}
+              {aiAutopilot && (
+                <div className="mt-4 p-3 bg-green-50 border border-green-100 rounded-lg flex gap-2">
+                  <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" />
+                  <p className="text-xs text-green-800 font-medium leading-relaxed">
+                    Autopilot is <strong>active</strong>. The AI will continuously find and engage creators until your daily email limit is reached.
+                  </p>
+                </div>
               )}
             </div>
 

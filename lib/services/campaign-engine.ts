@@ -196,3 +196,92 @@ async function runCampaign(campaignId: string, campaignData: any) {
 
     console.log(`[Campaign ${campaignId}] Run complete. Queued ${queueResult.queued} emails.`);
 }
+
+/**
+ * Autopilot Discovery Engine
+ * Automatically finds creators for users with enabled autopilot and remaining credits.
+ */
+export async function runAutopilotDiscovery() {
+    console.log('[Autopilot] Starting daily run...');
+
+    // Get users with autopilot enabled
+    const usersSnapshot = await db.collection('user_accounts')
+        .where('ai_autopilot_enabled', '==', true)
+        .get();
+
+    console.log(`[Autopilot] Found ${usersSnapshot.size} users with autopilot enabled.`);
+    let totalProcessed = 0;
+
+    const { discoveryPipeline } = await import('./discovery-pipeline');
+
+    for (const userDoc of usersSnapshot.docs) {
+        try {
+            const userData = userDoc.data();
+            const userId = userDoc.id;
+
+            // Check credits
+            const dailyQuota = userData.email_quota_daily || 0;
+            const usedToday = userData.email_used_today || 0;
+            const remaining = dailyQuota - usedToday;
+
+            if (remaining <= 0) {
+                console.log(`[Autopilot] User ${userId} has no credits left (${usedToday}/${dailyQuota}). Skipping.`);
+                continue;
+            }
+
+            console.log(`[Autopilot] User ${userId} has ${remaining} credits. Initiating discovery...`);
+
+            // Determine search criteria from last request
+            const lastRequests = await db.collection('creator_requests')
+                .where('user_id', '==', userId)
+                .orderBy('created_at', 'desc')
+                .limit(1)
+                .get();
+
+            let criteria: any = { niche: "lifestyle", min_followers: 1000, max_followers: 500000 };
+            let platform: any = 'instagram';
+
+            if (!lastRequests.empty) {
+                const lastReq = lastRequests.docs[0].data();
+                if (lastReq.criteria) criteria = lastReq.criteria;
+                if (lastReq.platforms && lastReq.platforms.length > 0) platform = lastReq.platforms[0];
+            }
+
+            // Create a record for this autopilot run
+            const now = Timestamp.now();
+            const requestRef = await db.collection('creator_requests').add({
+                user_id: userId,
+                name: `Autopilot Run - ${new Date().toLocaleDateString()}`,
+                platforms: [platform],
+                criteria: criteria,
+                status: 'in_progress',
+                created_at: now,
+                updated_at: now,
+                is_autopilot: true
+            });
+
+            // Run Discovery
+            await discoveryPipeline.discover({
+                userId,
+                filters: criteria,
+                requestedCount: remaining,
+                platform: platform,
+                campaignId: requestRef.id
+            });
+
+            // Update status
+            await requestRef.update({
+                status: 'delivered', // Mark as done finding
+                results_count: remaining, // This is an estimate, updated by pipeline ideally
+                updated_at: Timestamp.now()
+            });
+
+            totalProcessed++;
+
+        } catch (error) {
+            console.error(`[Autopilot] Failed for user ${userDoc.id}:`, error);
+        }
+    }
+
+    return { processed: totalProcessed };
+}

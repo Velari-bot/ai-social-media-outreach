@@ -11,6 +11,7 @@ export interface UserAccount {
   plan: 'free' | 'basic' | 'pro' | 'growth' | 'scale' | 'enterprise';
   role?: 'user' | 'admin' | 'affiliate';
   outreach_intent?: string; // What are they asking for?
+  ai_autopilot_enabled?: boolean; // If true, auto-finds creators daily
   email_quota_daily: number;
   email_quota_monthly: number;
   email_used_today: number;

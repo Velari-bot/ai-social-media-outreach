@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
     if (body.last_name !== undefined) updates.last_name = body.last_name;
     if (body.business_name !== undefined) updates.business_name = body.business_name;
     if (body.outreach_intent !== undefined) updates.outreach_intent = body.outreach_intent;
+    if (body.ai_autopilot_enabled !== undefined) updates.ai_autopilot_enabled = body.ai_autopilot_enabled;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json(

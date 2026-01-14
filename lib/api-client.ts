@@ -117,6 +117,7 @@ export async function updateUserAccount(updates: {
   last_name?: string;
   business_name?: string;
   outreach_intent?: string;
+  ai_autopilot_enabled?: boolean;
 }): Promise<{ success: boolean; account?: any; error?: string }> {
   const token = await getIdToken();
   if (!token) {

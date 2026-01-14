@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { runRecurringCampaigns } from '@/lib/services/campaign-engine';
+import { runRecurringCampaigns, runAutopilotDiscovery } from '@/lib/services/campaign-engine';
 
 export async function GET(request: NextRequest) {
     // Verify cron secret
@@ -15,11 +15,18 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        const result = await runRecurringCampaigns();
+        console.log('[Cron] Starting daily jobs...');
+
+        // 1. Run Recurring Campaigns
+        const campaignsResult = await runRecurringCampaigns();
+
+        // 2. Run Autopilot Discovery
+        const autopilotResult = await runAutopilotDiscovery();
 
         return NextResponse.json({
             success: true,
-            ...result,
+            campaigns: campaignsResult,
+            autopilot: autopilotResult,
             timestamp: new Date().toISOString()
         });
     } catch (error: any) {
