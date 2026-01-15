@@ -9,9 +9,18 @@ import { google } from 'googleapis';
 import OpenAI from 'openai';
 import { Timestamp } from 'firebase-admin/firestore';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
+let openai_inst: OpenAI | null = null;
+function getOpenAI() {
+    if (!openai_inst) {
+        if (!process.env.OPEN_AI_KEY && !process.env.OPENAI_API_KEY) {
+            console.warn('OpenAI API key missing. AI features will fail.');
+        }
+        openai_inst = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY || process.env.OPEN_AI_KEY
+        });
+    }
+    return openai_inst;
+}
 
 export async function sendScheduledEmails() {
     console.log('[Outreach Sender] Starting scheduled email send...');
@@ -263,7 +272,7 @@ async function generateOutreachEmail(params: {
 }): Promise<{ subject: string; body: string }> {
     const { creatorName, creatorHandle, creatorPlatform, userName, userEmail, persona } = params;
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
         model: "gpt-4",
         messages: [
             {

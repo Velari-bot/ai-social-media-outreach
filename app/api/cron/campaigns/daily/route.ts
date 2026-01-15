@@ -7,6 +7,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runRecurringCampaigns, runAutopilotDiscovery } from '@/lib/services/campaign-engine';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
     // Verify cron secret
     const authHeader = request.headers.get('authorization');
