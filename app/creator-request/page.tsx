@@ -352,6 +352,11 @@ function CreatorRequestContent() {
                     />
                   </div>
                 </div>
+                {(location !== "" || minAvgViews > 0) && (
+                  <p className="text-[10px] text-orange-600 font-bold mt-1.5 leading-snug">
+                    ⚠️ Not Recommended: Using specific location or view count filters may significantly reduce search results.
+                  </p>
+                )}
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
