@@ -30,6 +30,7 @@ export default function AdminExpenses() {
 
     // Mock MRR for profit calculation (you can replace this with real data from your stats API)
     const [mrr, setMrr] = useState(0);
+    const [stripeFees, setStripeFees] = useState(0);
 
     useEffect(() => {
         fetchExpenses();
@@ -58,6 +59,7 @@ export default function AdminExpenses() {
             const data = await res.json();
             if (data.success && data.stats) {
                 setMrr(data.stats.mrr || 0);
+                setStripeFees(data.stats.stripeFees || 0);
             }
         } catch (error) {
             console.error('Error fetching MRR:', error);
@@ -138,7 +140,8 @@ export default function AdminExpenses() {
         setShowAddModal(true);
     };
 
-    const profit = mrr - monthlyTotal;
+    const totalCosts = monthlyTotal + stripeFees;
+    const profit = mrr - totalCosts;
 
     return (
         <div className="space-y-6">
@@ -162,15 +165,25 @@ export default function AdminExpenses() {
             </div>
 
             {/* Profit Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="p-2 bg-green-50 rounded-lg">
                             <TrendingUp className="text-green-600" size={20} />
                         </div>
-                        <span className="text-sm font-medium text-gray-500">MRR</span>
+                        <span className="text-sm font-medium text-gray-500">Gross MRR</span>
                     </div>
                     <p className="text-2xl font-bold text-black">${mrr.toLocaleString()}</p>
+                </div>
+
+                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-orange-50 rounded-lg">
+                            <TrendingDown className="text-orange-600" size={20} />
+                        </div>
+                        <span className="text-sm font-medium text-gray-500">Stripe Fees (est)</span>
+                    </div>
+                    <p className="text-2xl font-bold text-orange-600">${stripeFees.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
 
                 <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
@@ -178,7 +191,7 @@ export default function AdminExpenses() {
                         <div className="p-2 bg-red-50 rounded-lg">
                             <TrendingDown className="text-red-600" size={20} />
                         </div>
-                        <span className="text-sm font-medium text-gray-500">Monthly Costs</span>
+                        <span className="text-sm font-medium text-gray-500">Other Costs</span>
                     </div>
                     <p className="text-2xl font-bold text-black">${monthlyTotal.toLocaleString()}</p>
                 </div>
@@ -188,10 +201,10 @@ export default function AdminExpenses() {
                         <div className="p-2 bg-blue-50 rounded-lg">
                             <DollarSign className="text-blue-600" size={20} />
                         </div>
-                        <span className="text-sm font-medium text-gray-500">Monthly Profit</span>
+                        <span className="text-sm font-medium text-gray-500">Net Profit</span>
                     </div>
                     <p className={`text-2xl font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        ${profit.toLocaleString()}
+                        ${profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                 </div>
 
@@ -202,7 +215,7 @@ export default function AdminExpenses() {
                         </div>
                         <span className="text-sm font-medium text-gray-500">Profit Margin</span>
                     </div>
-                    <p className="text-2xl font-bold text-black">
+                    <p className={`text-2xl font-bold ${profit >= 0 ? 'text-black' : 'text-red-600'}`}>
                         {mrr > 0 ? ((profit / mrr) * 100).toFixed(1) : 0}%
                     </p>
                 </div>
@@ -259,8 +272,8 @@ export default function AdminExpenses() {
                                             <td className="px-6 py-4 font-mono text-black">${expense.amount.toLocaleString()}</td>
                                             <td className="px-6 py-4">
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${expense.frequency === 'monthly' ? 'bg-blue-100 text-blue-700' :
-                                                        expense.frequency === 'yearly' ? 'bg-purple-100 text-purple-700' :
-                                                            'bg-gray-100 text-gray-700'
+                                                    expense.frequency === 'yearly' ? 'bg-purple-100 text-purple-700' :
+                                                        'bg-gray-100 text-gray-700'
                                                     }`}>
                                                     {expense.frequency}
                                                 </span>

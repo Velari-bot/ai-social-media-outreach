@@ -31,8 +31,8 @@ export default function AdminOverview() {
                             color: 'blue'
                         },
                         {
-                            label: "MRR",
-                            value: `$${statsData.mrr.toLocaleString()}`,
+                            label: "Profit",
+                            value: `$${(statsData.netMrr || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
                             change: `${statsData.mrrChange >= 0 ? '+' : ''}${statsData.mrrChange}%`,
                             icon: DollarSign,
                             color: 'green'

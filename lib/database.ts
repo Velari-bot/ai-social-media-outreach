@@ -198,69 +198,73 @@ export async function getUserStats(userId: string): Promise<UserStats> {
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
 
-    // Queries
+    // Queries - Using count() for numbers to save reads
     const pSettings = db.collection('user_email_settings').doc(userId).get();
     const pAccount = db.collection('user_accounts').doc(userId).get();
     const pThreads = db.collection('email_threads')
       .where('user_id', '==', userId)
-      .where('status', '==', 'active')
+      .where('status', 'in', ['active', 'replied']) // Count active conversations
       .count()
       .get();
-    // Fetch ALL requests
-    const pRequests = db.collection('creator_requests')
+
+    const pTotalRequests = db.collection('creator_requests')
       .where('user_id', '==', userId)
+      .count()
       .get();
 
-    // Use allSettled to survive partial failures (e.g. missing indexes)
-    const [rSettings, rAccount, rThreads, rRequests] = await Promise.allSettled([
-      pSettings, pAccount, pThreads, pRequests
+    const pWeekRequests = db.collection('creator_requests')
+      .where('user_id', '==', userId)
+      .where('created_at', '>=', Timestamp.fromDate(weekAgo))
+      .count()
+      .get();
+
+    // Fetch requests just for the results_count sum - limited to avoid mass reads
+    const pFoundSum = db.collection('creator_requests')
+      .where('user_id', '==', userId)
+      .select('results_count')
+      .limit(100)
+      .get();
+
+    // Use allSettled to survive partial failures
+    const [rSettings, rAccount, rThreads, rTotalReq, rWeekReq, rFoundSum] = await Promise.allSettled([
+      pSettings, pAccount, pThreads, pTotalRequests, pWeekRequests, pFoundSum
     ]);
 
     // Process Settings
-    let emailSettings = {};
-    if (rSettings.status === 'fulfilled') {
-      emailSettings = rSettings.value.data() || {};
-      const d = emailSettings as any;
+    if (rSettings.status === 'fulfilled' && rSettings.value.exists) {
+      const d = rSettings.value.data() as any;
       stats.repliesReceived = d.total_replies_received || 0;
       stats.totalEmailsSent = d.total_emails_sent || 0;
       stats.creatorsContacted = stats.totalEmailsSent;
     }
 
     // Process Account
-    if (rAccount.status === 'fulfilled') {
-      const d = rAccount.value.data() || {} as any;
+    if (rAccount.status === 'fulfilled' && rAccount.value.exists) {
+      const d = rAccount.value.data() as any;
       stats.emailUsedToday = d.email_used_today || 0;
       stats.remainingQuota = (d.email_quota_daily || 0) - (stats.emailUsedToday || 0);
-      // Fallback if settings didn't have total
       if (!stats.totalEmailsSent) {
-        stats.totalEmailsSent = d.email_used_today || 0; // Better than 0
+        stats.totalEmailsSent = d.email_used_today || 0;
         stats.creatorsContacted = stats.totalEmailsSent;
       }
     }
 
-    // Process Threads (Active Convos)
+    // Process Threads
     if (rThreads.status === 'fulfilled') {
       stats.activeConversations = rThreads.value.data().count;
-    } else {
-      console.warn('Failed to fetch active threads count (likely missing index):', rThreads.reason);
     }
 
-    // Process Requests (Creators Found)
-    if (rRequests.status === 'fulfilled') {
-      const allRequests = rRequests.value.docs.map(doc => doc.data());
-      stats.totalRequests = allRequests.length;
+    // Process Counts
+    if (rTotalReq.status === 'fulfilled') {
+      stats.totalRequests = rTotalReq.value.data().count;
+    }
+    if (rWeekReq.status === 'fulfilled') {
+      stats.requestsThisWeek = rWeekReq.value.data().count;
+    }
 
-      // Filter for week
-      const weekRequests = allRequests.filter(r => {
-        const created = r.created_at?.toDate ? r.created_at.toDate() : new Date(r.created_at);
-        return created >= weekAgo;
-      });
-      stats.requestsThisWeek = weekRequests.length;
-
-      // Sum results
-      stats.totalCreatorsFound = allRequests.reduce((acc, req) => acc + (Number(req.results_count) || 0), 0);
-    } else {
-      console.warn('Failed to fetch creator requests:', rRequests.reason);
+    // Process Sum (limited)
+    if (rFoundSum.status === 'fulfilled') {
+      stats.totalCreatorsFound = rFoundSum.value.docs.reduce((acc, doc) => acc + (Number(doc.data().results_count) || 0), 0);
     }
 
     // Interested

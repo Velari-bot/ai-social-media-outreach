@@ -66,9 +66,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error fetching Gmail status:', error);
+    const isQuotaError = error.message?.includes('Quota exceeded') || error.code === 8;
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch Gmail status' },
-      { status: 500 }
+      { error: isQuotaError ? 'Database capacity reached.' : (error.message || 'Failed to fetch Gmail status') },
+      { status: isQuotaError ? 429 : 500 }
     );
   }
 }

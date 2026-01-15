@@ -20,8 +20,9 @@ export async function GET() {
         const paidUsers = users.filter(u => u.role !== 'admin' && u.plan && u.plan.toLowerCase() !== 'free');
         const mrr = paidUsers.reduce((sum, u) => sum + (PLAN_PRICES[(u.plan || '').toLowerCase()] || 0), 0);
 
-        // Remove dummy multiplier. 1.0x MRR or whatever is actually in database.
-        const totalRevenue = mrr;
+        // Stripe Fees: 2.9% + $0.30 per payment
+        const stripeFees = (mrr * 0.029) + (paidUsers.length * 0.30);
+        const netRevenue = mrr - stripeFees;
 
         // Fetch Real Transactions from Firestore
         let recentTransactions: any[] = [];
@@ -56,7 +57,9 @@ export async function GET() {
         return NextResponse.json({
             success: true,
             stats: {
-                totalRevenue: `$${totalRevenue.toLocaleString()}`,
+                totalRevenue: `$${netRevenue.toLocaleString()}`, // Show Net Revenue
+                grossRevenue: `$${mrr.toLocaleString()}`,
+                stripeFees: `$${stripeFees.toLocaleString()}`,
                 activeSubs: paidUsers.length,
                 churnRate: '0%', // Need historical data for actual churn
                 avgSale: paidUsers.length > 0 ? `$${(mrr / paidUsers.length).toFixed(2)}` : '$0.00'

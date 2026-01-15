@@ -66,9 +66,15 @@ export async function GET(request: NextRequest) {
                 return NextResponse.json({ success: true, threads: threads.slice(0, limit!) });
             } catch (e) {
                 console.error('Error fetching threads (fallback):', e);
+                error = e; // Pass to general catch logic below
             }
         }
+
         console.error('Error fetching threads:', error);
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        const isQuotaError = error.message?.includes('Quota exceeded') || error.code === 8;
+        return NextResponse.json({
+            success: false,
+            error: isQuotaError ? 'Database capacity reached. Try again later.' : error.message
+        }, { status: isQuotaError ? 429 : 500 });
     }
 }

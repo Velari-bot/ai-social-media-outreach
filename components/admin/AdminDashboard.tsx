@@ -35,8 +35,9 @@ import AdminSettings from "./sections/AdminSettings";
 import AdminLogs from "./sections/AdminLogs";
 import AdminExpenses from "./AdminExpenses";
 import AdminAiHelp from "./sections/AdminAiHelp";
+import AdminInternalData from "./sections/AdminInternalData";
 
-type AdminSection = 'overview' | 'calls' | 'users' | 'pricing' | 'payments' | 'affiliates' | 'creators' | 'emails' | 'demo' | 'settings' | 'logs' | 'expenses' | 'ai-help';
+type AdminSection = 'overview' | 'calls' | 'users' | 'pricing' | 'payments' | 'affiliates' | 'creators' | 'emails' | 'demo' | 'settings' | 'logs' | 'expenses' | 'ai-help' | 'internal-data';
 
 export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     const [activeSection, setActiveSection] = useState<AdminSection>('overview');
@@ -55,6 +56,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         { id: 'ai-help', label: 'AI Assistant', icon: Bot },
         { id: 'demo', label: 'Demo Mode', icon: TestTube, href: '/admin/demo' },
         { id: 'settings', label: 'Settings', icon: Settings },
+        { id: 'internal-data', label: 'Internal Data', icon: TestTube },
         { id: 'logs', label: 'Logs & Audit', icon: FileText },
     ];
 
@@ -71,6 +73,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             case 'expenses': return <AdminExpenses />;
             case 'ai-help': return <AdminAiHelp />;
             case 'settings': return <AdminSettings />;
+            case 'internal-data': return <AdminInternalData />;
             case 'logs': return <AdminLogs />;
             default: return (
                 <div className="flex flex-col items-center justify-center h-[50vh] text-gray-400">

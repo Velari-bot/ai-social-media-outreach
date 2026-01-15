@@ -31,9 +31,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error fetching user stats:', error);
+    const isQuotaError = error.message?.includes('Quota exceeded') || error.code === 8;
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
+      { error: isQuotaError ? 'Database capacity reached. Please try again tomorrow.' : (error.message || 'Internal server error') },
+      { status: isQuotaError ? 429 : 500 }
     );
   }
 }

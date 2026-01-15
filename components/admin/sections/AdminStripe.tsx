@@ -2,14 +2,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CreditCard, DollarSign, ArrowUpRight, ArrowDownRight, RefreshCcw, ExternalLink, Loader2, Trash2 } from "lucide-react";
+import { CreditCard, DollarSign, ArrowUpRight, ArrowDownRight, RefreshCcw, ExternalLink, Loader2, Trash2, TrendingUp } from "lucide-react";
 
 export default function AdminStripe() {
     const [revenueStats, setRevenueStats] = useState([
-        { label: "Total Revenue", value: "-", icon: DollarSign, trend: "...", trendUp: true, color: "text-blue-600", bg: "bg-blue-50" },
+        { label: "Net Revenue", value: "-", icon: DollarSign, trend: "...", trendUp: true, color: "text-blue-600", bg: "bg-blue-50" },
+        { label: "Gross Revenue", value: "-", icon: TrendingUp, trend: "...", trendUp: true, color: "text-green-600", bg: "bg-green-50" },
+        { label: "Stripe Fees", value: "-", icon: ArrowDownRight, trend: "...", trendUp: false, color: "text-orange-600", bg: "bg-orange-50" },
         { label: "Active Subs", value: "-", icon: RefreshCcw, trend: "...", trendUp: true, color: "text-purple-600", bg: "bg-purple-50" },
-        { label: "Churn Rate", value: "0%", icon: ArrowDownRight, trend: "0%", trendUp: true, color: "text-red-600", bg: "bg-red-50" },
-        { label: "Avg. Sale", value: "-", icon: CreditCard, trend: "...", trendUp: true, color: "text-green-600", bg: "bg-green-50" },
     ]);
 
     const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
@@ -23,10 +23,10 @@ export default function AdminStripe() {
                 if (data.success) {
                     setRecentTransactions(data.transactions);
                     setRevenueStats([
-                        { label: "Total Revenue", value: data.stats.totalRevenue, icon: DollarSign, trend: "+0%", trendUp: true, color: "text-blue-600", bg: "bg-blue-50" },
+                        { label: "Net Revenue", value: data.stats.totalRevenue, icon: DollarSign, trend: "+0%", trendUp: true, color: "text-blue-600", bg: "bg-blue-50" },
+                        { label: "Gross Revenue", value: data.stats.grossRevenue, icon: TrendingUp, trend: "+0%", trendUp: true, color: "text-green-600", bg: "bg-green-50" },
+                        { label: "Stripe Fees", value: data.stats.stripeFees, icon: ArrowDownRight, trend: "-2.9%+", trendUp: false, color: "text-orange-600", bg: "bg-orange-50" },
                         { label: "Active Subs", value: data.stats.activeSubs.toString(), icon: RefreshCcw, trend: "+0%", trendUp: true, color: "text-purple-600", bg: "bg-purple-50" },
-                        { label: "Churn Rate", value: data.stats.churnRate, icon: ArrowDownRight, trend: "0%", trendUp: true, color: "text-red-600", bg: "bg-red-50" },
-                        { label: "Avg. Sale", value: data.stats.avgSale, icon: CreditCard, trend: "+0%", trendUp: true, color: "text-green-600", bg: "bg-green-50" },
                     ]);
                 }
             } catch (err) {
