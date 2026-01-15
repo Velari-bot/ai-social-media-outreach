@@ -231,7 +231,7 @@ export async function getUserStats(userId: string): Promise<UserStats> {
       requests_this_week: weekRequests.length,
       emails_sent_this_week: 0,
       creators_contacted: totalSent,
-      replyRate: totalSent > 0 ? parseFloat(((totalReplies / totalSent) * 100).toFixed(1)) : 0,
+      average_reply_rate: totalSent > 0 ? parseFloat(((totalReplies / totalSent) * 100).toFixed(1)) : 0,
       total_requests: allRequests.length,
       total_emails_sent: totalSent,
       total_creators_contacted: totalSent,
