@@ -4,9 +4,15 @@ import OpenAI from 'openai';
 
 export const dynamic = 'force-dynamic';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+let openai_instance: OpenAI | null = null;
+function getOpenAI() {
+    if (!openai_instance) {
+        openai_instance = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY || 'missing-key-during-build',
+        });
+    }
+    return openai_instance;
+}
 
 const SYSTEM_PROMPT = `
 You are the Verality AI System Admin Assistant.
@@ -32,7 +38,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid messages' }, { status: 400 });
         }
 
-        const completion = await openai.chat.completions.create({
+        const completion = await getOpenAI().chat.completions.create({
             model: "gpt-4",
             messages: [
                 { role: 'system', content: SYSTEM_PROMPT },
