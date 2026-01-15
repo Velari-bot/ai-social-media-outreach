@@ -120,7 +120,7 @@ function DashboardContent() {
             meetingsInterested: stats.meetingsInterested || 0,
             remainingQuota: stats.remainingQuota || 0,
             totalEmailsSent: stats.totalEmailsSent || 0,
-            totalCreatorsFound: stats.creators_contacted || 0,
+            totalCreatorsFound: stats.totalCreatorsFound || 0,
             totalCredits: 0,
             creditsUsed: 0,
             creditsRemaining: 0,

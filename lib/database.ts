@@ -47,19 +47,19 @@ export interface CreatorRequest {
 }
 
 export interface UserStats {
-  requests_this_week: number;
-  emails_sent_this_week: number;
-  creators_contacted: number;
-  average_reply_rate: number;
-  total_requests: number;
-  total_emails_sent: number;
-  total_creators_contacted: number;
-  totalCreatorsFound?: number; // Added field
-  repliesReceived?: number;
-  activeConversations?: number;
-  meetingsInterested?: number;
-  email_used_today?: number;
-  remainingQuota?: number;
+  requestsThisWeek: number;
+  emailsSentThisWeek: number;
+  creatorsContacted: number;
+  averageReplyRate: number;
+  totalRequests: number;
+  totalEmailsSent: number;
+  totalCreatorsContacted: number;
+  totalCreatorsFound: number;
+  repliesReceived: number;
+  activeConversations: number;
+  meetingsInterested: number;
+  emailUsedToday: number;
+  remainingQuota: number;
 }
 
 export interface AffiliateAccount {
@@ -177,90 +177,114 @@ export async function getUserAccount(userId: string): Promise<UserAccount | null
 
 // Fetch user stats
 export async function getUserStats(userId: string): Promise<UserStats> {
+  // Default zero stats
+  const stats: UserStats = {
+    requestsThisWeek: 0,
+    emailsSentThisWeek: 0,
+    creatorsContacted: 0,
+    averageReplyRate: 0,
+    totalRequests: 0,
+    totalEmailsSent: 0,
+    totalCreatorsContacted: 0,
+    totalCreatorsFound: 0,
+    repliesReceived: 0,
+    activeConversations: 0,
+    meetingsInterested: 0,
+    emailUsedToday: 0,
+    remainingQuota: 0
+  };
+
   try {
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
 
-    // Run parallel queries for performance
-    const [emailSettingsDoc, userAccountDoc, threadsSnapshot, requestsSnapshot] = await Promise.all([
-      db.collection('user_email_settings').doc(userId).get(),
-      db.collection('user_accounts').doc(userId).get(),
-      db.collection('email_threads')
-        .where('user_id', '==', userId)
-        .where('status', '==', 'active')
-        .count()
-        .get(),
-      // Fetch ALL requests to calculate total found
-      db.collection('creator_requests')
-        .where('user_id', '==', userId)
-        .get()
+    // Queries
+    const pSettings = db.collection('user_email_settings').doc(userId).get();
+    const pAccount = db.collection('user_accounts').doc(userId).get();
+    const pThreads = db.collection('email_threads')
+      .where('user_id', '==', userId)
+      .where('status', '==', 'active')
+      .count()
+      .get();
+    // Fetch ALL requests
+    const pRequests = db.collection('creator_requests')
+      .where('user_id', '==', userId)
+      .get();
+
+    // Use allSettled to survive partial failures (e.g. missing indexes)
+    const [rSettings, rAccount, rThreads, rRequests] = await Promise.allSettled([
+      pSettings, pAccount, pThreads, pRequests
     ]);
 
-    const emailSettings = emailSettingsDoc.data() || {};
-    const userAccount = userAccountDoc.data() || {};
-    const activeConvos = threadsSnapshot.data().count;
+    // Process Settings
+    let emailSettings = {};
+    if (rSettings.status === 'fulfilled') {
+      emailSettings = rSettings.value.data() || {};
+      const d = emailSettings as any;
+      stats.repliesReceived = d.total_replies_received || 0;
+      stats.totalEmailsSent = d.total_emails_sent || 0;
+      stats.creatorsContacted = stats.totalEmailsSent;
+    }
 
-    const allRequests = requestsSnapshot.docs.map(doc => doc.data());
+    // Process Account
+    if (rAccount.status === 'fulfilled') {
+      const d = rAccount.value.data() || {} as any;
+      stats.emailUsedToday = d.email_used_today || 0;
+      stats.remainingQuota = (d.email_quota_daily || 0) - (stats.emailUsedToday || 0);
+      // Fallback if settings didn't have total
+      if (!stats.totalEmailsSent) {
+        stats.totalEmailsSent = d.email_used_today || 0; // Better than 0
+        stats.creatorsContacted = stats.totalEmailsSent;
+      }
+    }
 
-    // Filter for weekly stats in memory
-    const weekRequests = allRequests.filter(r => {
-      const created = r.created_at?.toDate ? r.created_at.toDate() : new Date(r.created_at);
-      return created >= weekAgo;
-    });
+    // Process Threads (Active Convos)
+    if (rThreads.status === 'fulfilled') {
+      stats.activeConversations = rThreads.value.data().count;
+    } else {
+      console.warn('Failed to fetch active threads count (likely missing index):', rThreads.reason);
+    }
 
-    // Calculate total creators found across all requests
-    const totalCreatorsFound = allRequests.reduce((acc, req) => acc + (req.results_count || 0), 0);
+    // Process Requests (Creators Found)
+    if (rRequests.status === 'fulfilled') {
+      const allRequests = rRequests.value.docs.map(doc => doc.data());
+      stats.totalRequests = allRequests.length;
 
-    // Calculate real stats
-    const totalReplies = emailSettings.total_replies_received || 0;
-    const totalSent = emailSettings.total_emails_sent || userAccount.email_used_today || 0;
+      // Filter for week
+      const weekRequests = allRequests.filter(r => {
+        const created = r.created_at?.toDate ? r.created_at.toDate() : new Date(r.created_at);
+        return created >= weekAgo;
+      });
+      stats.requestsThisWeek = weekRequests.length;
 
-    let meetingsInterested = 0;
+      // Sum results
+      stats.totalCreatorsFound = allRequests.reduce((acc, req) => acc + (Number(req.results_count) || 0), 0);
+    } else {
+      console.warn('Failed to fetch creator requests:', rRequests.reason);
+    }
+
+    // Interested
     try {
       const interestedSnapshot = await db.collection('email_threads')
         .where('user_id', '==', userId)
         .where('phone_number', '!=', null)
         .count()
         .get();
-      meetingsInterested = interestedSnapshot.data().count;
+      stats.meetingsInterested = interestedSnapshot.data().count;
     } catch (e) {
-      meetingsInterested = 0;
+      // Ignore
     }
 
-    const stats: UserStats = {
-      requests_this_week: weekRequests.length,
-      emails_sent_this_week: 0,
-      creators_contacted: totalSent,
-      average_reply_rate: totalSent > 0 ? parseFloat(((totalReplies / totalSent) * 100).toFixed(1)) : 0,
-      total_requests: allRequests.length,
-      total_emails_sent: totalSent,
-      total_creators_contacted: totalSent,
-      totalCreatorsFound: totalCreatorsFound, // Mapped correctly
-      repliesReceived: totalReplies,
-      activeConversations: activeConvos,
-      meetingsInterested: meetingsInterested,
-
-      // Pass through quotas for dashboard
-      email_used_today: userAccount.email_used_today || 0,
-      remainingQuota: (userAccount.email_quota_daily || 0) - (userAccount.email_used_today || 0)
-    };
+    // Calculated fields
+    if (stats.totalEmailsSent > 0 && stats.repliesReceived !== undefined) {
+      stats.averageReplyRate = parseFloat(((stats.repliesReceived / stats.totalEmailsSent) * 100).toFixed(1));
+    }
 
     return stats;
+
   } catch (error) {
-    console.error('Error fetching user stats:', error);
-    return {
-      requests_this_week: 0,
-      emails_sent_this_week: 0,
-      creators_contacted: 0,
-      average_reply_rate: 0,
-      total_requests: 0,
-      total_emails_sent: 0,
-      total_creators_contacted: 0,
-      totalCreatorsFound: 0,
-      repliesReceived: 0,
-      activeConversations: 0,
-      meetingsInterested: 0
-    };
+    console.error('Critical error fetching user stats:', error);
+    return stats; // Return whatever we have so far
   }
 }
 
@@ -452,4 +476,3 @@ export async function trackAffiliateConversion(referralCode: string, amountPaid:
     return false;
   }
 }
-
