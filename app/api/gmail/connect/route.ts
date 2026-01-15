@@ -40,19 +40,67 @@ export async function POST(request: NextRequest) {
 
     // Store tokens in Firestore
     const gmailConnectionRef = db.collection('gmail_connections').doc(userId);
-    await gmailConnectionRef.set({
-      user_id: userId,
+    const existingDoc = await gmailConnectionRef.get();
+
+    let accounts: any[] = [];
+
+    if (existingDoc.exists) {
+      const data = existingDoc.data() || {};
+      if (Array.isArray(data.accounts)) {
+        accounts = [...data.accounts];
+      } else if (data.email) {
+        // Migration: Move legacy single account to array
+        accounts.push({
+          email: data.email,
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+          expires_at: data.expires_at,
+          connected_at: data.connected_at,
+          last_sync: data.last_sync,
+          daily_limit: 50, // Default for migrated
+          sent_today: 0
+        });
+      }
+    }
+
+    // Check if account already exists
+    const existingIndex = accounts.findIndex(a => a.email === profile.emailAddress);
+
+    const newAccountData = {
       email: profile.emailAddress,
-      access_token: tokens.access_token, // In production, encrypt this
-      refresh_token: tokens.refresh_token, // In production, encrypt this
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
       expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
       connected_at: new Date().toISOString(),
       last_sync: new Date().toISOString(),
+      // Preserve limits if updating, else default
+      daily_limit: existingIndex >= 0 ? (accounts[existingIndex].daily_limit || 50) : 50,
+      sent_today: existingIndex >= 0 ? (accounts[existingIndex].sent_today || 0) : 0
+    };
+
+    if (existingIndex >= 0) {
+      // Update existing
+      accounts[existingIndex] = newAccountData;
+    } else {
+      // Add new
+      accounts.push(newAccountData);
+    }
+
+    await gmailConnectionRef.set({
+      user_id: userId,
+      accounts: accounts,
+      // Keep legacy fields for a moment if other systems break, or just remove them? 
+      // Let's keep the *latest* one as legacy fallback for safety, but primary source is 'accounts'
+      email: profile.emailAddress,
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      last_sync: new Date().toISOString()
     }, { merge: true });
 
     return NextResponse.json({
       success: true,
       email: profile.emailAddress,
+      accounts: accounts.map(a => ({ email: a.email, connected: true }))
     });
   } catch (error: any) {
     console.error('Error connecting Gmail:', error);

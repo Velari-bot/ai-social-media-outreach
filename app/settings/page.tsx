@@ -40,7 +40,10 @@ function SettingsContent() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [connecting, setConnecting] = useState(false);
-  const [gmailStatus, setGmailStatus] = useState<GmailConnection>({ connected: false });
+
+  // Updated state for multiple accounts
+  const [gmailAccounts, setGmailAccounts] = useState<any[]>([]);
+
   const [limits, setLimits] = useState<DailyLimits | null>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [intent, setIntent] = useState("");
@@ -48,7 +51,7 @@ function SettingsContent() {
   useEffect(() => {
     async function loadSettings() {
       if (isDemo) {
-        setGmailStatus({ connected: true, email: "demo@verality.io", lastSync: new Date().toISOString() });
+        setGmailAccounts([{ email: "demo@verality.io", connected: true, lastSync: new Date().toISOString(), daily_limit: 50, sent_today: 12 }]);
         setLimits({
           email_quota_daily: 100,
           email_quota_monthly: 3000,
@@ -70,13 +73,9 @@ function SettingsContent() {
 
       try {
         // Fetch Gmail Status
-        const status = await getGmailStatus();
+        const status: any = await getGmailStatus();
         if (status.success) {
-          setGmailStatus({
-            connected: !!status.connected,
-            email: status.email,
-            lastSync: status.lastSync
-          });
+          setGmailAccounts(status.accounts || []);
         }
 
         // Fetch Limits
@@ -143,15 +142,25 @@ function SettingsContent() {
     }
   };
 
-  const handleDisconnectGmail = async () => {
-    if (!confirm("Are you sure you want to disconnect Gmail? Campaigns will stop.")) return;
+  const handleUpdateLimit = async (email: string, newLimit: number) => {
     try {
-      const user = await getCurrentUser();
-      if (!user) return;
+      const { updateGmailSettings } = await import("@/lib/api-client");
+      await updateGmailSettings('update_limit', email, newLimit);
+      toast.success("Limit updated");
+      // Update local state
+      setGmailAccounts(prev => prev.map(a => a.email === email ? { ...a, daily_limit: newLimit } : a));
+    } catch (e) {
+      toast.error("Failed to update limit");
+    }
+  };
 
-      await disconnectGmail();
-      setGmailStatus({ connected: false });
-      toast.success("Gmail disconnected");
+  const handleRemoveAccount = async (email: string) => {
+    if (!confirm(`Are you sure you want to disconnect ${email}?`)) return;
+    try {
+      const { updateGmailSettings } = await import("@/lib/api-client");
+      await updateGmailSettings('remove_account', email);
+      setGmailAccounts(prev => prev.filter(a => a.email !== email));
+      toast.success("Account disconnected");
     } catch (error) {
       toast.error("Failed to disconnect");
     }
@@ -199,7 +208,7 @@ function SettingsContent() {
               <div className="grid md:grid-cols-2 gap-8">
                 <div>
                   <div className="flex justify-between items-end mb-2">
-                    <span className="text-sm font-medium text-gray-600">Daily Emails</span>
+                    <span className="text-sm font-medium text-gray-600">Daily Emails (Global)</span>
                     <span className="text-sm font-bold text-black">{limits.email_used_today} / {limits.email_quota_daily}</span>
                   </div>
                   <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
@@ -213,7 +222,7 @@ function SettingsContent() {
                 <div>
                   <div className="flex justify-between items-end mb-2">
                     <span className="text-sm font-medium text-gray-600">Monthly Volume</span>
-                    <span className="text-sm font-bold text-black">{limits.email_used_this_month} / {limits.email_quota_monthly}</span>
+                    <span className="text-sm font-bold text-black">{limits.email_used_today} / {limits.email_quota_monthly}</span>
                   </div>
                   <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
                     <div
@@ -229,45 +238,72 @@ function SettingsContent() {
 
           {/* Integrations */}
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100/60">
-            <h2 className="text-xl font-bold text-black mb-6">Integrations</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-black">Connected Email Accounts</h2>
+              <button
+                onClick={handleConnectGmail}
+                disabled={connecting}
+                className="px-4 py-2 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-900 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                <span>+ Add Email Account</span>
+              </button>
+            </div>
 
-            <div className="flex items-center justify-between p-4 border border-gray-200 rounded-xl bg-gray-50/50">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center border border-gray-200 shadow-sm">
-                  <svg className="w-6 h-6 text-red-500" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z" />
-                  </svg>
+            <div className="space-y-4">
+              {gmailAccounts.length === 0 ? (
+                <div className="text-center p-8 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                  <p className="text-gray-500 font-medium">No email accounts connected.</p>
+                  <p className="text-sm text-gray-400 mt-1">Connect a Gmail account to start sending campaigns.</p>
                 </div>
-                <div>
-                  <h3 className="font-bold text-black">Gmail</h3>
-                  <p className="text-sm text-gray-500">
-                    {gmailStatus.connected
-                      ? `Connected to ${gmailStatus.email || 'account'}`
-                      : "Connect your email to send campaigns"}
-                  </p>
-                  {gmailStatus.lastSync && (
-                    <p className="text-xs text-gray-400 mt-1">Last synced: {new Date(gmailStatus.lastSync).toLocaleString()}</p>
-                  )}
-                </div>
-              </div>
-              <div>
-                {gmailStatus.connected ? (
-                  <button
-                    onClick={handleDisconnectGmail}
-                    className="px-4 py-2 bg-white border border-gray-300 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors"
-                  >
-                    Disconnect
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleConnectGmail}
-                    disabled={connecting}
-                    className="px-4 py-2 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-900 transition-colors disabled:opacity-50"
-                  >
-                    {connecting ? "Connecting..." : "Connect Gmail"}
-                  </button>
-                )}
-              </div>
+              ) : (
+                gmailAccounts.map((account, i) => (
+                  <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-gray-200 rounded-xl bg-gray-50/30 gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-gray-200 shadow-sm shrink-0">
+                        <svg className="w-5 h-5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-black text-sm">{account.email}</h3>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                          <span className="text-xs text-gray-500">Connected</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 w-full sm:w-auto">
+                      <div className="flex-1 sm:flex-none">
+                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block mb-1">Daily Limit</label>
+                        <input
+                          type="number"
+                          defaultValue={account.daily_limit || 50}
+                          onBlur={(e) => handleUpdateLimit(account.email, parseInt(e.target.value))}
+                          className="w-24 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-bold text-black focus:outline-none focus:border-black transition-colors"
+                        />
+                      </div>
+
+                      <div className="flex-1 sm:flex-none">
+                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block mb-1">Sent Today</label>
+                        <div className="px-3 py-1.5 bg-gray-100 rounded-lg text-sm font-bold text-gray-600 border border-transparent">
+                          {account.sent_today || 0}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => handleRemoveAccount(account.email)}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ml-2"
+                        title="Disconnect Account"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 

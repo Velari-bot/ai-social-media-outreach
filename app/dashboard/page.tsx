@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-helpers";
-import { fetchUserAccount, fetchUserStats, fetchRecentRequests, getGmailStatus } from "@/lib/api-client";
+import { fetchUserAccount, fetchUserStats, fetchRecentRequests, getGmailStatus, fetchRecentThreads, updateUserAccount } from "@/lib/api-client";
 import toast from "react-hot-toast";
 import Navbar from "@/components/Navbar";
 import DemoDashboard from "@/components/demo/DemoDashboard";
@@ -37,8 +37,8 @@ interface Campaign {
   status: "searching" | "outreach_running" | "awaiting_replies" | "completed";
   creatorsContacted: number;
   replies: number;
+  criteria: any;
 }
-
 
 export default function DashboardPage() {
   return (
@@ -85,6 +85,7 @@ function DashboardContent() {
   const [viewingCampaign, setViewingCampaign] = useState<any | null>(null);
   const [viewingCreators, setViewingCreators] = useState<any[]>([]);
   const [loadingCreators, setLoadingCreators] = useState(false);
+  const [recentThreads, setRecentThreads] = useState<any[]>([]);
 
   useEffect(() => {
     async function initDashboard() {
@@ -103,7 +104,14 @@ function DashboardContent() {
       setUserEmail(user.email);
 
       try {
-        const statsRes = await fetchUserStats();
+        const [statsRes, accountRes, gmailRes, requestsRes, threadsRes] = await Promise.all([
+          fetchUserStats(),
+          fetchUserAccount(),
+          getGmailStatus(),
+          fetchRecentRequests(),
+          fetchRecentThreads(5)
+        ]);
+
         if (statsRes.success && statsRes.stats) {
           const stats = statsRes.stats;
           setMetrics({
@@ -111,82 +119,50 @@ function DashboardContent() {
             activeConversations: stats.activeConversations || 0,
             meetingsInterested: stats.meetingsInterested || 0,
             remainingQuota: stats.remainingQuota || 0,
-            totalEmailsSent: stats.totalEmailsSent || stats.email_used_today || 0,
-            totalCreatorsFound: stats.total_creators_contacted || 0,
-            totalCredits: 0, // Will be updated from account
-            creditsUsed: 0, // Will be updated from account
-            creditsRemaining: 0, // Will be updated from account
+            totalEmailsSent: stats.totalEmailsSent || 0,
+            totalCreatorsFound: stats.creators_contacted || 0,
+            totalCredits: 0,
+            creditsUsed: 0,
+            creditsRemaining: 0,
           });
         }
 
-        const accountRes = await fetchUserAccount();
         if (accountRes.success && accountRes.account) {
           setUserName(accountRes.account.name || accountRes.account.first_name || accountRes.account.business_name || null);
           setOutreachIntent(accountRes.account.outreach_intent || "");
           setAiAutopilot(!!accountRes.account.ai_autopilot_enabled);
 
-          // Update credits info and email count
           const totalCredits = accountRes.account.email_quota_daily || 0;
           const creditsUsed = accountRes.account.email_used_today || 0;
-          const creditsRemaining = totalCredits - creditsUsed;
 
           setMetrics(prev => ({
             ...prev,
             totalCredits,
             creditsUsed,
-            creditsRemaining,
-            totalEmailsSent: creditsUsed // Use the same value as creditsUsed
+            creditsRemaining: totalCredits - creditsUsed,
+            // If we want total emails sent today to match usage, we can override, 
+            // but stats.totalEmailsSent might be historical. We'll stick to stats for historical if available.
+            // But actually, the dashboard tile says "Emails Sent". Usually implies total.
           }));
-
-          // Try to link Stripe customer if not already linked
-          if (!accountRes.account.stripeCustomerId && user.email) {
-            try {
-              const token = await user.getIdToken();
-              const linkRes = await fetch('/api/user/link-stripe', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-              });
-              const linkData = await linkRes.json();
-              if (linkData.success && linkData.customerId) {
-                console.log('Stripe customer linked:', linkData.customerId);
-                // Optionally refresh account data if plan was updated
-                if (linkData.plan) {
-                  const refreshedAccount = await fetchUserAccount();
-                  if (refreshedAccount.success && refreshedAccount.account) {
-                    const newCredits = refreshedAccount.account.email_quota_daily || 0;
-                    const newUsed = refreshedAccount.account.email_used_today || 0;
-                    setMetrics(prev => ({
-                      ...prev,
-                      totalCredits: newCredits,
-                      creditsUsed: newUsed,
-                      creditsRemaining: newCredits - newUsed,
-                      totalEmailsSent: newUsed
-                    }));
-                  }
-                }
-              }
-            } catch (linkError) {
-              console.error('Error linking Stripe customer:', linkError);
-              // Don't show error to user - this is a background operation
-            }
-          }
         }
 
-        const gmailRes = await getGmailStatus();
         setStatus(prev => ({ ...prev, gmail: !!gmailRes.connected }));
 
-        const requestsRes = await fetchRecentRequests();
         const requests = requestsRes.success ? (requestsRes.requests || []) : [];
         const campaigns: Campaign[] = requests.map((req: any) => ({
           id: req.id,
           name: req.name,
           platforms: req.platforms || (Array.isArray(req.platform) ? req.platform : (req.platform ? [req.platform] : [])),
-          criteria: req.criteria || req.filters_json || {},
           status: req.status === "delivered" ? "awaiting_replies" : req.status === "in_progress" ? "outreach_running" : "searching",
           creatorsContacted: req.results_count || req.resultsCount || 0,
-          replies: 0
+          replies: 0,
+          criteria: req.criteria || req.filters_json || {}
         }));
         setRecentCampaigns(campaigns);
+
+        if (threadsRes.success && threadsRes.threads) {
+          setRecentThreads(threadsRes.threads);
+        }
 
       } catch (error) {
         console.error("Error loading dashboard data:", error);
@@ -398,23 +374,31 @@ function DashboardContent() {
               </div>
 
               <div className="bg-white rounded-2xl border-2 border-gray-100 overflow-hidden">
-                {metrics.repliesReceived > 0 ? (
+                {recentThreads.length > 0 ? (
                   <div className="divide-y divide-gray-100">
-                    {/* Simualted Recent Item */}
-                    <div className="p-5 flex gap-4 hover:bg-gray-50 transition-colors cursor-pointer border-l-4 border-transparent hover:border-black" onClick={() => router.push('/inbox')}>
-                      <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center font-bold shrink-0">
-                        AI
+                    {recentThreads.map((thread) => (
+                      <div key={thread.id} className="p-5 flex gap-4 hover:bg-gray-50 transition-colors cursor-pointer border-l-4 border-transparent hover:border-black" onClick={() => router.push('/inbox')}>
+                        <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center font-bold shrink-0">
+                          {thread.creator_email?.charAt(0).toUpperCase() || "C"}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-black truncate">
+                            {thread.last_message_from === 'user' ? 'You replied to ' : 'Reply from '}
+                            <span className="underline">{thread.creator_handle || thread.creator_email}</span>
+                          </p>
+                          <p className="text-sm text-gray-600 mt-1 truncate">
+                            {thread.last_message_from === 'user' ? 'AI Reply Sent' : 'New message received'}
+                          </p>
+                          <p className="text-[10px] text-gray-400 mt-2 uppercase tracking-wide font-bold">
+                            {thread.updated_at ? new Date(thread.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently'}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-bold text-black">AI replied to <span className="underline">Creator</span></p>
-                        <p className="text-sm text-gray-600 mt-1">"Hey, checking in on the rates..."</p>
-                        <p className="text-[10px] text-gray-400 mt-2 uppercase tracking-wide font-bold">Just now</p>
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 ) : (
                   <div className="p-8 text-center text-gray-900 font-medium text-sm">
-                    No recent replies.
+                    No recent replies found.
                   </div>
                 )}
               </div>
@@ -454,7 +438,6 @@ function DashboardContent() {
                       const newState = !aiAutopilot;
                       setAiAutopilot(newState);
                       try {
-                        const { updateUserAccount } = await import("@/lib/api-client");
                         await updateUserAccount({ ai_autopilot_enabled: newState });
                         toast.success(newState ? "Autopilot enabled" : "Autopilot disabled");
                       } catch (e) {

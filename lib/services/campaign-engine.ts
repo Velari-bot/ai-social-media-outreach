@@ -261,7 +261,7 @@ export async function runAutopilotDiscovery() {
             });
 
             // Run Discovery
-            await discoveryPipeline.discover({
+            const discoveryResult = await discoveryPipeline.discover({
                 userId,
                 filters: criteria,
                 requestedCount: remaining,
@@ -269,10 +269,38 @@ export async function runAutopilotDiscovery() {
                 campaignId: requestRef.id
             });
 
+            const foundCreators = discoveryResult.creators || [];
+            console.log(`[Autopilot] Discovery yielded ${foundCreators.length} creators.`);
+
+            // Filter for those with emails (already done in enrichment ideally, but double check)
+            const creatorsWithEmails = foundCreators.filter(c => c.email && c.email.length > 0);
+
+            if (creatorsWithEmails.length > 0) {
+                console.log(`[Autopilot] Queuing ${creatorsWithEmails.length} creators for outreach for user ${userId}...`);
+
+                const { queueCreatorsForOutreach } = await import('./outreach-queue');
+                const queueResult = await queueCreatorsForOutreach({
+                    userId,
+                    creators: creatorsWithEmails.map(c => ({
+                        creator_id: String(c.id),
+                        email: c.email!,
+                        handle: c.handle,
+                        platform: c.platform,
+                        name: c.name || c.full_name || undefined
+                    })),
+                    campaignId: requestRef.id,
+                    requestId: requestRef.id
+                });
+
+                console.log(`[Autopilot] Queued ${queueResult.queued} emails.`);
+            } else {
+                console.log(`[Autopilot] No creators with emails found to queue.`);
+            }
+
             // Update status
             await requestRef.update({
                 status: 'delivered', // Mark as done finding
-                results_count: remaining, // This is an estimate, updated by pipeline ideally
+                results_count: foundCreators.length,
                 updated_at: Timestamp.now()
             });
 

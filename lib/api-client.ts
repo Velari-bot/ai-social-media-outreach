@@ -206,6 +206,7 @@ export async function fetchAffiliateAccount() {
   return apiRequest<{ success: boolean; account: any }>('/api/affiliates/account');
 }
 
+
 /**
  * Create affiliate account
  */
@@ -213,5 +214,25 @@ export async function createAffiliateAccountApi(email: string) {
   return apiRequest<{ success: boolean; account: any }>('/api/affiliates/account', {
     method: 'POST',
     body: JSON.stringify({ email }),
+  });
+}
+
+/**
+ * Get recent email threads
+ */
+export async function fetchRecentThreads(limit: number = 5) {
+  return apiRequest<{ success: boolean; threads: any[] }>(`/api/user/threads/recent?limit=${limit}`);
+}
+
+/**
+ * Update Gmail Settings (Limits, Remove Account)
+ */
+export async function updateGmailSettings(action: 'update_limit' | 'remove_account', email: string, daily_limit?: number) {
+  const token = await getIdToken();
+  if (!token) throw new Error('Not authenticated');
+
+  return apiRequest<{ success: boolean; accounts: any[] }>('/api/gmail/update-settings', {
+    method: 'POST',
+    body: JSON.stringify({ action, email, daily_limit })
   });
 }

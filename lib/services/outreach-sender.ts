@@ -81,41 +81,83 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
         return { sent: 0, failed: emails.length };
     }
 
-    const { refresh_token } = gmailConn.data()!;
+    const connData = gmailConn.data()!;
+    let accounts: any[] = connData.accounts || [];
+
+    // Legacy fallback
+    if (accounts.length === 0 && connData.email) {
+        accounts = [{
+            email: connData.email,
+            refresh_token: connData.refresh_token,
+            access_token: connData.access_token,
+            daily_limit: 50,
+            sent_today: 0
+        }];
+    }
+
+    if (accounts.length === 0) {
+        console.error(`[Outreach Sender] No connected accounts found for user ${userId}`);
+        return { sent: 0, failed: emails.length }; // Or mark failed
+    }
 
     // Get user settings
     const settingsDoc = await db.collection('user_email_settings').doc(userId).get();
     const settings = settingsDoc.data() || {};
 
-    // Setup Gmail client (using user's connected Gmail account)
-    const oauth2Client = new google.auth.OAuth2(
-        process.env.NEXT_PUBLIC_GMAIL_CLIENT_ID,
-        process.env.GMAIL_CLIENT_SECRET
-    );
-    oauth2Client.setCredentials({ refresh_token });
-    const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
-
     // Get user data for personalization
     const userDoc = await db.collection('user_accounts').doc(userId).get();
     const userData = userDoc.data() || {};
     const userName = userData.name || userData.first_name || 'Cory';
-    const userEmail = userData.email || settings.gmail_email;
 
-    console.log(`[Outreach Sender] Sending from ${userEmail} (user's Gmail)`);
+    let sentCount = 0;
+    let failedCount = 0;
 
-    let sent = 0;
-    let failed = 0;
+    // Usage tracking map: email -> count used in this batch
+    const usageMap: Record<string, number> = {};
 
-    // Send emails one by one (credits already reserved when queued)
+    // Send emails
     for (const emailItem of emails) {
+        // Find suitable account
+        // We filter for accounts that have NOT reached their limit (considering current batch usage)
+        const availableAccounts = accounts.filter(acc => {
+            const currentUsage = (acc.sent_today || 0) + (usageMap[acc.email] || 0);
+            return currentUsage < (acc.daily_limit || 50);
+        });
+
+        if (availableAccounts.length === 0) {
+            console.warn(`[Outreach Sender] All accounts reached daily limits for user ${userId}. Skipping remaining.`);
+            break;
+        }
+
+        // Pick account with lowest usage ratio or just first one? 
+        // Let's pick the one with most remaining quota to balance it out
+        availableAccounts.sort((a, b) => {
+            const remA = (a.daily_limit || 50) - ((a.sent_today || 0) + (usageMap[a.email] || 0));
+            const remB = (b.daily_limit || 50) - ((b.sent_today || 0) + (usageMap[b.email] || 0));
+            return remB - remA; // Descending order of remaining
+        });
+
+        const selectedAccount = availableAccounts[0];
+        const sendingEmail = selectedAccount.email;
+
+        console.log(`[Outreach Sender] Selected sender: ${sendingEmail} (Limit: ${selectedAccount.daily_limit}, Used: ${(selectedAccount.sent_today || 0) + (usageMap[sendingEmail] || 0)})`);
+
         try {
-            // Generate AI email
+            // Setup Gmail Client for this account
+            const oauth2Client = new google.auth.OAuth2(
+                process.env.NEXT_PUBLIC_GMAIL_CLIENT_ID,
+                process.env.GMAIL_CLIENT_SECRET
+            );
+            oauth2Client.setCredentials({ refresh_token: selectedAccount.refresh_token });
+            const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+
+            // Generate AI email (Personalized from this specific email address)
             const emailContent = await generateOutreachEmail({
                 creatorName: emailItem.creator_name || emailItem.creator_handle,
                 creatorHandle: emailItem.creator_handle,
                 creatorPlatform: emailItem.creator_platform,
                 userName: userName,
-                userEmail: userEmail,
+                userEmail: sendingEmail, // Send from selected account
                 persona: settings.ai_persona || "Cory from Beyond Vision"
             });
 
@@ -124,8 +166,11 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
                 to: emailItem.creator_email,
                 subject: emailContent.subject,
                 body: emailContent.body,
-                userEmail: userEmail
+                userEmail: sendingEmail
             });
+
+            // Update usage stats immediately in memory
+            usageMap[sendingEmail] = (usageMap[sendingEmail] || 0) + 1;
 
             // Update queue item
             await db.collection('outreach_queue').doc(emailItem.id).update({
@@ -135,6 +180,7 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
                 gmail_message_id: result.messageId,
                 email_subject: emailContent.subject,
                 email_body: emailContent.body,
+                sent_from_email: sendingEmail, // Track which email sent it
                 updated_at: Timestamp.now()
             });
 
@@ -148,21 +194,21 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
                 last_message_at: Timestamp.now(),
                 ai_enabled: settings.ai_auto_reply_enabled !== false,
                 ai_reply_count: 0,
+                connected_account_email: sendingEmail, // Key for reply monitoring
                 gmail_labels: ['VERALITY_AI'],
                 created_at: Timestamp.now(),
                 updated_at: Timestamp.now()
             });
 
-            sent++;
-            console.log(`[Outreach Sender] ✅ Sent to ${emailItem.creator_email}`);
+            sentCount++;
+            console.log(`[Outreach Sender] ✅ Sent to ${emailItem.creator_email} via ${sendingEmail}`);
 
-            // Small delay between sends
+            // Small delay
             await new Promise(resolve => setTimeout(resolve, 2000));
 
         } catch (error: any) {
-            console.error(`[Outreach Sender] Failed to send to ${emailItem.creator_email}:`, error.message);
-
-            // Update with error
+            console.error(`[Outreach Sender] Failed to send via ${sendingEmail}:`, error.message);
+            // ... Error handling logic same as before ...
             await db.collection('outreach_queue').doc(emailItem.id).update({
                 status: emailItem.retry_count >= 2 ? 'failed' : 'scheduled',
                 retry_count: emailItem.retry_count + 1,
@@ -170,19 +216,41 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
                 scheduled_send_time: Timestamp.fromDate(new Date(Date.now() + 3600000)), // Retry in 1 hour
                 updated_at: Timestamp.now()
             });
-
-            failed++;
+            failedCount++;
         }
     }
 
-    // Update user's email tracking
+    // Update DB with new usage counts
+    // We fetch the doc again or just update based on what we know? Best to be atomic if possible, but for now simple update.
+    // We already have 'accounts' array. We map over it and update sent_today.
+
+    // Refresh the accounts list in case of race conditions? 
+    // Ideally yes, but let's just update the fields we changed.
+
+    const updatedAccounts = accounts.map(acc => {
+        if (usageMap[acc.email]) {
+            return {
+                ...acc,
+                sent_today: (acc.sent_today || 0) + usageMap[acc.email],
+                last_sent_at: new Date().toISOString()
+            };
+        }
+        return acc;
+    });
+
+    await db.collection('gmail_connections').doc(userId).update({
+        accounts: updatedAccounts,
+        updated_at: Timestamp.now()
+    });
+
+    // Update user global stats
     await db.collection('user_email_settings').doc(userId).update({
-        total_emails_sent: (settings.total_emails_sent || 0) + sent,
+        total_emails_sent: (settings.total_emails_sent || 0) + sentCount,
         last_email_sent_at: Timestamp.now(),
         updated_at: Timestamp.now()
     });
 
-    return { sent, failed };
+    return { sent: sentCount, failed: failedCount };
 }
 
 async function generateOutreachEmail(params: {

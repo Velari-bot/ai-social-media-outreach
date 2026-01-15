@@ -36,12 +36,32 @@ export async function GET(request: NextRequest) {
     }
 
     const data = gmailConnectionDoc.data()!;
+    let accounts = data.accounts || [];
+
+    // Fallback/Migration for legacy
+    if (accounts.length === 0 && data.email) {
+      accounts = [{
+        email: data.email,
+        connected: true,
+        last_sync: data.last_sync,
+        daily_limit: 50,
+        sent_today: 0
+      }];
+    }
 
     return NextResponse.json({
       success: true,
-      connected: true,
-      email: data.email,
-      lastSync: data.last_sync,
+      connected: accounts.length > 0,
+      accounts: accounts.map((a: any) => ({
+        email: a.email,
+        connected: true,
+        lastSync: a.last_sync,
+        daily_limit: a.daily_limit || 50,
+        sent_today: a.sent_today || 0
+      })),
+      // Legacy support for basic UI
+      email: accounts.length > 0 ? accounts[0].email : null,
+      lastSync: accounts.length > 0 ? accounts[0].last_sync : null,
       connectedAt: data.connected_at,
     });
   } catch (error: any) {
