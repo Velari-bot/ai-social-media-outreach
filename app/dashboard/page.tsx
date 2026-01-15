@@ -308,30 +308,30 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* Stats Grid - High Contrast */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Stats            {/* KPI Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           <StatTile
-            label="Creators Found"
-            value={metrics.totalCreatorsFound}
+            label="CREATORS FOUND"
+            value={metrics.totalCreatorsFound || 0}
             suffix="total"
             color="bg-white border-2 border-gray-100"
           />
           <StatTile
-            label="Emails Sent"
-            value={metrics.totalEmailsSent}
+            label="EMAILS SENT"
+            value={metrics.totalEmailsSent || 0}
             suffix="total"
             color="bg-white border-2 border-gray-100"
           />
           <StatTile
-            label="Active Convos"
-            value={metrics.activeConversations}
+            label="ACTIVE CONVOS"
+            value={metrics.activeConversations || 0}
             suffix="ongoing"
             color="bg-white border-2 border-blue-100"
             textColor="text-blue-900"
           />
           <StatTile
-            label="Interested"
-            value={metrics.meetingsInterested}
+            label="INTERESTED"
+            value={metrics.meetingsInterested || 0}
             suffix="leads"
             color="bg-white border-2 border-green-100"
             textColor="text-green-900"

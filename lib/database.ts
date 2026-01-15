@@ -54,12 +54,12 @@ export interface UserStats {
   total_requests: number;
   total_emails_sent: number;
   total_creators_contacted: number;
+  totalCreatorsFound?: number; // Added field
   repliesReceived?: number;
   activeConversations?: number;
   meetingsInterested?: number;
   email_used_today?: number;
   remainingQuota?: number;
-  replyRate?: number;
 }
 
 export interface AffiliateAccount {
@@ -190,9 +190,9 @@ export async function getUserStats(userId: string): Promise<UserStats> {
         .where('status', '==', 'active')
         .count()
         .get(),
+      // Fetch ALL requests to calculate total found
       db.collection('creator_requests')
         .where('user_id', '==', userId)
-        .where('created_at', '>=', Timestamp.fromDate(weekAgo))
         .get()
     ]);
 
@@ -200,20 +200,20 @@ export async function getUserStats(userId: string): Promise<UserStats> {
     const userAccount = userAccountDoc.data() || {};
     const activeConvos = threadsSnapshot.data().count;
 
-    // Requests this week
-    const weekRequests = requestsSnapshot.docs.map(doc => doc.data());
+    const allRequests = requestsSnapshot.docs.map(doc => doc.data());
+
+    // Filter for weekly stats in memory
+    const weekRequests = allRequests.filter(r => {
+      const created = r.created_at?.toDate ? r.created_at.toDate() : new Date(r.created_at);
+      return created >= weekAgo;
+    });
+
+    // Calculate total creators found across all requests
+    const totalCreatorsFound = allRequests.reduce((acc, req) => acc + (req.results_count || 0), 0);
 
     // Calculate real stats
     const totalReplies = emailSettings.total_replies_received || 0;
     const totalSent = emailSettings.total_emails_sent || userAccount.email_used_today || 0;
-
-    // For meetings interested, we might check for a specific tag or status in threads
-    // For now, we can approximate it based on replies that didn't get closed immediately, or add a specific field later.
-    // Let's check if we track specific "interested" status anywhere. 
-    // Currently reply-monitor tracks phone numbers extracted, which implies interest.
-    // We can query threads with extracted phone numbers if we want deeper accuracy, but for now let's assume active threads with > 1 reply from user are interested?
-    // Actually, let's keep it simple: Active Conversations are a good proxy for Interest.
-    // Or we can query threads where phone_number is set (High Intent).
 
     let meetingsInterested = 0;
     try {
@@ -224,18 +224,18 @@ export async function getUserStats(userId: string): Promise<UserStats> {
         .get();
       meetingsInterested = interestedSnapshot.data().count;
     } catch (e) {
-      // field might not exist on all docs
       meetingsInterested = 0;
     }
 
-    const stats: any = {
+    const stats: UserStats = {
       requests_this_week: weekRequests.length,
-      emails_sent_this_week: 0, // We don't track weekly specifically in settings, but we can leave 0 or approximate
+      emails_sent_this_week: 0,
       creators_contacted: totalSent,
-      replyRate: totalSent > 0 ? ((totalReplies / totalSent) * 100).toFixed(1) : 0,
-      total_requests: 0, // We didn't fetch all requests, but that's fine
+      replyRate: totalSent > 0 ? parseFloat(((totalReplies / totalSent) * 100).toFixed(1)) : 0,
+      total_requests: allRequests.length,
       total_emails_sent: totalSent,
       total_creators_contacted: totalSent,
+      totalCreatorsFound: totalCreatorsFound, // Mapped correctly
       repliesReceived: totalReplies,
       activeConversations: activeConvos,
       meetingsInterested: meetingsInterested,
@@ -256,6 +256,7 @@ export async function getUserStats(userId: string): Promise<UserStats> {
       total_requests: 0,
       total_emails_sent: 0,
       total_creators_contacted: 0,
+      totalCreatorsFound: 0,
       repliesReceived: 0,
       activeConversations: 0,
       meetingsInterested: 0
