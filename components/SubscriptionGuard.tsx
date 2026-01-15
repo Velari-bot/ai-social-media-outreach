@@ -45,8 +45,8 @@ function SubscriptionGuardContent({ children }: SubscriptionGuardProps) {
                 const res = await fetchUserAccount();
                 if (res.success && res.account) {
                     const plan = res.account.plan;
-                    // Allow all paid plans
-                    const paidPlans = ["basic", "pro", "growth", "scale", "enterprise"];
+                    // Allow all paid plans including testing and custom
+                    const paidPlans = ["basic", "pro", "growth", "scale", "enterprise", "testing", "custom_no_email"];
                     const isActive = paidPlans.includes(plan?.toLowerCase());
                     setHasSubscription(isActive);
 
