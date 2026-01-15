@@ -110,9 +110,9 @@ export default function SignupPage() {
               Start finding <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">top creators</span> in seconds.
             </h2>
             <div className="flex -space-x-3">
-              {[1, 2, 3, 4].map((i) => (
+              {['/charli.jpg', '/dude.jpg', '/kim.jpg', '/mkbhd.jpg', '/mr-beast.jpg'].map((src, i) => (
                 <div key={i} className="w-10 h-10 rounded-full border-2 border-white bg-gray-200 overflow-hidden shadow-sm">
-                  <img src={`/mr-beast.jpg`} alt="Creator" className="w-full h-full object-cover" />
+                  <img src={src} alt="Creator" className="w-full h-full object-cover" />
                 </div>
               ))}
               <div className="w-10 h-10 rounded-full border-2 border-white bg-black flex items-center justify-center text-[10px] text-white font-bold shadow-sm">

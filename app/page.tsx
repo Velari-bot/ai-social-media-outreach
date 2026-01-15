@@ -288,10 +288,11 @@ export default function Home() {
               <div className="flex gap-4">
                 <div className="flex -space-x-3">
                   {[
-                    "/mr-beast.jpg",
-                    "/mkbhd.jpg",
+                    "/charli.jpg",
+                    "/dude.jpg",
                     "/kim.jpg",
-                    "/dude.jpg"
+                    "/mkbhd.jpg",
+                    "/mr-beast.jpg"
                   ].map((src, i) => (
                     <div key={i} className="w-10 h-10 rounded-full border-2 border-[#1A1A1A] overflow-hidden">
                       <img src={src} alt="User" className="w-full h-full object-cover" />
