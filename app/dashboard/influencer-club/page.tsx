@@ -149,7 +149,7 @@ export default function InfluencerClubDashboard() {
         if (creators.length === 0) return;
 
         // Create CSV headers
-        const headers = ["Name", "Handle", "Platform", "Followers", "Engagement Rate", "Location", "Country"];
+        const headers = ["Name", "Handle", "Platform", "Followers", "Engagement Rate", "Location", "Country", "Profile Link"];
 
         // Create CSV rows
         const rows = creators.map(c => [
@@ -159,13 +159,14 @@ export default function InfluencerClubDashboard() {
             c.followers || 0,
             c.engagementRate ? `${(c.engagementRate * 100).toFixed(2)}%` : "",
             c.location || "",
-            c.country || ""
+            c.country || "",
+            c.profileUrl || ""
         ]);
 
         // Combine headers and rows
         const csvContent = [
             headers.join(","),
-            ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+            ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
         ].join("\n");
 
         // Create blob and download

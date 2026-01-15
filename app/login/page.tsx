@@ -32,8 +32,28 @@ export default function LoginPage() {
               console.log("User account found:", accountResponse.account);
               router.push("/dashboard");
             } else {
-              // Account does not exist
-              toast.error("Account not found. Please contact sales to get access.");
+              // Auto-create account for Google users
+              console.log("Creating new account for Google user (redirect)...");
+              const token = await user.getIdToken();
+              const createRes = await fetch('/api/user/create-account', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  email: user.email,
+                  name: user.displayName
+                })
+              });
+
+              const createData = await createRes.json();
+              if (createData.success) {
+                toast.success("Account created!");
+                router.push("/dashboard");
+              } else {
+                toast.error("Account not found. Please sign up.");
+              }
             }
           } catch (error: any) {
             console.error("Error finding/accessing account:", error);
@@ -128,9 +148,28 @@ export default function LoginPage() {
             console.log("User account found:", accountResponse.account);
             router.push("/dashboard");
           } else {
-            // User authed with Google but no DB account found
-            toast.error("Account not found. Please contact sales to get access.");
-            // Optionally sign them out immediately
+            // Auto-create account for Google users
+            console.log("Creating new account for Google user...");
+            const token = await user.getIdToken();
+            const createRes = await fetch('/api/user/create-account', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                email: user.email,
+                name: user.displayName
+              })
+            });
+
+            const createData = await createRes.json();
+            if (createData.success) {
+              toast.success("Account created!");
+              router.push("/dashboard");
+            } else {
+              toast.error("Account not found. Please contact sales to get access.");
+            }
           }
         } catch (error: any) {
           console.error("Error finding/accessing account:", error);
@@ -328,8 +367,8 @@ export default function LoginPage() {
             {/* Footer Text */}
             <p className="mt-5 text-xs text-gray-500 text-center">
               Don&apos;t have an account?{" "}
-              <Link href="/book" className="text-blue-600 underline">Book a demo</Link>
-              {" "}to get access.
+              <Link href="/signup" className="text-blue-600 underline">Sign up here</Link>
+              {" "}to get started.
             </p>
             <div className="mt-4 flex gap-4 justify-center text-[10px] text-gray-400">
               <Link href="/tos" className="hover:text-gray-600">Terms of Service</Link>

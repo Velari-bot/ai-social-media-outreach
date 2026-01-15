@@ -153,10 +153,10 @@ function NavbarContent() {
                     Log in
                   </Link>
                   <Link
-                    href="/book"
+                    href="/signup"
                     className="px-6 py-3 bg-black text-white rounded-full font-bold text-sm hover:bg-gray-800 transition-all hover:scale-105"
                   >
-                    Book a call
+                    Get Started
                   </Link>
                 </>
               )}
@@ -201,7 +201,7 @@ function NavbarContent() {
               <Link href="/pricing" onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium text-black">Pricing</Link>
               <Link href="/docs" onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium text-black">Docs</Link>
               <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="p-4 hover:bg-gray-50 rounded-xl font-medium text-black">Log in</Link>
-              <Link href="/book" onClick={() => setMobileMenuOpen(false)} className="p-4 bg-black text-white rounded-xl font-bold text-center mt-2">Book a call</Link>
+              <Link href="/signup" onClick={() => setMobileMenuOpen(false)} className="p-4 bg-black text-white rounded-xl font-bold text-center mt-2">Get Started</Link>
             </>
           )}
         </div>

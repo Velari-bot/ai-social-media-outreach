@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       email: email || decodedToken.email || '',
       name: name || '',
       plan: 'free',
-      email_quota_daily: 0,
+      email_quota_daily: 100,
       email_quota_monthly: 3000,
       email_used_today: 0,
       email_used_this_month: 0,

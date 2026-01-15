@@ -265,20 +265,53 @@ function CreatorRequestContent() {
 
   const handleExportCSV = () => {
     if (!searchResults || searchResults.length === 0) return;
-    const headers = ["Handle", "Platform", "Followers", "Email", "Status"];
+
+    const headers = [
+      "Name",
+      "Handle",
+      "Platform",
+      "Followers",
+      "Avg Views",
+      "Engagement Rate",
+      "Location",
+      "Email",
+      "Phone",
+      "Profile Link",
+      "Website",
+      "Niche",
+      "Bio",
+      "Enrichment Status"
+    ];
+
+    const escapeCSV = (val: any) => {
+      if (val === null || val === undefined) return '""';
+      const s = String(val).replace(/"/g, '""');
+      return `"${s}"`;
+    };
+
     const rows = searchResults.map(c => [
-      c.handle,
-      c.platform,
-      c.followers,
-      c.email || "Pending",
-      c.enrichment_status || "processing"
+      escapeCSV(c.full_name || c.name || ""),
+      escapeCSV(c.handle || ""),
+      escapeCSV(c.platform || ""),
+      c.followers || 0,
+      c.avg_views || 0,
+      escapeCSV(c.engagement_rate || ""),
+      escapeCSV(c.location || ""),
+      escapeCSV(c.email || ""),
+      escapeCSV(c.phone || ""),
+      escapeCSV(getPlatformUrl(c.platform, c.handle)),
+      escapeCSV(c.website || ""),
+      escapeCSV(c.niche || ""),
+      escapeCSV(c.bio || ""),
+      escapeCSV(c.enrichment_status || "pending")
     ]);
 
-    const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `creators_${niche}_${new Date().getTime()}.csv`);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `creators_${niche || 'search'}_${new Date().getTime()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

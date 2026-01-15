@@ -42,7 +42,7 @@ export default function Home() {
 
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center animate-in fade-in slide-in-from-bottom-6 duration-700 delay-300">
           <Link
-            href="/book"
+            href="/signup"
             className="px-10 py-4 bg-black text-white rounded-full hover:bg-gray-800 hover:scale-105 transition-all font-bold text-lg shadow-xl shadow-black/10 flex items-center gap-2"
           >
             Start Outreach Free <span className="text-white/60">→</span>
@@ -341,8 +341,11 @@ export default function Home() {
           <div className="relative z-10 max-w-3xl mx-auto">
             <h2 className="text-5xl md:text-7xl font-[850] mb-8 tracking-tighter">Ready to automate your growth?</h2>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Link href="/book" className="px-10 py-5 bg-white text-black rounded-full hover:bg-gray-100 font-bold text-xl shadow-xl hover:scale-105 transition-all">
-                Book a Demo Call
+              <Link href="/signup" className="px-10 py-5 bg-white text-black rounded-full hover:bg-gray-100 font-bold text-xl shadow-xl hover:scale-105 transition-all">
+                Get Started Free
+              </Link>
+              <Link href="/book" className="px-10 py-5 bg-transparent border-2 border-white/20 text-white rounded-full hover:bg-white/10 font-bold text-xl transition-all">
+                Talk to Sales
               </Link>
             </div>
             <p className="mt-8 text-white/40 text-sm font-medium">
