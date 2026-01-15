@@ -414,6 +414,22 @@ function CreatorRequestContent() {
                 </div>
               </form>
             </div>
+
+            {userAccount && (
+              <div className="mt-4 px-2">
+                <div className="flex items-center justify-between text-xs font-bold text-gray-500 mb-1">
+                  <span>Daily Credits</span>
+                  <span>{remainingQuota} / {userAccount.email_quota_daily}</span>
+                </div>
+                <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-black rounded-full transition-all duration-500"
+                    style={{ width: `${(remainingQuota / userAccount.email_quota_daily) * 100}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1.5 text-center">Resets daily at midnight UTC</p>
+              </div>
+            )}
           </div>
 
           {/* RIGHT: Results Area */}

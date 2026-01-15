@@ -92,18 +92,24 @@ function CreatorRequestContent() {
       ]);
 
       if (accountRes.success) {
-        const account = accountRes.account;
-        setUserAccount(account);
-
-        // PLAN CHECK: If you want to restrict this page to only "custom_no_email"
-        // Uncomment the below logic. For now, it's open to verify layout.
-        if (account.plan !== 'custom_no_email' && account.plan !== 'testing' && account.plan !== 'enterprise' && account.role !== 'admin') {
-          // Uncommenting this line enforces the restriction
-          // toast.error("This feature is not included in your plan.");
-          // router.push('/dashboard');
-        }
+        setUserAccount(accountRes.account);
+        // ... plan checks ...
       }
       if (requestsRes.success) setRecentRequests(requestsRes.requests || []);
+
+      // LOAD ALL ACCUMULATED CREATORS
+      try {
+        const token = await user.getIdToken();
+        const allRes = await fetch('/api/creators/all', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const allData = await allRes.json();
+        if (allData.success) {
+          setSearchResults(allData.creators || []);
+        }
+      } catch (e) {
+        console.error("Failed to load accumulated creators", e);
+      }
     }
     init();
   }, []);
@@ -462,6 +468,12 @@ function CreatorRequestContent() {
                     </h3>
                   </div>
                   <div className="flex gap-2 w-full sm:w-auto">
+                    <button
+                      onClick={handleRefreshAll}
+                      className="text-xs font-medium bg-white border border-gray-200 px-4 py-2 rounded-lg hover:bg-gray-50 text-blue-600 flex items-center gap-1.5 shadow-sm"
+                    >
+                      <Loader2 className="h-3.5 w-3.5" /> Refresh Emails
+                    </button>
                     <button
                       onClick={() => setSearchResults(null)}
                       className="text-xs font-medium bg-white border border-gray-200 px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-600"
