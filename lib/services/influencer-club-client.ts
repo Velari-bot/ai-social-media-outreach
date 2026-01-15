@@ -113,6 +113,9 @@ export class InfluencerClubClient {
             // --- CLIENT-SIDE POST-FILTERING ---
             // Because standardizing location filters is hard, we enforce it here if provided.
 
+            /* 
+            // CLIENT-SIDE LOCATION FILTERING REMOVED 
+            // Relying on API to handle location filtering to avoid dropping valid results (e.g. "New York" vs "United States")
             if (locationFilter) {
                 const targetLoc = locationFilter.toLowerCase();
                 const beforeCount = mapped.length;
@@ -126,6 +129,7 @@ export class InfluencerClubClient {
                 });
                 console.log(`[InfluencerClub:${requestId}] Location Filter ("${locationFilter}"): ${beforeCount} -> ${mapped.length}`);
             }
+            */
 
             if (minAvgViews > 0) {
                 const beforeCount = mapped.length;
