@@ -279,7 +279,7 @@ function DashboardContent() {
               {getTimeGreeting()}, {userName || userEmail?.split('@')[0]}
             </h1>
             <p className="text-lg text-black font-medium flex items-center gap-2">
-              Your automated outreach is <span className="font-bold text-green-600">active</span>.
+              Your automated outreach is {aiAutopilot ? <span className="font-bold text-green-600">active</span> : <span className="font-bold text-orange-600">paused (Enable Autopilot)</span>}.
               <Link
                 href="/settings"
                 className="inline-flex items-center gap-1.5 px-3 py-1 bg-white rounded-full text-xs font-black text-black border border-gray-200 shadow-sm uppercase tracking-widest hover:bg-gray-50 transition-colors group"
@@ -534,11 +534,11 @@ function DashboardContent() {
                                 <div className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">
                                   {(c.platform || viewingCampaign.platforms?.[0]) === 'youtube' ? 'Subscribers' : 'Followers'}
                                 </div>
-                                <div className="text-2xl font-black text-blue-900">{Number(c.followers) > 0 ? new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(c.followers) : "N/A"}</div>
+                                <div className="text-2xl font-black text-blue-900">{(Number(c.followers) > 0 || c.followers === 0) ? new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(c.followers) : "N/A"}</div>
                               </div>
                               <div className="p-4 bg-gradient-to-br from-green-50 to-green-100/50 rounded-2xl border border-green-200/50">
                                 <div className="text-xs font-bold text-green-600 uppercase tracking-wider mb-1">Engagement</div>
-                                <div className="text-2xl font-black text-green-900">{(Number(c.engagement_rate) * 100) > 0 ? `${(Number(c.engagement_rate) * 100).toFixed(1)}%` : "N/A"}</div>
+                                <div className="text-2xl font-black text-green-900">{(Number(c.engagement_rate) * 100 >= 0) ? `${(Number(c.engagement_rate) * 100).toFixed(1)}%` : "N/A"}</div>
                               </div>
                             </div>
 

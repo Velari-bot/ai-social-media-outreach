@@ -27,16 +27,29 @@ export async function sendScheduledEmails() {
 
     const now = Timestamp.now();
 
-    // Get all emails scheduled to be sent now or earlier
-    const queueSnapshot = await db.collection('outreach_queue')
+    // Get all emails in scheduled status
+    // Filter by time in memory to avoid needing a composite index
+    const snapshot = await db.collection('outreach_queue')
         .where('status', '==', 'scheduled')
-        .where('scheduled_send_time', '<=', now)
-        .limit(50) // Process 50 at a time
+        .limit(200) // Fetch a larger batch to filter
         .get();
 
-    console.log(`[Outreach Sender] Found ${queueSnapshot.size} emails to send`);
+    const emailsToSend = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter((d: any) => {
+            const sendTime = d.scheduled_send_time?.toDate?.() || new Date(d.scheduled_send_time);
+            return sendTime <= now.toDate();
+        })
+        .sort((a: any, b: any) => {
+            const timeA = a.scheduled_send_time?.toDate?.() || new Date(a.scheduled_send_time);
+            const timeB = b.scheduled_send_time?.toDate?.() || new Date(b.scheduled_send_time);
+            return timeA.getTime() - timeB.getTime();
+        })
+        .slice(0, 50); // Process 50 at a time
 
-    if (queueSnapshot.empty) {
+    console.log(`[Outreach Sender] Found ${emailsToSend.length} emails ready to send (from ${snapshot.size} scheduled)`);
+
+    if (emailsToSend.length === 0) {
         return { sent: 0, failed: 0 };
     }
 
@@ -46,12 +59,11 @@ export async function sendScheduledEmails() {
     // Group by user to batch process
     const emailsByUser = new Map<string, any[]>();
 
-    queueSnapshot.docs.forEach(doc => {
-        const data = doc.data();
+    emailsToSend.forEach((data: any) => {
         if (!emailsByUser.has(data.user_id)) {
             emailsByUser.set(data.user_id, []);
         }
-        emailsByUser.get(data.user_id)!.push({ id: doc.id, ...data });
+        emailsByUser.get(data.user_id)!.push(data);
     });
 
     // Process each user's emails

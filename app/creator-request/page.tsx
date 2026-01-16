@@ -127,12 +127,11 @@ function CreatorRequestContent() {
       });
 
       if (res.success) {
-        toast.success("Request sent!");
         if (res.creators && res.creators.length > 0) {
           setSearchResults(res.creators);
           toast.success(`${res.creators.length} creators found!`);
         } else {
-          toast.error("No creators found. Try adjusting your filters.");
+          toast.error("No creators found matching those filters. Try broadening your search!", { duration: 5000 });
         }
         fetchUserAccount().then(r => r.success && setUserAccount(r.account));
         fetchRecentRequests().then(r => r.success && setRecentRequests(r.requests || []));
@@ -539,12 +538,12 @@ function CreatorRequestContent() {
                             {getPlatformIcon(c.platform)}
                           </div>
                           <div className="text-xs text-gray-500 truncate flex items-center gap-1">
-                            <a href={getPlatformUrl(c.platform, c.handle)} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors flex items-center gap-0.5">
-                              @{c.handle?.replace(/^@+/, "")}
+                            <a href={getPlatformUrl(c.platform || "instagram", c.handle)} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors flex items-center gap-0.5">
+                              @{String(c.handle || "").replace(/^@+/, "")}
                               <ExternalLink className="h-2.5 w-2.5" />
                             </a>
                             <span className="mx-1">•</span>
-                            <span>{new Intl.NumberFormat('en-US', { notation: "compact" }).format(c.followers)} Followers</span>
+                            <span>{new Intl.NumberFormat('en-US', { notation: "compact" }).format(c.followers || 0)} Followers</span>
                           </div>
                           {!isEnriched && (
                             <button onClick={() => handleRefreshEnrichment(c.id)} className="mt-2 text-[10px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded">
