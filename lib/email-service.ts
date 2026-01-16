@@ -187,3 +187,48 @@ export async function sendBookingEmails(booking: BookingDetails & { start: Date,
         }
     }
 }
+
+export async function sendBookingCancellationEmail(booking: { name: string, email: string, date: string, time: string }) {
+    console.log(`[Email] Sending cancellation email to ${booking.email}...`);
+
+    const html = `
+        <div style="font-family: sans-serif; color: #333; max-width: 600px;">
+            <h1>Booking Cancelled</h1>
+            <p>Hi ${booking.name},</p>
+            <p>Your call scheduled for <strong>${booking.date}</strong> at <strong>${booking.time}</strong> has been cancelled.</p>
+            <p>If you have any questions or would like to reschedule, please feel free to reach out.</p>
+            <p>Best,<br>Aiden</p>
+        </div>
+    `;
+
+    await sendViaGmailApi(
+        booking.email,
+        'Booking Cancelled: Call with Verality',
+        `Hi ${booking.name}, Your call for ${booking.date} at ${booking.time} has been cancelled.`,
+        html
+    );
+}
+
+export async function sendBookingUpdateEmail(booking: { name: string, email: string, date: string, time: string, status: string }) {
+    console.log(`[Email] Sending status update email to ${booking.email}...`);
+
+    const statusText = booking.status.charAt(0).toUpperCase() + booking.status.slice(1);
+
+    const html = `
+        <div style="font-family: sans-serif; color: #333; max-width: 600px;">
+            <h1>Booking Update</h1>
+            <p>Hi ${booking.name},</p>
+            <p>There has been an update to your booking for <strong>${booking.date}</strong> at <strong>${booking.time}</strong>.</p>
+            <p>New Status: <strong>${statusText}</strong></p>
+            <p>If this was unexpected, please reach out to us.</p>
+            <p>Best,<br>Aiden</p>
+        </div>
+    `;
+
+    await sendViaGmailApi(
+        booking.email,
+        `Booking Update: ${statusText}`,
+        `Hi ${booking.name}, Your booking for ${booking.date} at ${booking.time} status is now: ${statusText}`,
+        html
+    );
+}
