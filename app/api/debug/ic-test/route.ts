@@ -152,5 +152,43 @@ export async function GET(request: NextRequest) {
         });
     }
 
+    // TEST 5: Broad Search (Empty Niche)
+    try {
+        console.log("--- TEST 5: Broad Search (Empty Niche) ---");
+        const body = {
+            platform: platform,
+            limit: 5,
+            offset: 0,
+            filters: {
+                min_followers: 10000,
+                max_followers: 500000
+            }
+        };
+
+        const res = await fetch('https://api-dashboard.influencers.club/public/v1/discovery/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': process.env.INFLUENCER_CLUB_API_KEY || ''
+            },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        results.tests.push({
+            name: "Broad Search (Empty Niche)",
+            sentBody: body,
+            status: res.status,
+            total: data.total,
+            accountsCount: data?.accounts?.length,
+            sample: data?.accounts?.[0]?.profile?.username
+        });
+    } catch (e: any) {
+        results.tests.push({
+            name: "Broad Search (Empty Niche)",
+            status: "error",
+            error: e.toString()
+        });
+    }
+
     return NextResponse.json(results);
 }

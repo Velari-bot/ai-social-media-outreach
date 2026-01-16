@@ -51,11 +51,18 @@ export class InfluencerClubClient {
         const locationFilter = params.filters.location || params.filters.country || null;
         const minAvgViews = Number(params.filters.min_avg_views || 0);
 
+        // Calculate page from offset
+        const limit = params.limit || 50;
+        const offset = params.offset || 0;
+        const page = Math.floor(offset / limit);
+
         // Build base payload
         const body: any = {
             platform: params.platform.toLowerCase(),
-            limit: params.limit || 50,
-            offset: params.offset || 0,
+            paging: {
+                limit: limit,
+                page: page
+            },
             filters: {
                 min_followers: minFollowers,
                 max_followers: maxFollowers
@@ -64,7 +71,8 @@ export class InfluencerClubClient {
 
         // Add location if present (Attempting multiple keys to increase hit rate)
         if (locationFilter) {
-            body.filters.location = locationFilter;
+            // API expects a list for location
+            body.filters.location = Array.isArray(locationFilter) ? locationFilter : [locationFilter];
         }
 
         // Add platform-specific filters
@@ -72,7 +80,7 @@ export class InfluencerClubClient {
 
         if (cleanNiche && cleanNiche.trim().length > 0) {
             if (platform === 'instagram' || platform === 'tiktok') {
-                body.filters.keywords_in_bio = cleanNiche.toLowerCase();
+                body.filters.keywords_in_bio = [cleanNiche.toLowerCase()];
             } else if (platform === 'youtube') {
                 body.filters.topics = [cleanNiche];
             }
