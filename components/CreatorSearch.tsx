@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, Loader2, Instagram, Youtube, Lock, User } from "lucide-react";
+import { Search, Loader2, Instagram, Youtube, Lock, User, HelpCircle } from "lucide-react";
 import Link from "next/link";
 
 interface CreatorResult {
@@ -103,51 +103,16 @@ export default function CreatorSearch() {
                         <div className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
                             Best Match
                         </div>
-                        {results.map((creator) => (
-                            <Link
-                                href="/signup"
+                        {results.slice(0, 3).map((creator) => (
+                            <CreatorResultItem
                                 key={creator.id}
-                                className="block px-4 py-3 hover:bg-gray-50 transition-colors group border-b border-gray-50 last:border-0"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden border border-gray-200 shrink-0">
-                                            <img
-                                                src={creator.picture}
-                                                alt={creator.name}
-                                                className="w-full h-full object-cover"
-                                                onError={(e) => {
-                                                    (e.target as HTMLImageElement).src = "/placeholder-user.jpg";
-                                                }}
-                                            />
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="font-bold text-gray-900">{creator.name}</span>
-                                                {creator.platform && (
-                                                    <span className="p-1 bg-gray-100 rounded-full">
-                                                        {getPlatformIcon(creator.platform)}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="text-sm text-gray-500 font-medium">@{creator.handle}</div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-right hidden sm:block">
-                                            <div className="text-sm font-bold text-gray-900">{formatNumber(creator.followers)}</div>
-                                            <div className="text-xs text-gray-400">Followers</div>
-                                        </div>
-                                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 group-hover:bg-[#6B4BFF] group-hover:text-white transition-all">
-                                            <Lock className="w-4 h-4" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </Link>
+                                creator={creator}
+                                formatNumber={formatNumber}
+                                getPlatformIcon={getPlatformIcon}
+                            />
                         ))}
                         <Link href="/signup" className="block px-4 py-3 text-center bg-gray-50 hover:bg-gray-100 text-[#6B4BFF] font-bold text-sm transition-colors">
-                            View {results.length}+ more results
+                            View all {results.length} results
                         </Link>
                     </div>
                 </div>
@@ -156,10 +121,67 @@ export default function CreatorSearch() {
             {showResults && results.length === 0 && query.length >= 2 && !isLoading && (
                 <div className="absolute mt-2 w-full bg-white rounded-2xl shadow-2xl border border-gray-100 p-8 text-center animate-in fade-in slide-in-from-top-2 duration-200">
                     <Link href="/signup" className="text-gray-500 font-medium hover:text-[#6B4BFF] transition-colors">
-                        Be the first one to search for this creator in our website
+                        Be the first one to find that person today
                     </Link>
                 </div>
             )}
         </div>
+    );
+}
+
+function CreatorResultItem({
+    creator,
+    formatNumber,
+    getPlatformIcon
+}: {
+    creator: CreatorResult;
+    formatNumber: (n: number) => string;
+    getPlatformIcon: (p: string) => JSX.Element;
+}) {
+    const [imgError, setImgError] = useState(false);
+
+    return (
+        <Link
+            href="/signup"
+            className="block px-4 py-3 hover:bg-gray-50 transition-colors group border-b border-gray-50 last:border-0"
+        >
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden border border-gray-200 shrink-0 flex items-center justify-center">
+                        {!imgError && creator.picture ? (
+                            <img
+                                src={creator.picture}
+                                alt={creator.name}
+                                className="w-full h-full object-cover"
+                                onError={() => setImgError(true)}
+                            />
+                        ) : (
+                            <HelpCircle className="w-5 h-5 text-gray-400" />
+                        )}
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-gray-900">{creator.name}</span>
+                            {creator.platform && (
+                                <span className="p-1 bg-gray-100 rounded-full">
+                                    {getPlatformIcon(creator.platform)}
+                                </span>
+                            )}
+                        </div>
+                        <div className="text-sm text-gray-500 font-medium">@{creator.handle.replace(/^@/, '')}</div>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                    <div className="text-right hidden sm:block">
+                        <div className="text-sm font-bold text-gray-900">{formatNumber(creator.followers)}</div>
+                        <div className="text-xs text-gray-400">Followers</div>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 group-hover:bg-[#6B4BFF] group-hover:text-white transition-all">
+                        <Lock className="w-4 h-4" />
+                    </div>
+                </div>
+            </div>
+        </Link>
     );
 }
