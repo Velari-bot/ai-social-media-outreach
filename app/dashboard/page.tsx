@@ -9,7 +9,7 @@ import toast from "react-hot-toast";
 import Navbar from "@/components/Navbar";
 import DemoDashboard from "@/components/demo/DemoDashboard";
 import SubscriptionGuard from "@/components/SubscriptionGuard";
-import { Eye, X, ExternalLink, Youtube, Instagram, Music, Globe, Mail, MapPin, Users, Info, Loader2 } from "lucide-react";
+import { Eye, X, ExternalLink, Youtube, Instagram, Music, Globe, Mail, MapPin, Users, Info, Loader2, Download } from "lucide-react";
 
 interface DashboardMetrics {
   repliesReceived: number;
@@ -254,6 +254,77 @@ function DashboardContent() {
     }
   };
 
+  const downloadCreatorsCSV = (creators: any[], filename: string) => {
+    if (!creators || creators.length === 0) {
+      toast.error("No creators to download");
+      return;
+    }
+
+    // Define headers
+    const headers = ["Name", "Handle", "Platform", "Email", "Followers", "Engagement Rate", "Location", "Profile URL"];
+
+    // Create CSV content
+    const csvContent = [
+      headers.join(","),
+      ...creators.map(c => {
+        const row = [
+          `"${(c.name || c.fullname || "").replace(/"/g, '""')}"`,
+          `"${(c.handle || c.username || "").replace(/"/g, '""')}"`,
+          `"${(c.platform || "").replace(/"/g, '""')}"`,
+          `"${(c.email || "").replace(/"/g, '""')}"`,
+          `"${c.followers || 0}"`,
+          `"${(typeof c.engagement_rate === 'number' ? (c.engagement_rate * 100).toFixed(2) : c.engagement_rate) || 0}%"`,
+          `"${(c.location || "").replace(/"/g, '""')}"`,
+          `"${getPlatformUrl(c.platform, c.handle || c.username)}"`
+        ];
+        return row.join(",");
+      })
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${filename}.csv`);
+    link.style.visibility = "hidden";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success(`Downloaded ${creators.length} creators`);
+  };
+
+  const handleDownloadAll = async () => {
+    const toastId = toast.loading("Preparing all creators download...");
+
+    try {
+      const user = await getCurrentUser();
+      const token = await user?.getIdToken();
+
+      const res = await fetch(`/api/user/requests/results/export-all`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await res.json();
+
+      if (data.success && data.creators) {
+        downloadCreatorsCSV(data.creators, `all-creators-export-${new Date().toISOString().split('T')[0]}`);
+        toast.dismiss(toastId);
+      } else {
+        toast.error("Failed to fetch all creators", { id: toastId });
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Error downloading all creators", { id: toastId });
+    }
+  };
+
   const getTimeGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
@@ -293,15 +364,23 @@ function DashboardContent() {
             </p>
           </div>
           <div className="flex gap-3 items-center">
-            <div className="px-4 py-2 bg-white rounded-xl border-2 border-gray-100 shadow-sm">
-              <div className="text-xs font-bold text-gray-400 uppercase tracking-wide">Credits</div>
-              <div className="text-lg font-black text-black">
-                {metrics.creditsRemaining.toLocaleString()} <span className="text-gray-400 text-sm font-medium">/ {metrics.totalCredits.toLocaleString()}</span>
+            <button
+              onClick={handleDownloadAll}
+              className="px-4 py-2.5 bg-white text-black border-2 border-gray-200 rounded-xl font-bold hover:bg-gray-50 transition-all hover:scale-105 active:scale-95 shadow-sm flex items-center gap-2 h-[46px]"
+              title="Download All Creators (CSV)"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Export All</span>
+            </button>
+            <div className="px-5 py-2 bg-white rounded-xl border-2 border-gray-100 shadow-sm h-[46px] flex flex-col justify-center min-w-[140px]">
+              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Credits</div>
+              <div className="text-base font-black text-black leading-none whitespace-nowrap">
+                {metrics.creditsRemaining.toLocaleString()} <span className="text-gray-300 font-medium">/ {metrics.totalCredits.toLocaleString()}</span>
               </div>
             </div>
             <Link
               href="/creator-request"
-              className="px-6 py-3 bg-black text-white rounded-xl font-bold hover:bg-gray-800 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-black/10 flex items-center gap-2"
+              className="px-6 py-2.5 bg-black text-white rounded-xl font-bold hover:bg-gray-800 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-black/10 flex items-center gap-2 h-[46px]"
             >
               <span>+ New Campaign</span>
             </Link>
@@ -495,12 +574,21 @@ function DashboardContent() {
                   </div>
                 </div>
               </div>
-              <button
-                onClick={() => setViewingCampaign(null)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-black"
-              >
-                <X className="w-6 h-6" />
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => downloadCreatorsCSV(viewingCreators, `${viewingCampaign.name}-export`)}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-black text-sm font-bold rounded-xl transition-colors flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  <span className="hidden sm:inline">Export CSV</span>
+                </button>
+                <button
+                  onClick={() => setViewingCampaign(null)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-black"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
             </div>
 
             {/* Content Area */}
