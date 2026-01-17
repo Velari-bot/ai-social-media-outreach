@@ -3,7 +3,6 @@
 
 import React from "react";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import Image from "next/image";
 
 export default function DocsPage() {
@@ -12,210 +11,255 @@ export default function DocsPage() {
             <Navbar />
 
             <main className="flex-grow pt-32 pb-20 px-4 sm:px-6">
-                <div className="max-w-4xl mx-auto space-y-12">
+                <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-12">
 
-                    {/* Header */}
-                    <div className="text-center space-y-4">
-                        <h1 className="text-4xl sm:text-5xl font-black text-black tracking-tight">
-                            Documentation &amp; Setup
-                        </h1>
-                        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                            A comprehensive guide to configuring Verality, connecting your accounts, and launching your first outreach campaign.
-                        </p>
-                    </div>
-
-                    <div className="w-full h-px bg-gray-200" />
-
-                    {/* Table of Contents */}
-                    <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-                        <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Links</h3>
-                        <ul className="space-y-2">
-                            <li>
-                                <a href="#gmail-connection" className="text-blue-600 hover:text-blue-800 font-medium underline">
-                                    1. Connecting Gmail (Google OAuth)
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#creating-campaigns" className="text-blue-600 hover:text-blue-800 font-medium underline">
-                                    2. Creating Creator Requests
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#managing-replies" className="text-blue-600 hover:text-blue-800 font-medium underline">
-                                    3. Managing Inbox &amp; Replies
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#faq" className="text-blue-600 hover:text-blue-800 font-medium underline">
-                                    4. Frequently Asked Questions
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    {/* Section 1: Gmail Connection */}
-                    <section id="gmail-connection" className="space-y-6">
-                        <div className="flex items-center gap-3">
-                            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-black text-white font-bold text-sm">1</span>
-                            <h2 className="text-3xl font-bold text-black">Connecting Gmail</h2>
-                        </div>
-
-                        <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm prose max-w-none text-gray-700">
-                            <p>
-                                To allow Verality to send emails on your behalf, you need to connect your Gmail account securely via Google OAuth.
-                                Because Verality interacts with sensitive scopes (sending emails, reading replies), Google requires a verified connection process.
-                            </p>
-
-                            <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-100 my-4 text-sm text-yellow-800">
-                                <strong>Important Note:</strong> The app is currently in &quot;Testing&quot; mode with Google. You will see a &quot;Google hasn&apos;t verified this app&quot; warning. This is expected and safe for internal use.
-                            </div>
-
-                            <h4 className="text-xl font-bold text-black mt-6 mb-3">Step-by-Step Instructions</h4>
-
-                            <ol className="list-decimal pl-5 space-y-4">
-                                <li>
-                                    Go to the <strong>Settings</strong> page via the user dashboard.
-                                </li>
-                                <li>
-                                    Click the <strong>Connect Gmail</strong> button.
-                                </li>
-                                <li>
-                                    You will be redirected to Google&apos;s sign-in page. Select the Gmail account you wish to use for outreach.
-                                </li>
-                            </ol>
-
-                            <div className="mt-8 space-y-2">
-                                <h5 className="font-bold text-black">Handling the &quot;Go to Verality (unsafe)&quot; Screen</h5>
-                                <p className="text-sm">Since the app is unverified, you will likely see a warning screen. You must bypass this to proceed.</p>
-                            </div>
-
-                            {/* Step 1 Image */}
-                            <div className="mt-6">
-                                <p className="font-bold mb-2">1. When you see the warning, click the &quot;Advanced&quot; link:</p>
-                                <div className="relative w-full rounded-xl overflow-hidden shadow-lg border border-gray-200">
-                                    <Image
-                                        src="/Click advanced.png"
-                                        alt="Click Advanced on Google Warning"
-                                        width={800}
-                                        height={500}
-                                        className="w-full h-auto"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Step 2 Image */}
-                            <div className="mt-8">
-                                <p className="font-bold mb-2">2. Then, click &quot;Go to verality.io (unsafe)&quot; at the bottom:</p>
-                                <div className="relative w-full rounded-xl overflow-hidden shadow-lg border border-gray-200">
-                                    <Image
-                                        src="/Shown advanced.png"
-                                        alt="Click Go to Verality Unsafe"
-                                        width={800}
-                                        height={500}
-                                        className="w-full h-auto"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Step 3 Image */}
-                            <div className="mt-8">
-                                <p className="font-bold mb-2">3. Finally, ensure you CHECK ALL BOXES to grant necessary permissions:</p>
-                                <div className="relative w-full rounded-xl overflow-hidden shadow-lg border border-gray-200">
-                                    <Image
-                                        src="/Must select.png"
-                                        alt="Check all permission boxes"
-                                        width={800}
-                                        height={500}
-                                        className="w-full h-auto"
-                                    />
-                                </div>
-                                <p className="text-sm text-red-600 mt-2 font-medium">If you do not check all boxes (Send, Read, Manage), the connection will fail.</p>
-                            </div>
-
-                            <p className="mt-6">
-                                Once authorized, you will be redirected back to Verality, and your Settings page should show &quot;Connected&quot;.
-                            </p>
-                        </div>
-                    </section>
-
-                    {/* Section 2: Campaigns */}
-                    <section id="creating-campaigns" className="space-y-6">
-                        <div className="flex items-center gap-3">
-                            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-black text-white font-bold text-sm">2</span>
-                            <h2 className="text-3xl font-bold text-black">Finding Creators</h2>
-                        </div>
-                        <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm prose max-w-none text-gray-700">
-                            <p>
-                                Verality uses advanced AI to find creators that match your niche.
-                            </p>
-                            <ul className="list-disc pl-5 mt-4 space-y-2">
-                                <li>Navigate to <strong>Creator Request</strong> in the dashboard.</li>
-                                <li>Enter a descriptive name for your search (e.g., &quot;Tech YouTubers &lt; 100k&quot;).</li>
-                                <li>Select the platforms you want to target (YouTube, Instagram, TikTok).</li>
-                                <li>In the description, be specific about the niche (e.g., &quot;Gaming channels that focus on Strategy games&quot;).</li>
-                            </ul>
-                            <p className="mt-4">
-                                The system will automatically scan millions of creators, filter them by your criteria, and enrich their contact data.
-                            </p>
-                        </div>
-                    </section>
-
-                    {/* Section 3: Inbox */}
-                    <section id="managing-replies" className="space-y-6">
-                        <div className="flex items-center gap-3">
-                            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-black text-white font-bold text-sm">3</span>
-                            <h2 className="text-3xl font-bold text-black">Managing Replies</h2>
-                        </div>
-                        <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm prose text-gray-700">
-                            <p>
-                                When a creator replies to your automated email, it will appear in your <strong>Inbox</strong>.
-                            </p>
-                            <p className="mt-2">
-                                The AI Monitor checks your inbox every hour. It identifies:
-                            </p>
-                            <ul className="list-disc pl-5 mt-2 space-y-1">
-                                <li>Positive replies (Interested)</li>
-                                <li>Questions</li>
-                                <li>Rejections/Unsubscribes</li>
-                            </ul>
-                            <p className="mt-4">
-                                You can reply directly from the Verality Dashboard without logging into Gmail. The AI can also draft suggested replies for you based on the context.
-                            </p>
-                        </div>
-                    </section>
-
-                    {/* Section 4: FAQ */}
-                    <section id="faq" className="space-y-6">
-                        <div className="flex items-center gap-3">
-                            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-black text-white font-bold text-sm">4</span>
-                            <h2 className="text-3xl font-bold text-black">FAQ</h2>
-                        </div>
-                        <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6">
-
+                    {/* Sidebar Navigation */}
+                    <aside className="lg:w-64 flex-shrink-0">
+                        <div className="sticky top-32 space-y-8">
                             <div>
-                                <h4 className="font-bold text-black text-lg mb-2">Why did my Gmail connection disconnect?</h4>
-                                <p className="text-gray-600">Google security tokens expire if not used, or if the password is changed. Simply go to Settings and reconnect if this happens.</p>
+                                <h3 className="font-bold text-gray-900 mb-4 px-2">Getting Started</h3>
+                                <div className="space-y-1">
+                                    <a href="#introduction" className="block px-2 py-1.5 text-sm font-medium text-gray-600 hover:text-black hover:bg-gray-100 rounded-lg transition-colors">Introduction</a>
+                                    <a href="#gmail-connection" className="block px-2 py-1.5 text-sm font-medium text-gray-600 hover:text-black hover:bg-gray-100 rounded-lg transition-colors">Connecting Gmail</a>
+                                    <a href="#account-setup" className="block px-2 py-1.5 text-sm font-medium text-gray-600 hover:text-black hover:bg-gray-100 rounded-lg transition-colors">Account Setup</a>
+                                </div>
                             </div>
 
                             <div>
-                                <h4 className="font-bold text-black text-lg mb-2">How many emails can I send per day?</h4>
-                                <p className="text-gray-600">
-                                    Your daily limit is set based on your plan (default 100/day for new accounts). We recommend warming up your email gradually to avoid spam filters.
+                                <h3 className="font-bold text-gray-900 mb-4 px-2">Core Features</h3>
+                                <div className="space-y-1">
+                                    <a href="#discovery" className="block px-2 py-1.5 text-sm font-medium text-gray-600 hover:text-black hover:bg-gray-100 rounded-lg transition-colors">Discovery Engine</a>
+                                    <a href="#campaigns" className="block px-2 py-1.5 text-sm font-medium text-gray-600 hover:text-black hover:bg-gray-100 rounded-lg transition-colors">Campaigns & Sequencing</a>
+                                    <a href="#inbox" className="block px-2 py-1.5 text-sm font-medium text-gray-600 hover:text-black hover:bg-gray-100 rounded-lg transition-colors">Unified Inbox</a>
+                                    <a href="#crm" className="block px-2 py-1.5 text-sm font-medium text-gray-600 hover:text-black hover:bg-gray-100 rounded-lg transition-colors">Sales CRM</a>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 className="font-bold text-gray-900 mb-4 px-2">Support</h3>
+                                <div className="space-y-1">
+                                    <a href="#faq" className="block px-2 py-1.5 text-sm font-medium text-gray-600 hover:text-black hover:bg-gray-100 rounded-lg transition-colors">FAQ & Troubleshooting</a>
+                                    <a href="#billing" className="block px-2 py-1.5 text-sm font-medium text-gray-600 hover:text-black hover:bg-gray-100 rounded-lg transition-colors">Billing & Plans</a>
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
+
+                    {/* Main Content Area */}
+                    <div className="flex-grow space-y-16 lg:pt-2">
+
+                        {/* Introduction */}
+                        <section id="introduction" className="scroll-mt-32">
+                            <h2 className="text-3xl font-black text-gray-900 mb-6">Introduction to Verality</h2>
+                            <div className="prose prose-lg max-w-none text-gray-600">
+                                <p className="leading-relaxed">
+                                    Verality is the all-in-one operating system for creator outreach. We replace your fragmented stack of tools (search, email finding, sequencing, and CRM) with a single, unified platform designed to help you close more deals in less time.
                                 </p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-8 not-prose">
+                                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                                        <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center mb-4 font-bold">1</div>
+                                        <h4 className="font-bold text-gray-900 mb-2">Find Creators</h4>
+                                        <p className="text-sm text-gray-500">Search millions of profiles with AI filters.</p>
+                                    </div>
+                                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                                        <div className="w-10 h-10 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center mb-4 font-bold">2</div>
+                                        <h4 className="font-bold text-gray-900 mb-2">Automate Outreach</h4>
+                                        <p className="text-sm text-gray-500">Send personalized drip sequences.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <div className="w-full h-px bg-gray-200" />
+
+                        {/* Gmail Connection (Preserved & Enhanced) */}
+                        <section id="gmail-connection" className="scroll-mt-32">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold uppercase tracking-wider rounded-full">Step 1</div>
+                                <h2 className="text-3xl font-black text-gray-900">Connecting Gmail</h2>
                             </div>
 
-                            <div>
-                                <h4 className="font-bold text-black text-lg mb-2">Is the data real time?</h4>
-                                <p className="text-gray-600">Yes, we fetch creator data live via our partner APIs (Influencer Club) to ensure follower counts and emails are accurate.</p>
+                            <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm prose max-w-none text-gray-700">
+                                <p>
+                                    To allow Verality to send emails on your behalf, you need to connect your Gmail account securely via Google OAuth.
+                                    Because Verality interacts with sensitive scopes (sending emails, reading replies), Google requires a verified connection process.
+                                </p>
+
+                                <div className="bg-amber-50 p-6 rounded-xl border border-amber-100 my-6 flex gap-4 items-start">
+                                    <div className="text-2xl">⚠️</div>
+                                    <div>
+                                        <div className="font-bold text-amber-900 mb-1">Testing Mode Notice</div>
+                                        <div className="text-sm text-amber-800 leading-relaxed">
+                                            The app is currently in "Testing" mode with Google. You will see a "Google hasn't verified this app" warning. This is expected and safe for internal use.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h4 className="text-xl font-bold text-black mt-8 mb-4">Step-by-Step Instructions</h4>
+
+                                <ol className="list-decimal pl-5 space-y-4 marker:text-gray-400 marker:font-bold">
+                                    <li>Navigate to <strong>Settings</strong> &gt; <strong>Integrations</strong>.</li>
+                                    <li>Click the <strong>Connect Gmail</strong> button.</li>
+                                    <li>Select your outreach email account.</li>
+                                    <li>
+                                        <strong>Crucial Step:</strong> When you see the warning screen:
+                                        <ul className="list-disc pl-5 mt-2 space-y-2 text-sm text-gray-600">
+                                            <li>Click "Advanced"</li>
+                                            <li>Click "Go to verality.io (unsafe)" at the bottom</li>
+                                        </ul>
+                                    </li>
+                                    <li>
+                                        <strong>Permissions:</strong> Check ALL boxes (Send, Read, Manage). If you miss one, the connection will fail.
+                                    </li>
+                                </ol>
+
+                                {/* Images Grid */}
+                                <div className="grid md:grid-cols-2 gap-6 mt-8 not-prose">
+                                    <div className="space-y-2">
+                                        <p className="text-xs font-bold text-gray-400 uppercase">1. Click Advanced</p>
+                                        <div className="rounded-xl overflow-hidden border border-gray-200 shadow-md">
+                                            <Image src="/Click advanced.png" alt="Click Advanced" width={400} height={300} className="w-full" />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <p className="text-xs font-bold text-gray-400 uppercase">2. Select Permissions</p>
+                                        <div className="rounded-xl overflow-hidden border border-gray-200 shadow-md">
+                                            <Image src="/Must select.png" alt="Select Permissions" width={400} height={300} className="w-full" />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
+                        </section>
 
-                        </div>
-                    </section>
+                        <div className="w-full h-px bg-gray-200" />
 
+                        {/* Discovery Engine */}
+                        <section id="discovery" className="scroll-mt-32">
+                            <h2 className="text-3xl font-black text-gray-900 mb-6">Discovery Engine</h2>
+                            <div className="prose prose-lg max-w-none text-gray-600">
+                                <p>
+                                    Stop wasting hours scrolling TikTok. Our Discovery Engine lets you filter 200M+ creators to find your perfect match in seconds.
+                                </p>
+
+                                <div className="space-y-8 mt-8">
+                                    <div>
+                                        <h4 className="font-bold text-gray-900 text-lg">Search Filters</h4>
+                                        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 not-prose">
+                                            <li className="bg-white p-4 rounded-xl border border-gray-100 text-sm font-medium flex items-center gap-3">
+                                                <span className="w-2 h-2 bg-pink-500 rounded-full" /> Niche & Keywords
+                                            </li>
+                                            <li className="bg-white p-4 rounded-xl border border-gray-100 text-sm font-medium flex items-center gap-3">
+                                                <span className="w-2 h-2 bg-blue-500 rounded-full" /> Follower Count (Min/Max)
+                                            </li>
+                                            <li className="bg-white p-4 rounded-xl border border-gray-100 text-sm font-medium flex items-center gap-3">
+                                                <span className="w-2 h-2 bg-purple-500 rounded-full" /> Engagement Rate
+                                            </li>
+                                            <li className="bg-white p-4 rounded-xl border border-gray-100 text-sm font-medium flex items-center gap-3">
+                                                <span className="w-2 h-2 bg-green-500 rounded-full" /> Location / Country
+                                            </li>
+                                        </ul>
+                                    </div>
+
+                                    <div>
+                                        <h4 className="font-bold text-gray-900 text-lg">Understanding "Credits"</h4>
+                                        <p className="text-sm">
+                                            Searching is free. You only use a "Credit" when you choose to <strong>Reveal Email</strong> or <strong>Add to Campaign</strong>. This ensures you only pay for data you actually use.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <div className="w-full h-px bg-gray-200" />
+
+                        {/* Campaigns */}
+                        <section id="campaigns" className="scroll-mt-32">
+                            <h2 className="text-3xl font-black text-gray-900 mb-6">Campaigns & Sequencing</h2>
+                            <div className="prose prose-lg max-w-none text-gray-600">
+                                <p>
+                                    Automate your follow-ups without sounding like a robot. Verality supports multi-step email sequences that stop automatically when a creator replies.
+                                </p>
+
+                                <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden my-8 not-prose">
+                                    <div className="bg-gray-50 px-6 py-3 border-b border-gray-200 font-bold text-xs uppercase text-gray-500">
+                                        Campaign Structure Example
+                                    </div>
+                                    <div className="p-6 space-y-6">
+                                        <div className="flex gap-4">
+                                            <div className="flex-shrink-0 w-8 flex flex-col items-center">
+                                                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">1</div>
+                                                <div className="w-0.5 h-full bg-gray-100 my-2" />
+                                            </div>
+                                            <div>
+                                                <h5 className="font-bold text-gray-900">Initial Outreach (Day 0)</h5>
+                                                <p className="text-sm text-gray-500">Keep it short. Mention their specific content. Value first.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-4">
+                                            <div className="flex-shrink-0 w-8 flex flex-col items-center">
+                                                <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center font-bold text-sm">2</div>
+                                                <div className="w-0.5 h-full bg-gray-100 my-2" />
+                                            </div>
+                                            <div>
+                                                <h5 className="font-bold text-gray-900">Follow Up (Day 3)</h5>
+                                                <p className="text-sm text-gray-500">"Just floating this to the top of your inbox..."</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-4">
+                                            <div className="flex-shrink-0 w-8 flex flex-col items-center">
+                                                <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center font-bold text-sm">3</div>
+                                            </div>
+                                            <div>
+                                                <h5 className="font-bold text-gray-900">Final Bump (Day 7)</h5>
+                                                <p className="text-sm text-gray-500">"I'll assume you're busy. Last message from me!"</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <div className="w-full h-px bg-gray-200" />
+
+                        {/* Inbox & CRM */}
+                        <section id="inbox" className="scroll-mt-32">
+                            <h2 className="text-3xl font-black text-gray-900 mb-6">Unified Inbox & CRM</h2>
+                            <div className="prose prose-lg max-w-none text-gray-600">
+                                <p>
+                                    Never lose a deal in a messy inbox again. Every reply from a creator is automatically pulled into Verality and organized by campaign.
+                                </p>
+                                <ul className="mt-4 space-y-2">
+                                    <li><strong>Status Tracking:</strong> Custom Kanban board (Interested, Negotiating, Signed, Paid).</li>
+                                    <li><strong>Team Notes:</strong> Mention teammates with @username to collaborate on a deal.</li>
+                                    <li><strong>Quick Replies:</strong> Use AI-generated response suggestions to reply 10x faster.</li>
+                                </ul>
+                            </div>
+                        </section>
+
+                        <div className="w-full h-px bg-gray-200" />
+
+                        {/* FAQ */}
+                        <section id="faq" className="scroll-mt-32">
+                            <h2 className="text-3xl font-black text-gray-900 mb-6">Frequently Asked Questions</h2>
+                            <div className="grid gap-6">
+                                <div className="bg-white p-6 rounded-2xl border border-gray-100">
+                                    <h4 className="font-bold text-black text-lg mb-2">Why did my Gmail disconnect?</h4>
+                                    <p className="text-gray-600">Security tokens expire if unused or if you change your password. Reconnect in Settings.</p>
+                                </div>
+                                <div className="bg-white p-6 rounded-2xl border border-gray-100">
+                                    <h4 className="font-bold text-black text-lg mb-2">Daily sending limits?</h4>
+                                    <p className="text-gray-600">We cap new accounts at 100 emails/day to protect your domain reputation. Contact support to increase this.</p>
+                                </div>
+                                <div className="bg-white p-6 rounded-2xl border border-gray-100">
+                                    <h4 className="font-bold text-black text-lg mb-2">Can I export data?</h4>
+                                    <p className="text-gray-600">Yes, you can export all creditor data and campaign stats to CSV for use in Excel or other tools.</p>
+                                </div>
+                            </div>
+                        </section>
+
+                    </div>
                 </div>
             </main>
-
-            <Footer />
         </div>
     );
 }

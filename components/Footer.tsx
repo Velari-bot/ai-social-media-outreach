@@ -29,7 +29,16 @@ export default function Footer() {
                     </div>
 
                     <div>
-                        <h3 className="font-bold text-black mb-4">Use Cases</h3>
+                        <h3 className="font-bold text-black mb-4">Resources</h3>
+                        <ul className="space-y-3 text-sm font-medium text-gray-500">
+                            <li><Link href="/newsletter" className="hover:text-black transition-colors">Newsletter</Link></li>
+                            <li><Link href="/book" className="hover:text-black transition-colors">Book a Demo</Link></li>
+                            <li><Link href="/blog" className="hover:text-black transition-colors">Blog</Link></li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 className="font-bold text-black mb-4">Compare</h3>
                         <ul className="space-y-3 text-sm font-medium text-gray-500">
                             <li><Link href="/for-agencies" className="hover:text-black transition-colors">For Agencies</Link></li>
                             <li><Link href="/for-ecommerce" className="hover:text-black transition-colors">For Ecommerce</Link></li>

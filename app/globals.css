@@ -106,7 +106,7 @@ textarea {
 
 /* Lemni-style Button Styles */
 .btn-secondary {
-  width: 100%;
+  /* width: 100%; Removed default width 100% */
   padding: 11px 16px;
   background: #FFFFFF;
   border: 1px solid #E5E5E5;
@@ -150,7 +150,7 @@ textarea {
 }
 
 .btn-primary {
-  width: 100%;
+  /* width: 100%; Removed default width 100% */
   padding: 11px 20px;
   background: #0A0A0A;
   border: none;

@@ -3,139 +3,165 @@
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import AmbientBlooms from "@/components/AmbientBlooms";
+import CreatorSearch from "@/components/CreatorSearch";
+
 import {
   Search,
   Send,
   BarChart3,
-  Building2,
-  Rocket,
-  Users,
   CheckCircle2,
-  Zap,
   Globe,
   ArrowRight,
-  XCircle
+  ShieldCheck,
+  Zap,
+  Star,
+  Mail
 } from "lucide-react";
 
 export default function Home() {
   return (
-    <main className="min-h-screen relative z-10 font-sans selection:bg-black selection:text-white pb-20">
+    <main className="min-h-screen relative z-10 font-sans selection:bg-black selection:text-white overflow-hidden">
       <Navbar />
-
       <AmbientBlooms bloomCount={8} />
 
+      {/* Vivid Background Blobs (Login Style) */}
+      <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-[#FF9E0B]/30 blur-[100px] rounded-full mix-blend-multiply animate-blob pointer-events-none z-0 opacity-70" />
+      <div className="absolute top-[10%] left-[-20%] w-[50%] h-[50%] bg-[#6B4BFF]/30 blur-[100px] rounded-full mix-blend-multiply animate-blob animation-delay-2000 pointer-events-none z-0 opacity-70" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-[#FF5252]/20 blur-[120px] rounded-full mix-blend-multiply animate-blob animation-delay-4000 pointer-events-none z-0 opacity-70" />
+
+      {/* Grid Pattern Overlay */}
+      <div
+        className="absolute inset-0 z-0 opacity-[0.4] pointer-events-none"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, #E5E7EB 1px, transparent 1px),
+            linear-gradient(to bottom, #E5E7EB 1px, transparent 1px)
+          `,
+          backgroundSize: '40px 40px'
+        }}
+      />
+
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6 max-w-[1440px] mx-auto flex flex-col items-center text-center relative z-10">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-200 shadow-sm mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Live: AI Email Outreach</span>
+      <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 px-6 max-w-[1440px] mx-auto flex flex-col items-center text-center z-10">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700 hover:scale-105 transition-transform cursor-default">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+          </span>
+          <span className="text-xs font-bold uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-gray-900 via-gray-600 to-gray-900 animate-text-shimmer bg-[length:200%_auto]">New: AI Email Finder</span>
         </div>
 
-        <h1 className="text-6xl sm:text-7xl lg:text-[80px] font-[850] text-[#1A1A1A] mb-8 tracking-tighter leading-[1.05] max-w-5xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
-          <span className="text-[#6B4BFF]">AI Social Media Outreach</span> for Creators & Brands
+        <h1 className="text-5xl sm:text-7xl lg:text-[80px] font-bold text-gray-900 mb-6 tracking-tight leading-[1.1] max-w-5xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
+          Your Outreach. <br className="hidden sm:block" />
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900">Smarter. Faster. Personal.</span>
         </h1>
 
-        <p className="text-xl text-gray-600 mb-10 leading-relaxed font-medium max-w-2xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-200">
-          Verality is the all-in-one influencer outreach software.
-          <span className="block mt-2 text-gray-500">Find creators, get emails, send DMs, and track campaigns in one platform.</span>
+        <p className="text-lg sm:text-xl text-gray-600 mb-10 leading-relaxed font-medium max-w-2xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-200">
+          Stop manual searching. Start closing deals. Verality automates the entire creator outreach lifecycle—from discovery to signed contract.
         </p>
+
+        {/* Public Creator Search Integration */}
+        <div className="w-full mb-12 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-250">
+          <CreatorSearch />
+        </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center animate-in fade-in slide-in-from-bottom-6 duration-700 delay-300">
           <Link
             href="/signup"
-            className="px-10 py-4 bg-black text-white rounded-full hover:bg-gray-800 hover:scale-105 transition-all font-bold text-lg shadow-xl shadow-black/10 flex items-center gap-2"
+            className="btn-primary min-w-[180px] text-base py-3 h-auto"
           >
-            Start Outreach Free <span className="text-white/60">→</span>
+            Start for Free
           </Link>
           <Link
             href="/demo"
-            className="px-10 py-4 bg-white text-black border border-gray-200 rounded-full hover:bg-gray-50 hover:scale-105 transition-all font-bold text-lg shadow-sm"
+            className="btn-secondary min-w-[180px] text-base py-3 h-auto"
           >
             View Demo
           </Link>
         </div>
       </section>
 
-      {/* Hero Dashboard Preview */}
-      <section className="px-6 max-w-[1440px] mx-auto mb-32 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500">
-        <div className="bg-white rounded-[40px] shadow-2xl border border-gray-200/60 p-2 sm:p-4 relative overflow-hidden">
+      {/* Dashboard Preview (Hero Extension) */}
+      <section className="px-6 max-w-[1440px] mx-auto -mt-0 mb-32 pt-20">
+        <div className="bg-white rounded-[32px] md:rounded-[48px] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] border border-gray-200/60 p-2 sm:p-4 relative overflow-hidden ring-1 ring-gray-950/5">
           <div className="absolute inset-0 bg-gradient-to-b from-gray-50/50 to-white pointer-events-none" />
-
-          <div className="relative bg-white border border-gray-100 rounded-[32px] overflow-hidden shadow-sm">
-            {/* Window Controls */}
-            <div className="h-14 border-b border-gray-100 flex items-center px-6 justify-between bg-white text-sm font-medium text-gray-400">
-              <div className="flex gap-2">
-                <div className="w-3 h-3 rounded-full bg-red-400/80" />
-                <div className="w-3 h-3 rounded-full bg-yellow-400/80" />
-                <div className="w-3 h-3 rounded-full bg-green-400/80" />
+          <div className="relative bg-white border border-gray-100 rounded-[24px] md:rounded-[36px] overflow-hidden shadow-sm">
+            {/* Browser UI */}
+            <div className="h-10 border-b border-gray-100 flex items-center px-4 justify-between bg-[#FAFAFA]">
+              <div className="flex gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-gray-200" />
+                <div className="w-2.5 h-2.5 rounded-full bg-gray-200" />
+                <div className="w-2.5 h-2.5 rounded-full bg-gray-200" />
               </div>
-              <div className="hidden sm:flex items-center gap-2 bg-gray-50 px-4 py-1.5 rounded-full border border-gray-100">
-                <Globe className="w-3 h-3" />
-                verality.io/dashboard
-              </div>
-              <div className="text-xs font-medium px-3 py-1 bg-gray-100 rounded-full text-gray-500">
-                v2.4.0
-              </div>
+              <div className="text-[10px] font-medium text-gray-400">verality.io/dashboard</div>
+              <div className="w-10" />
             </div>
 
-            {/* Dashboard Mockup Content */}
-            <div className="p-8 bg-[#FAFAFA]">
-              <div className="bg-white rounded-[24px] border border-gray-200/60 shadow-sm overflow-hidden">
-                <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center">
-                  <h3 className="text-xl font-bold text-black">Active Campaigns</h3>
-                  <div className="flex gap-2">
-                    <div className="px-3 py-1 bg-black text-white text-xs font-bold rounded-full">Filter</div>
-                    <div className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded-full">Export</div>
-                  </div>
+            {/* Content */}
+            <div className="p-6 md:p-10 bg-white">
+              <div className="flex justify-between items-end mb-8">
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900">Campaign Performance</h3>
+                  <p className="text-gray-500 mt-1">Real-time overview of your active outreach.</p>
                 </div>
+                <div className="flex gap-2">
+                  <div className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600">Last 30 days</div>
+                  <div className="px-3 py-1.5 bg-black text-white rounded-lg text-sm font-medium">Export Report</div>
+                </div>
+              </div>
 
+              {/* Stats Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                {[
+                  { label: "Creators Contacted", value: "1,248", trend: "+12%", neutral: false },
+                  { label: "Reply Rate", value: "48.2%", trend: "+5%", neutral: false },
+                  { label: "Deals Closed", value: "86", trend: "+3", neutral: false },
+                  { label: "Avg. CPM", value: "$12.50", trend: "-2%", neutral: true },
+                ].map((stat, i) => (
+                  <div key={i} className="p-4 rounded-2xl border border-gray-100 bg-gray-50/50">
+                    <div className="text-gray-500 text-sm font-medium mb-1">{stat.label}</div>
+                    <div className="text-2xl font-bold text-gray-900 mb-2">{stat.value}</div>
+                    <div className={`text-xs font-bold ${stat.neutral ? 'text-gray-400' : 'text-green-600'} flex items-center gap-1`}>
+                      {!stat.neutral && <ArrowRight className="w-3 h-3 -rotate-45" />} {stat.trend} <span className="text-gray-300 font-normal">vs last month</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-2xl border border-gray-100 overflow-hidden">
                 <table className="w-full text-left">
-                  <thead className="bg-gray-50/50 text-gray-400 text-xs uppercase font-bold tracking-wider">
+                  <thead className="bg-gray-50 border-b border-gray-100">
                     <tr>
-                      <th className="px-8 py-4 font-black">Creator</th>
-                      <th className="px-8 py-4 font-black">Platform</th>
-                      <th className="px-8 py-4 font-black">Status</th>
-                      <th className="px-8 py-4 font-black text-right">Engagement</th>
+                      <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Creator</th>
+                      <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Value</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 text-sm font-medium">
+                  <tbody className="divide-y divide-gray-50">
                     {[
-                      { name: "MrBeast", handle: "@mrbeast", platform: "YT", status: "Replied", statusColor: "green", views: "142M", img: "/mr-beast.jpg" },
-                      { name: "MKBHD", handle: "@mkbhd", platform: "YT", status: "Follow-up", statusColor: "yellow", views: "18M", img: "/mkbhd.jpg" },
-                      { name: "Charli D'Amelio", handle: "@charlidamelio", platform: "TT", status: "Sent", statusColor: "blue", views: "25M", img: "/charli.jpg" },
-                      { name: "Kim Kardashian", handle: "@kimkardashian", platform: "IG", status: "Replied", statusColor: "green", views: "4.2M", img: "/kim.jpg" },
-                      { name: "Dude Perfect", handle: "@dudeperfect", platform: "YT", status: "Sent", statusColor: "blue", views: "12M", img: "/dude.jpg" },
+                      { name: "Marques Brownlee", handle: "@mkbhd", status: "Negotiating", value: "$15,000", img: "/mkbhd.jpg" },
+                      { name: "Charli D'Amelio", handle: "@charlidamelio", status: "Active", value: "$45,000", img: "/charli.jpg" },
+                      { name: "MrBeast", handle: "@mrbeast", status: "Replied", value: "$250,000", img: "/mr-beast.jpg" },
                     ].map((row, i) => (
-                      <tr key={i} className="group hover:bg-gray-50 transition-colors">
-                        <td className="px-8 py-4">
+                      <tr key={i} className="bg-white hover:bg-gray-50/50 transition-colors">
+                        <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden shadow-sm border border-white">
-                              {row.img ? <img src={row.img} alt={row.name} className="w-full h-full object-cover" /> : null}
-                            </div>
+                            <span className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 overflow-hidden">
+                              {row.img && <img src={row.img} alt={row.name} className="w-full h-full object-cover" />}
+                            </span>
                             <div>
-                              <div className="text-gray-900 font-bold">{row.name}</div>
+                              <div className="font-bold text-gray-900 text-sm">{row.name}</div>
                               <div className="text-gray-400 text-xs">{row.handle}</div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-8 py-4">
-                          <div className="flex items-center gap-2">
-                            {row.platform === "YT" && <div className="p-1.5 bg-red-100 rounded-lg text-red-600"><Globe className="w-4 h-4" /></div>}
-                            {row.platform === "TT" && <div className="p-1.5 bg-black/10 rounded-lg text-black"><Globe className="w-4 h-4" /></div>}
-                            {row.platform === "IG" && <div className="p-1.5 bg-pink-100 rounded-lg text-pink-600"><Globe className="w-4 h-4" /></div>}
-                            <span className="font-bold text-gray-700">{row.platform === "YT" ? "YouTube" : row.platform === "TT" ? "TikTok" : "Instagram"}</span>
-                          </div>
-                        </td>
-                        <td className="px-8 py-4">
-                          <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border ${row.statusColor === "green" ? "bg-green-50 text-green-700 border-green-200" :
-                            row.statusColor === "yellow" ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
-                              "bg-blue-50 text-blue-700 border-blue-200"
-                            }`}>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
                             {row.status}
                           </span>
                         </td>
-                        <td className="px-8 py-4 text-right font-mono text-gray-500">
-                          {row.views}
+                        <td className="px-6 py-4 text-right font-mono text-sm text-gray-600">
+                          {row.value}
                         </td>
                       </tr>
                     ))}
@@ -147,212 +173,120 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Problem / Solution Section */}
-      <section className="py-24 bg-white border-y border-gray-100">
+      {/* Feature Grid */}
+      <section className="py-24 bg-white relative">
         <div className="max-w-[1440px] px-6 mx-auto">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-4xl font-[850] text-[#1A1A1A] mb-4">Why traditional outreach fails.</h2>
-            <p className="text-lg text-gray-500">
-              Most brands struggle to scale influencer marketing because manual work is slow, and "databases" don't do the heavy lifting.
-            </p>
+          <div className="text-center max-w-3xl mx-auto mb-20 animate-in fade-in slide-in-from-bottom-8 duration-700 view-timeline">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 tracking-tight">Everything you need to <br className="hidden md:block" />scale your outreach.</h2>
+            <p className="text-lg text-gray-500">Stop juggling tools. Verality unifies search, email, and CRM into one powerful platform.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-            {/* Old Way */}
-            <div className="bg-red-50/50 p-10 rounded-[32px] border border-red-100">
-              <h3 className="text-red-900 font-bold text-xl mb-6 flex items-center gap-2">
-                <XCircle className="w-6 h-6 text-red-500" /> The Old Way
-              </h3>
-              <ul className="space-y-4">
-                <li className="flex gap-4 text-gray-700 font-medium">
-                  <div className="w-1.5 h-1.5 rounded-full bg-red-300 mt-2.5 flex-shrink-0" />
-                  Manually searching hashtags on TikTok/IG for hours.
-                </li>
-                <li className="flex gap-4 text-gray-700 font-medium">
-                  <div className="w-1.5 h-1.5 rounded-full bg-red-300 mt-2.5 flex-shrink-0" />
-                  Copy-pasting "Hey [Name]" into 50 different DMs.
-                </li>
-                <li className="flex gap-4 text-gray-700 font-medium">
-                  <div className="w-1.5 h-1.5 rounded-full bg-red-300 mt-2.5 flex-shrink-0" />
-                  Tracking replies in a messy, outdated Google Sheet.
-                </li>
-                <li className="flex gap-4 text-gray-700 font-medium">
-                  <div className="w-1.5 h-1.5 rounded-full bg-red-300 mt-2.5 flex-shrink-0" />
-                  Getting ignored because your messaging is generic.
-                </li>
-              </ul>
-            </div>
-
-            {/* Verality Way */}
-            <div className="bg-green-50/50 p-10 rounded-[32px] border border-green-100 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-green-200/20 blur-3xl rounded-full" />
-              <h3 className="text-green-900 font-bold text-xl mb-6 flex items-center gap-2">
-                <CheckCircle2 className="w-6 h-6 text-green-600" /> The Verality Way
-              </h3>
-              <ul className="space-y-4">
-                <li className="flex gap-4 text-gray-800 font-bold">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2.5 flex-shrink-0" />
-                  AI finds 1,000+ perfectly matched creators in seconds.
-                </li>
-                <li className="flex gap-4 text-gray-800 font-bold">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2.5 flex-shrink-0" />
-                  Personalized emails sent automatically at scale.
-                </li>
-                <li className="flex gap-4 text-gray-800 font-bold">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2.5 flex-shrink-0" />
-                  Auto-follow ups ensure you never miss a reply.
-                </li>
-                <li className="flex gap-4 text-gray-800 font-bold">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2.5 flex-shrink-0" />
-                  One dashboard to manage relationships and deals.
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* WHO IS THIS FOR? */}
-      <section className="py-24 max-w-[1440px] mx-auto px-6">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-[850] text-[#1A1A1A] mb-4">Who uses Verality?</h2>
-          <p className="text-lg text-gray-500">Built for teams that need to scale relationships, not administrative work.</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {[
-            { icon: Building2, title: "DTC Brands", desc: "Scale your seeding campaigns efficiently. Find micro-influencers who actually convert without hiring a full agency." },
-            { icon: Users, title: "Marketing Agencies", desc: "Manage outreach for multiple clients in one place. Reduce improved profit margins by automating the busy work." },
-            { icon: Rocket, title: "Talent Managers", desc: "Find new talent to sign. Use our search tools to spot rising stars before they go viral and get signed by big firms." }
-          ].map((item, i) => (
-            <div key={i} className="bg-gray-50 rounded-3xl p-8 hover:bg-white hover:shadow-xl transition-all border border-gray-100">
-              <div className="w-12 h-12 bg-black text-white rounded-xl flex items-center justify-center mb-6">
-                <item.icon className="w-6 h-6" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Feature 1 */}
+            <div className="bg-white rounded-[32px] p-8 md:p-10 border border-gray-100 shadow-xl shadow-gray-200/40 hover:shadow-2xl hover:shadow-gray-200/60 transition-all duration-300 md:col-span-2 group relative overflow-hidden cursor-default">
+              <div className="relative z-10 max-w-lg">
+                <div className="w-12 h-12 bg-black text-white rounded-xl flex items-center justify-center mb-8 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <Search className="w-6 h-6" />
+                </div>
+                <h3 className="text-2xl font-bold mb-4 text-gray-900">AI-Powered Creator Search</h3>
+                <p className="text-gray-500 font-medium leading-relaxed">Find the perfect creators instantly. Filter by engagement rate, keywords, niche, and follower counts across all major platforms. Our AI parses millions of bio's to find exact matches.</p>
               </div>
-              <h3 className="text-xl font-bold mb-3">{item.title}</h3>
-              <p className="text-gray-500 leading-relaxed font-medium">{item.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-
-      {/* Value Props / Bento Grid */}
-      <section className="px-6 max-w-[1440px] mx-auto mb-32">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-[850] text-[#1A1A1A] mb-6 tracking-tight">Everything you need to <br />scale your outreach.</h2>
-          <p className="text-lg text-gray-500 max-w-2xl mx-auto">Stop juggling tools. Verality unifies search, email, and CRM into one powerful platform.</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Card 1 */}
-          <div className="bg-white rounded-[32px] p-8 border border-gray-200 shadow-sm hover:shadow-xl transition-all duration-300 md:col-span-2 group overflow-hidden relative">
-            <div className="relative z-10">
-              <div className="w-14 h-14 bg-black text-white rounded-2xl flex items-center justify-center mb-6 shadow-lg rotate-[-5deg] group-hover:rotate-0 transition-all duration-300">
-                <Search className="w-7 h-7" />
+              <div className="absolute top-1/2 right-10 -translate-y-1/2 opacity-5 hidden lg:block group-hover:opacity-10 transition-opacity duration-500">
+                <Search className="w-64 h-64" />
               </div>
-              <h3 className="text-2xl font-bold mb-3">AI-Powered Search</h3>
-              <p className="text-gray-500 font-medium max-w-sm">Find the perfect creators instantly. Filter by engagement rate, keywords, niche, and follower counts across TikTok, Instagram, and YouTube.</p>
             </div>
-            <div className="absolute right-[-20px] bottom-[-20px] opacity-10 group-hover:opacity-20 transition-opacity">
-              <Search className="w-64 h-64" />
-            </div>
-          </div>
 
-          {/* Card 2 */}
-          <div className="bg-white rounded-[32px] p-8 border border-gray-200 shadow-sm hover:shadow-xl transition-all duration-300 group overflow-hidden relative">
-            <div className="relative z-10">
-              <div className="w-14 h-14 bg-black text-white rounded-2xl flex items-center justify-center mb-6 shadow-lg rotate-[5deg] group-hover:rotate-0 transition-all duration-300">
-                <Send className="w-7 h-7" />
+            {/* Feature 2 */}
+            <div className="bg-gray-50 rounded-[32px] p-8 md:p-10 border border-gray-100 hover:bg-white hover:shadow-xl hover:shadow-gray-200/40 transition-all duration-300 group cursor-default">
+              <div className="w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center mb-8 shadow-lg shadow-blue-600/20 group-hover:rotate-12 transition-transform duration-300">
+                <Send className="w-6 h-6" />
               </div>
-              <h3 className="text-2xl font-bold mb-3">Automated Email Drip</h3>
-              <p className="text-gray-500 font-medium">Set up 3-step email sequences. Verality stops the sequence automatically when a creator replies.</p>
+              <h3 className="text-2xl font-bold mb-4 text-gray-900">Smart Drip Campaigns</h3>
+              <p className="text-gray-500 font-medium leading-relaxed">Set up multi-step email sequences. Verality automatically stops follow-ups when a creator replies.</p>
             </div>
-          </div>
 
-          {/* Card 3 */}
-          <div className="bg-white rounded-[32px] p-8 border border-gray-200 shadow-sm hover:shadow-xl transition-all duration-300 group overflow-hidden relative">
-            <div className="relative z-10">
-              <div className="w-14 h-14 bg-black text-white rounded-2xl flex items-center justify-center mb-6 shadow-lg rotate-[3deg] group-hover:rotate-0 transition-all duration-300">
-                <BarChart3 className="w-7 h-7" />
+            {/* Feature 3 */}
+            <div className="bg-gray-50 rounded-[32px] p-8 md:p-10 border border-gray-100 hover:bg-white hover:shadow-xl hover:shadow-gray-200/40 transition-all duration-300 group cursor-default">
+              <div className="w-12 h-12 bg-purple-600 text-white rounded-xl flex items-center justify-center mb-8 shadow-lg shadow-purple-600/20 group-hover:-rotate-12 transition-transform duration-300">
+                <BarChart3 className="w-6 h-6" />
               </div>
-              <h3 className="text-2xl font-bold mb-3">Live Pipeline</h3>
-              <p className="text-gray-500 font-medium">Kanban-style board to track every relationship. Drag and drop to move creators from 'Contacted' to 'Negotiating'.</p>
+              <h3 className="text-2xl font-bold mb-4 text-gray-900">Live Pipeline</h3>
+              <p className="text-gray-500 font-medium leading-relaxed">Kanban-style board to track every relationship. Drag and drop creators through your custom deal flow.</p>
             </div>
-          </div>
 
-          {/* Card 4 - Full Width */}
-          <div className="bg-[#1A1A1A] rounded-[32px] p-8 md:col-span-2 border border-black shadow-sm hover:shadow-xl transition-all duration-300 text-white group overflow-hidden relative flex flex-col md:flex-row items-center gap-8">
-            <div className="flex-1 relative z-10">
-              <h3 className="text-2xl font-bold mb-3">Collaborate with your team</h3>
-              <p className="text-gray-400 font-medium mb-6">Invite team members to manage different campaigns. Centralize your creator database so no contact is ever lost.</p>
-              <div className="flex gap-4">
+            {/* Feature 4 (Large Visual) */}
+            <div className="bg-black rounded-[32px] p-8 md:p-10 md:col-span-2 border border-gray-800 shadow-2xl text-white group overflow-hidden relative flex flex-col justify-between">
+              <div className="relative z-10 max-w-lg">
+                <h3 className="text-2xl font-bold mb-4">Team Collaboration</h3>
+                <p className="text-gray-400 font-medium leading-relaxed mb-8">Invite your entire team. Assign specific creators to agents, track individual performance, and share notes in real-time.</p>
                 <div className="flex -space-x-3">
-                  {[
-                    "/charli.jpg",
-                    "/dude.jpg",
-                    "/kim.jpg",
-                    "/mkbhd.jpg",
-                    "/mr-beast.jpg"
-                  ].map((src, i) => (
-                    <div key={i} className="w-10 h-10 rounded-full border-2 border-[#1A1A1A] overflow-hidden">
-                      <img src={src} alt="User" className="w-full h-full object-cover" />
+                  {["/charli.jpg", "/dude.jpg", "/kim.jpg"].map((src, i) => (
+                    <div key={i} className="w-10 h-10 rounded-full border-2 border-black overflow-hidden bg-gray-800">
+                      <img src={src} className="w-full h-full object-cover opacity-80" />
                     </div>
                   ))}
+                  <div className="w-10 h-10 rounded-full border-2 border-black bg-gray-800 flex items-center justify-center text-xs font-bold text-white">+5</div>
                 </div>
-                <div className="text-sm font-bold flex items-center text-gray-300">+12 active now</div>
               </div>
-            </div>
-            <div className="flex-1 w-full h-full min-h-[200px] relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-[#1A1A1A] via-transparent to-transparent z-10" />
-              <img
-                src="/team-dashboard.png"
-                alt="Team Dashboard"
-                className="absolute top-0 right-[-20px] w-[110%] h-full object-cover rounded-l-xl opacity-90 group-hover:scale-105 transition-transform duration-700"
-              />
+              {/* Abstract decorative element */}
+              <div className="absolute right-0 bottom-0 w-64 h-64 bg-gradient-to-tl from-purple-900/50 to-transparent rounded-full blur-3xl pointer-events-none" />
             </div>
           </div>
         </div>
       </section>
 
-      {/* SEO Content: "What is AI Creator Outreach?" */}
-      <section className="py-20 bg-gray-50 border-t border-gray-200">
-        <div className="max-w-3xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-gray-900 mb-6">What is AI Creator Outreach?</h2>
-          <div className="prose text-gray-600">
-            <p className="mb-4">
-              AI Creator Outreach is the process of using artificial intelligence to automate the labor-intensive parts of influencer marketing: finding the right influencers, finding their verified email addresses, and sending personalized outreach messages.
-            </p>
-            <p className="mb-4">
-              Traditionally, brands would hire virtual assistants to manually scroll through Instagram or TikTok, copy-pasting info into spreadsheets. This approach is slow, error-prone, and unscalable.
-            </p>
-            <p>
-              With Verality, you can replace this entire manual workflow. Our AI scans millions of profiles to find creators that match your exact parameters (like engagement rate, location, and niche), enriches their data to find personal emails, and manages the initial conversation—allowing you to focus on building relationships and strategy.
-            </p>
+
+
+      {/* Newsletter Section - Traffic Capture */}
+      <section className="py-24 px-6 border-t border-gray-100 bg-white">
+        <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center gap-12">
+          <div className="flex-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-100 border border-gray-200 text-gray-900 text-xs font-bold uppercase tracking-wider mb-6">
+              <span className="w-2 h-2 rounded-full bg-black animate-pulse" />
+              Free Resource
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Masterminding your outreach.</h2>
+            <p className="text-gray-500 text-lg mb-8">Get our weekly "Outreach OS" newsletter. Strategies, templates, and teardowns of successful campaigns.</p>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Link href="/newsletter" className="px-8 py-4 bg-black hover:bg-gray-900 text-white rounded-xl font-bold text-lg transition-all shadow-lg shadow-black/20 flex items-center justify-center gap-2">
+                <span className="bg-white/20 p-1 rounded-md"><Mail className="w-4 h-4" /></span>
+                Join Newsletter
+              </Link>
+            </div>
+          </div>
+
+          <div className="flex-1 bg-gray-50 rounded-2xl p-8 border border-gray-200 relative rotate-2 hover:rotate-0 transition-transform duration-500 cursor-default">
+            <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Upcoming Issue</div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">The "Magic Email" template with 60% reply rate</h3>
+            <p className="text-gray-500 mb-6 text-sm">We break down exactly how specific subject lines consistently book more calls.</p>
+            <div className="flex items-center gap-3 border-t border-gray-200 pt-4">
+              <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-white font-bold text-xs">A</div>
+              <div className="text-xs font-bold text-gray-900">Aiden Bender <span className="text-gray-400 font-normal ml-1">Editor</span></div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="px-6 max-w-[1440px] mx-auto">
-        <div className="bg-black rounded-[48px] p-12 md:p-24 text-center text-white relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-full bg-[url('/noise.png')] opacity-20 pointer-events-none mix-blend-overlay" />
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-500/30 blur-[150px] rounded-full mix-blend-screen" />
-          <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/30 blur-[150px] rounded-full mix-blend-screen" />
+      {/* Final CTA */}
+      <section className="py-24 px-6">
+        <div className="max-w-5xl mx-auto bg-gray-900 rounded-[48px] p-12 md:p-24 text-center relative overflow-hidden shadow-2xl">
+          {/* Background Gradients */}
+          <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-500/30 blur-[120px] rounded-full mix-blend-screen pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-fuchsia-500/30 blur-[120px] rounded-full mix-blend-screen pointer-events-none" />
 
-          <div className="relative z-10 max-w-3xl mx-auto">
-            <h2 className="text-5xl md:text-7xl font-[850] mb-8 tracking-tighter">Ready to automate your growth?</h2>
+          <div className="relative z-10">
+            <h2 className="text-4xl md:text-6xl font-bold text-white mb-8 tracking-tight">Ready to scale your outreach?</h2>
+            <p className="text-lg text-gray-400 mb-10 max-w-2xl mx-auto">Join the new standard in influencer marketing. Start your 14-day free trial today.</p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Link href="/signup" className="px-10 py-5 bg-white text-black rounded-full hover:bg-gray-100 font-bold text-xl shadow-xl hover:scale-105 transition-all">
+              <Link href="/signup" className="px-8 py-4 bg-white text-black rounded-xl font-bold text-lg hover:bg-gray-100 transition-colors shadow-lg shadow-white/10">
                 Get Started Free
               </Link>
-              <Link href="/book" className="px-10 py-5 bg-transparent border-2 border-white/20 text-white rounded-full hover:bg-white/10 font-bold text-xl transition-all">
-                Talk to Sales
+              <Link href="/book" className="px-8 py-4 bg-transparent border border-gray-700 text-white rounded-xl font-bold text-lg hover:bg-white/5 transition-colors">
+                Book a Demo
               </Link>
             </div>
-            <p className="mt-8 text-white/40 text-sm font-medium">
-              No credit card required. Cancel anytime. <br />
-              <Link href="/privacy-policy" className="hover:text-white underline decoration-white/30 underline-offset-4">Privacy Policy</Link>
-            </p>
+            <p className="mt-8 text-sm text-gray-500">No credit card required. Cancel anytime.</p>
           </div>
         </div>
       </section>
