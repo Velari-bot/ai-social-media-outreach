@@ -70,7 +70,8 @@ function CreatorRequestContent() {
   const [recentRequests, setRecentRequests] = useState<any[]>([]);
 
   // Computed
-  const creditsCost = requestedCreators;
+  const costMultiplier = platform.toLowerCase() === 'youtube' ? 2 : 1;
+  const creditsCost = requestedCreators * costMultiplier;
   const remainingQuota = userAccount ? Math.max(0, userAccount.email_quota_daily - userAccount.email_used_today) : 0;
   const isQuotaExceeded = creditsCost > remainingQuota;
 

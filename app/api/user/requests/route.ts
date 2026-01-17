@@ -188,14 +188,19 @@ export async function POST(request: NextRequest) {
         // 8. Charge based on found creators (ONLY if emails were requested)
         if (foundCount > 0 && criteria.skipEnrichment !== true) {
           try {
-            console.log(`[RequestsAPI] Charging user ${userId} for ${foundCount} creators.`);
+            const isYoutube = platforms.some(p => p.toLowerCase() === 'youtube');
+            const costPerCreator = isYoutube ? 2 : 1;
+            const totalCost = foundCount * costPerCreator;
+
+            console.log(`[RequestsAPI] Charging user ${userId} for ${foundCount} creators (Rate: ${costPerCreator}/creator. Total: ${totalCost}).`);
             const { incrementEmailQuota } = await import('@/lib/database');
-            await incrementEmailQuota(userId, foundCount);
-            console.log(`[RequestsAPI] Charged user ${userId} for ${foundCount} creators.`);
+            await incrementEmailQuota(userId, totalCost);
+            console.log(`[RequestsAPI] Charged user ${userId} ${totalCost} credits.`);
           } catch (quotaError: any) {
             console.error(`[RequestsAPI] Failed to charge quota for user ${userId}:`, quotaError.message);
           }
         }
+
 
         console.log(`[RequestsAPI] Returning successful response for request ${newRequest.id} with creators.`);
         return NextResponse.json({

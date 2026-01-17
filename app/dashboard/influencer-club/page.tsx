@@ -58,7 +58,7 @@ export default function InfluencerClubDashboard() {
 
     // Computed Credits
     const callsNeeded = Math.ceil(requestedCreators / 50);
-    const creditsCost = callsNeeded; // 1 call = 1 credit
+    const creditsCost = platform === 'youtube' ? callsNeeded * 2 : callsNeeded;
 
     // Validation (Strong Targeting Rule: Must have Keywords OR Category)
     const hasStrongTargeting = (keywords.trim().length > 0) || (category !== "");
