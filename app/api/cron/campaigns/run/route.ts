@@ -118,6 +118,7 @@ export async function GET(req: NextRequest) {
                     filters: campaign.criteria as any,
                     requestedCount: batchSize,
                     campaignId: campaignId,
+                    startingOffset: campaign.results_count || 0
                     // skipEnrichment: false is default/implied now
                 });
 

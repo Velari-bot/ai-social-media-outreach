@@ -20,10 +20,11 @@ export class DiscoveryPipeline {
         platform: Platform;
         skipEnrichment?: boolean;
         campaignId?: string;
+        startingOffset?: number; // Add support for pagination
     }): Promise<DiscoveryPipelineResponse> {
-        const { userId, filters, requestedCount, platform, skipEnrichment, campaignId } = params;
+        const { userId, filters, requestedCount, platform, skipEnrichment, campaignId, startingOffset } = params;
 
-        console.log(`[Discovery] Starting search for User ${userId}. Requested: ${requestedCount}`);
+        console.log(`[Discovery] Starting search for User ${userId}. Requested: ${requestedCount}. Offset: ${startingOffset || 0}`);
 
         // 1. Build User's "Seen" Cache (Deduplication)
         const userSeenIds = await this.getUserSeenCreatorIds(userId);
@@ -82,13 +83,18 @@ export class DiscoveryPipeline {
             // We force the 'niche' filter to be the current keyword for this iteration
             const currentFilters = { ...filters, niche: currentKeyword };
 
+            // Determine Offset for this specific search
+            // Only apply the global 'startingOffset' to the PRIMARY keyword search (index 0).
+            // Expansion keywords should start at 0 (fresh search).
+            const searchOffset = (keywordIndex === 0 && startingOffset) ? startingOffset : 0;
+
             try {
                 // Try fetching - we know pagination might be broken so we just ask for 50 and take what we get
                 const externalResults = await influencerClubClient.discoverCreators({
                     platform,
                     filters: currentFilters,
                     limit: 50,
-                    offset: 0
+                    offset: searchOffset // Use calculated offset
                 });
 
                 let addedForKeyword = 0;

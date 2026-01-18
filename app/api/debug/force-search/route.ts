@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
             filters: campaign.criteria as any,
             requestedCount: batchSize,
             campaignId: campaignId,
+            startingOffset: campaign.results_count || 0
         });
 
         const foundCount = results.creators?.length || 0;
