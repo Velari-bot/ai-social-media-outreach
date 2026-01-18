@@ -38,6 +38,7 @@ interface Campaign {
   creatorsContacted: number;
   replies: number;
   criteria: any;
+  recurring: boolean;
 }
 
 export default function DashboardPage() {
@@ -156,7 +157,8 @@ function DashboardContent() {
           status: req.status === "delivered" ? "awaiting_replies" : req.status === "in_progress" ? "outreach_running" : "searching",
           creatorsContacted: req.results_count || req.resultsCount || 0,
           replies: 0,
-          criteria: req.criteria || req.filters_json || {}
+          criteria: req.criteria || req.filters_json || {},
+          recurring: !!req.is_recurring
         }));
         setRecentCampaigns(campaigns);
 
@@ -706,15 +708,27 @@ function CampaignCard({ campaign, onDelete, onClick }: { campaign: Campaign, onD
     >
       <div className="flex justify-between items-start relative z-10">
         <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
             <div className="p-1.5 bg-gray-50 rounded-lg group-hover:bg-black group-hover:text-white transition-colors">
               {getPlatformIcon(campaign.platforms?.[0] || 'any', "w-4 h-4")}
             </div>
-            <h3 className="font-bold text-lg text-black">{campaign.name}</h3>
-            <StatusBadge status={campaign.status} />
+            <h3 className="font-bold text-lg text-black mr-2">{campaign.name}</h3>
+
+            {/* Status Badges */}
+            <div className="flex items-center gap-2">
+              <StatusBadge status={campaign.status} />
+              {campaign.recurring && (
+                <span className="text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wide bg-green-100 text-green-700 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                  Autopilot
+                </span>
+              )}
+            </div>
           </div>
           <p className="text-sm text-gray-500 font-medium truncate max-w-[200px]">
-            Targeting {(campaign.platforms && campaign.platforms.length > 0) ? campaign.platforms.join(', ') : 'YouTube'}
+            {(campaign.platforms && campaign.platforms.length > 0) ? campaign.platforms.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(', ') : 'YouTube'}
+            <span className="text-gray-300 mx-2">•</span>
+            {campaign.recurring ? "Finding new creators daily" : "One-time search"}
           </p>
         </div>
 
