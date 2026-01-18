@@ -867,7 +867,7 @@ function StatusBadge({ status }: { status: Campaign["status"] }) {
   const labels = {
     searching: "Finding",
     outreach_running: "Sending",
-    awaiting_replies: "Waiting",
+    awaiting_replies: "Sent First Email",
     completed: "Done"
   };
 
