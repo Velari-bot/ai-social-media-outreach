@@ -177,6 +177,49 @@ function DashboardContent() {
     initDashboard();
   }, [router, isDemo]);
 
+  const triggerAutopilot = async (campaignId: number, e: any) => {
+    e.stopPropagation();
+    if (isDemo) {
+      toast.error("Cannot run autopilot in demo info");
+      return;
+    }
+
+    const toastId = toast.loading("Resuming Autopilot: Finding creators...");
+
+    try {
+      // 1. Force Search
+      const searchRes = await fetch('/api/debug/force-search', {
+        method: 'POST',
+        body: JSON.stringify({ userId, campaignId: campaignId.toString() })
+      });
+      const searchData = await searchRes.json();
+
+      if (!searchData.success && !searchData.error?.includes('No quota')) {
+        throw new Error(searchData.error || "Search failed");
+      }
+
+      const found = searchData.found || 0;
+
+      // 2. Force Email Send (if creators found or just to be safe)
+      toast.loading(`Found ${found} new creators! Sending emails...`, { id: toastId });
+
+      const sendRes = await fetch('/api/debug/force-send', {
+        method: 'POST',
+        body: JSON.stringify({ userId, forceAll: true })
+      });
+      const sendData = await sendRes.json();
+
+      toast.success(`Autopilot Complete: ${found} found, ${sendData.sendResult?.sent || 0} emails sent!`, { id: toastId });
+
+      // Refresh dashboard
+      // window.location.reload(); // Or just let stats update on next poll
+
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Autopilot failed: " + err.message, { id: toastId });
+    }
+  };
+
   if (loading) {
     return (
       <main className="h-screen bg-[#F5F3EF] flex items-center justify-center">
@@ -435,8 +478,14 @@ function DashboardContent() {
 
               <div className="space-y-3">
                 {recentCampaigns && recentCampaigns.length > 0 ? (
-                  recentCampaigns.map((c) => (
-                    <CampaignCard key={c.id} campaign={c} onDelete={handleDeleteCampaign} onClick={() => handleViewCampaignResults(c)} />
+                  recentCampaigns.map((campaign) => (
+                    <CampaignCard
+                      key={campaign.id}
+                      campaign={campaign}
+                      onDelete={handleDeleteCampaign}
+                      onRunNow={(id, e) => triggerAutopilot(id, e)}
+                      onClick={() => router.push(`/creator-request?id=${campaign.id}`)}
+                    />
                   ))
                 ) : (
                   <div className="p-8 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 text-center">
@@ -700,7 +749,7 @@ function StatTile({ label, value, suffix, color, textColor = "text-black" }: any
   );
 }
 
-function CampaignCard({ campaign, onDelete, onClick }: { campaign: Campaign, onDelete: (id: number) => void, onClick: () => void }) {
+function CampaignCard({ campaign, onDelete, onClick, onRunNow }: { campaign: Campaign, onDelete: (id: number) => void, onClick: () => void, onRunNow?: (id: number, e: any) => void }) {
   return (
     <div
       onClick={onClick}
@@ -718,10 +767,21 @@ function CampaignCard({ campaign, onDelete, onClick }: { campaign: Campaign, onD
             <div className="flex items-center gap-2">
               <StatusBadge status={campaign.status} />
               {campaign.recurring && (
-                <span className="text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wide bg-green-100 text-green-700 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                  Autopilot
-                </span>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wide bg-green-100 text-green-700 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                    Autopilot
+                  </span>
+                  <button
+                    onClick={(e) => onRunNow?.(campaign.id, e)}
+                    className="p-1 hover:bg-gray-100 rounded-full text-gray-400 hover:text-green-600 transition-colors"
+                    title="Run Autopilot Now (Force Search & Email)"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                      <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.433a.75.75 0 0 0 0-1.5H3.989a.75.75 0 0 0-.75.75v4.242a.75.75 0 0 0 1.5 0v-2.43l.31.31a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm1.23-3.723a.75.75 0 0 0 .219-.53V2.929a.75.75 0 0 0-1.5 0v2.433l-.31-.31a7 7 0 0 0-11.712 3.138.75.75 0 0 0 1.449.39 5.5 5.5 0 0 1 9.201-2.466l.312.312h-2.433a.75.75 0 0 0 0 1.5h4.242a.75.75 0 0 0 .53-.219Z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
               )}
             </div>
           </div>
