@@ -28,8 +28,8 @@ export default function SupportPage() {
                         <p className="text-gray-500 mb-6 min-h-[48px]">
                             Direct access to our engineering team for complex issues.
                         </p>
-                        <a href="mailto:support@verality.io" className="text-black font-black flex items-center hover:gap-2 transition-all">
-                            support@verality.io <ArrowRight className="h-4 w-4 ml-1" />
+                        <a href="mailto:benderaiden826@gmail.com" className="text-black font-black flex items-center hover:gap-2 transition-all">
+                            benderaiden826@gmail.com <ArrowRight className="h-4 w-4 ml-1" />
                         </a>
                     </div>
 
