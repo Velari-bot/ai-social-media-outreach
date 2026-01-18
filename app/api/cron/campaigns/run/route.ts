@@ -125,11 +125,21 @@ export async function GET(req: NextRequest) {
                 const foundCount = results.creators?.length || 0;
 
                 if (foundCount > 0) {
-                    // C. Charge Quota
+                    // C. Charge Quota (Only for NEW findings, backlog was presumably charged or will be charged on queue)
+                    // Wait, incrementEmailQuota tracks TOTAL discoveries.
+                    // Queuing consumes 'email_usage'. Two different quotas?
+                    // 'findings_quota' vs 'email_quota'.
+                    // UserAccount has 'email_quota_daily'.
+                    // incrementEmailQuota increments 'email_usage'? No.
+                    // Let's check incrementEmailQuota.
+                    // It increments 'creators_found_this_month'. It does NOT touch daily email quota.
+                    // 'addCreatorsToQueue' touches 'email_used_today'.
+                    // So we are safe. Discovery costs "Find Credits" (maybe unlimited or monthly).
+                    // Sending costs "Daily Email Credits".
+
                     await incrementEmailQuota(userId, foundCount);
 
                     // D. Update Campaign Stats/Log
-                    // We append to creator_ids or just update last_run_at
                     const newIds = results.creators.map(c => c.id).filter(Boolean);
 
                     await db.collection('creator_requests').doc(campaignId).update({
@@ -140,15 +150,38 @@ export async function GET(req: NextRequest) {
 
                     totalCreatorsFound += foundCount;
                     console.log(`[CampaignCron] Success: Found ${foundCount} creators for ${campaignId}`);
-
-                    // E. Schedule Emails for Outreach
-                    // We must import this carefully to avoid circular deps if any
-                    const { addCreatorsToQueue } = await import('@/lib/services/outreach-queue');
-                    await addCreatorsToQueue(newIds.map(String), userId, campaignId, campaign.name);
-                    console.log(`[CampaignCron] Scheduled ${foundCount} outlook emails for ${campaignId}`);
-
                 } else {
                     console.log(`[CampaignCron] No new creators found for ${campaignId}`);
+                }
+
+                // E. ROBUST QUEUING / BACKLOG PROCESSING
+                // We ALWAYS run this to ensure any creators found (now or in past) are queued if they haven't been yet.
+                // This fixes the "0 emails sent" issue if backlog exists.
+
+                // 1. Get latest attached creators to campaign
+                const updatedCampaignDoc = await db.collection('creator_requests').doc(campaignId).get();
+                const allCreatorIds = (updatedCampaignDoc.data()?.creator_ids || []) as string[];
+
+                // 2. Get currently queued items to avoid duplicates
+                const queueSnap = await db.collection('outreach_queue')
+                    .where('campaign_id', '==', campaignId)
+                    .select('creator_id')
+                    .get();
+
+                const queuedCreatorIds = new Set(queueSnap.docs.map(d => d.data().creator_id));
+
+                // 3. Find missing (Backlog)
+                const idsToQueue = allCreatorIds.filter(id => !queuedCreatorIds.has(id));
+
+                if (idsToQueue.length > 0) {
+                    console.log(`[CampaignCron] Processing backlog/new items. Attempting to queue ${idsToQueue.length} creators...`);
+                    const { addCreatorsToQueue } = await import('@/lib/services/outreach-queue');
+
+                    // This function handles the Daily Email Quota check.
+                    // If out of quota, it will skip them, but we tried.
+                    await addCreatorsToQueue(idsToQueue, userId, campaignId, campaign.name);
+                } else {
+                    console.log(`[CampaignCron] No pending backlog for ${campaignId}`);
                 }
 
                 processed++;
