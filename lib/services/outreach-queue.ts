@@ -100,6 +100,60 @@ export interface UserEmailSettings {
  * Add creators to outreach queue with smart scheduling
  * Uses user's daily credit quota (credits = emails)
  */
+export const addCreatorsToQueue = async (
+    creatorIds: string[],
+    userId: string,
+    campaignId?: string,
+    campaignName?: string
+) => {
+    // 1. Fetch full creator details from "creators" collection
+    // Because queueCreatorsForOutreach needs emails, etc.
+    // This is a helper bridge.
+
+    // We can't fetch all efficiently if array is huge, but usually <50.
+    // Let's implement this logic or just update queueCreatorsForOutreach to handle IDs?
+    // Better: Fetch the creators here.
+
+    if (!creatorIds || creatorIds.length === 0) return;
+
+    // Use chunks if > 10 in 'in' query
+    // Actually, queueCreatorsForOutreach expects full objects.
+    // We should probably fetch them from the database since we only have IDs in the cron.
+
+    // Simplification: We'll do a quick fetch loop or batched fetch
+    const creators: any[] = [];
+    const chunks = [];
+    for (let i = 0; i < creatorIds.length; i += 10) {
+        chunks.push(creatorIds.slice(i, i + 10));
+    }
+
+    for (const chunk of chunks) {
+        const snap = await db.collection('creators').where('id', 'in', chunk).get();
+        snap.docs.forEach(doc => {
+            const data = doc.data();
+            creators.push({
+                creator_id: data.id,
+                email: data.email || data.contact_email,
+                handle: data.handle || data.username,
+                platform: data.platform || 'instagram',
+                name: data.name || data.fullname
+            });
+        });
+    }
+
+    // Filter out valid emails
+    const validCreators = creators.filter(c => c.email && c.email.includes('@'));
+
+    return queueCreatorsForOutreach({
+        userId,
+        creators: validCreators,
+        campaignId,
+        requestId: campaignId // using campaignId as requestId for context
+    });
+};
+
+/**
+ * Add creators to outreach queue with smart scheduling
 export async function queueCreatorsForOutreach(params: {
     userId: string;
     creators: Array<{

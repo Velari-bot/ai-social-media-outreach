@@ -135,6 +135,13 @@ export async function GET(req: NextRequest) {
 
                     totalCreatorsFound += foundCount;
                     console.log(`[CampaignCron] Success: Found ${foundCount} creators for ${campaignId}`);
+
+                    // E. Schedule Emails for Outreach
+                    // We must import this carefully to avoid circular deps if any
+                    const { addCreatorsToQueue } = await import('@/lib/services/outreach-queue');
+                    await addCreatorsToQueue(newIds.map(String), userId, campaignId, campaign.name);
+                    console.log(`[CampaignCron] Scheduled ${foundCount} outlook emails for ${campaignId}`);
+
                 } else {
                     console.log(`[CampaignCron] No new creators found for ${campaignId}`);
                 }
