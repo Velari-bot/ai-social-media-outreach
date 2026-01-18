@@ -392,7 +392,7 @@ function SettingsContent() {
                 <button
                   onClick={(e) => {
                     e.preventDefault();
-                    window.location.href = "https://billing.stripe.com/p/login/bpc_1Sqm1JDGgiSTURYUG403C5YY";
+                    window.location.href = "https://billing.stripe.com/p/login/5kQ4gz06Lgt7bGS7sC0gw00";
                   }}
                   className="px-4 py-2 bg-white border border-gray-200 text-black rounded-xl hover:bg-gray-50 transition-colors text-sm font-medium"
                 >
