@@ -70,10 +70,14 @@ export async function GET(req: NextRequest) {
                 }
 
                 // Determine batch size (use remaining, but cap at say 50 or the original batch size)
-                const originalBatchSize = campaign.criteria?.batchSize || 50;
+                // IGNORE the original batch size (which defaults to 50) for Autopilot.
+                // We want to MAX out credits daily.
+                // Cap at 100 per run to ensure reliability, but rely on runs to fill up.
+                // Actually, let's try to do up to active remaining quota (capped at 150 for safety).
+
                 const batchSize = account.plan === 'enterprise'
-                    ? originalBatchSize
-                    : Math.min(originalBatchSize, remaining);
+                    ? 200
+                    : Math.min(remaining, 200);
 
                 if (batchSize <= 0) {
                     skipped++;
