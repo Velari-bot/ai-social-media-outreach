@@ -59,6 +59,7 @@ function CreatorRequestContent() {
   const [location, setLocation] = useState("United States");
   const [requestedCreators, setRequestedCreators] = useState(50);
   const [isAnyNiche, setIsAnyNiche] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);
 
   // App State
   const [userId, setUserId] = useState<string | null>(null);
@@ -124,7 +125,8 @@ function CreatorRequestContent() {
       const res = await createRequest({
         name: `${niche}`,
         platforms: [platform],
-        criteria
+        criteria,
+        isRecurring
       });
 
       if (res.success) {
@@ -426,6 +428,23 @@ function CreatorRequestContent() {
                   </select>
                 </div>
 
+                <div className="bg-green-50 rounded-xl p-4 border border-green-100/50">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isRecurring}
+                      onChange={(e) => setIsRecurring(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    />
+                    <div>
+                      <span className="block text-sm font-bold text-gray-900">Enable Autopilot (Daily)</span>
+                      <span className="block text-xs text-green-700 mt-0.5 leading-snug">
+                        Automatically find new creators every day until your quota is reached.
+                      </span>
+                    </div>
+                  </label>
+                </div>
+
                 <div className="pt-4 border-t border-gray-100">
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-xs font-bold text-gray-500">Estimated Cost</span>
@@ -576,7 +595,7 @@ function CreatorRequestContent() {
             )}
           </div>
         </div>
-      </div>
-    </main>
+      </div >
+    </main >
   );
 }

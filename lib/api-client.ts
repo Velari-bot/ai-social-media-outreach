@@ -78,6 +78,7 @@ export async function createRequest(data: {
   name: string;
   platforms: string[];
   criteria: Record<string, any>;
+  isRecurring?: boolean;
 }) {
   return apiRequest<{ success: boolean; request: any; creators?: any[]; meta?: any }>('/api/user/requests', {
     method: 'POST',
