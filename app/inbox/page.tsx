@@ -55,8 +55,11 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [showThread, setShowThread] = useState(false);
 
-  // Moved out of useEffect to allow manual refresh
-  // Moved out of useEffect to allow manual refresh
+  // Tabs
+  const [activeTab, setActiveTab] = useState<"inbox" | "sent">("inbox");
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+
   const loadUserAndReplies = useCallback(async () => {
     // Check for demo mode
     const demoMode = searchParams?.demo === "true";
@@ -64,6 +67,7 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
 
     if (demoMode) {
       setUserId("demo-user");
+      setUserEmail("demo@verality.io");
       // Mock replies
       const mockReplies: Reply[] = [
         {
@@ -167,6 +171,7 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
       }
 
       setUserId(user.uid);
+      setUserEmail(user.email);
 
       // Get fresh token
       const token = await user.getIdToken();
@@ -231,6 +236,26 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
   const filteredReplies = useMemo(() => {
     let result = [...replies];
 
+    // Filter by Tab (Inbox vs Sent)
+    if (activeTab === "inbox") {
+      // Inbox: Last message is NOT from me
+      result = result.filter(r => {
+        // Find last message
+        const lastMsg = r.thread && r.thread.length > 0 ? r.thread[r.thread.length - 1] : null;
+        if (!lastMsg) return true; // Default keep
+        // If last message is from me, it's SENT. So for Inbox, exclude it.
+        // We check if fromEmail includes my email
+        return !lastMsg.fromEmail?.includes(userEmail || "MISSING");
+      });
+    } else {
+      // Sent: Last message IS from me
+      result = result.filter(r => {
+        const lastMsg = r.thread && r.thread.length > 0 ? r.thread[r.thread.length - 1] : null;
+        if (!lastMsg) return false;
+        return lastMsg.fromEmail?.includes(userEmail || "MISSING");
+      });
+    }
+
     // Apply filters
     if (filter === "new") {
       result = result.filter(r => r.isNew || r.hasNewReply);
@@ -248,7 +273,7 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
     });
 
     return result;
-  }, [replies, filter, sortBy]);
+  }, [replies, filter, sortBy, activeTab, userEmail]);
 
   const getTagColor = (tag: string) => {
     switch (tag) {
@@ -451,6 +476,28 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
                     Back to Dashboard
                   </Link>
                 </div>
+              </div>
+
+              {/* Tab Switcher */}
+              <div className="flex gap-1 bg-gray-100 p-1 rounded-xl mb-6 w-fit">
+                <button
+                  onClick={() => setActiveTab("inbox")}
+                  className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "inbox"
+                      ? "bg-white text-black shadow-sm"
+                      : "text-gray-500 hover:text-black"
+                    }`}
+                >
+                  Inbox
+                </button>
+                <button
+                  onClick={() => setActiveTab("sent")}
+                  className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "sent"
+                      ? "bg-white text-black shadow-sm"
+                      : "text-gray-500 hover:text-black"
+                    }`}
+                >
+                  Sent
+                </button>
               </div>
 
               {/* Filters */}
