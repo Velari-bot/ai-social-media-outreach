@@ -83,64 +83,86 @@ export class DiscoveryPipeline {
             // We force the 'niche' filter to be the current keyword for this iteration
             const currentFilters = { ...filters, niche: currentKeyword };
 
-            // Determine Offset for this specific search
-            // Only apply the global 'startingOffset' to the PRIMARY keyword search (index 0).
-            // Expansion keywords should start at 0 (fresh search).
-            const searchOffset = (keywordIndex === 0 && startingOffset) ? startingOffset : 0;
+            // Determine Initial Offset for this specific search
+            let currentOffset = (keywordIndex === 0 && startingOffset) ? startingOffset : 0;
+            let keywordRetries = 0;
+            const MAX_RETRIES_PER_KEYWORD = 3;
 
-            try {
-                // Try fetching - we know pagination might be broken so we just ask for 50 and take what we get
-                const externalResults = await influencerClubClient.discoverCreators({
-                    platform,
-                    filters: currentFilters,
-                    limit: 50,
-                    offset: searchOffset // Use calculated offset
-                });
+            // Inner Loop: Paging through results for this keyword
+            while (keywordRetries <= MAX_RETRIES_PER_KEYWORD && finalCreators.length < TARGET_COUNT) {
+                try {
+                    // Try fetching - we know pagination might be broken so we just ask for 50 and take what we get
+                    const externalResults = await influencerClubClient.discoverCreators({
+                        platform,
+                        filters: currentFilters,
+                        limit: 50,
+                        offset: currentOffset,
+                    });
 
-                let addedForKeyword = 0;
-                if (externalResults) {
-                    externalFetches += externalResults.length;
-                    creditsConsumed += 1; // 1 credit per API call
+                    let addedForKeyword = 0;
+                    if (externalResults && externalResults.length > 0) {
+                        externalFetches += externalResults.length;
+                        creditsConsumed += 1; // 1 credit per API call
 
-                    // Deduplicate and Add
-                    for (const raw of externalResults) {
-                        if (finalCreators.length >= TARGET_COUNT) break;
+                        // Deduplicate and Add
+                        for (const raw of externalResults) {
+                            if (finalCreators.length >= TARGET_COUNT) break;
 
-                        const creator = await this.resolveCreator(raw, platform);
+                            const creator = await this.resolveCreator(raw, platform);
 
-                        // MANAGEMENT CHECK (for 'custom_no_email' plan)
-                        const excludeManagement = (filters as any).excludeManagement === true;
-                        if (excludeManagement) {
-                            const bio = (creator.bio || creator.basic_profile_data?.biography || "").toLowerCase();
-                            const hasManagement = bio.includes("management") || bio.includes("agency") || bio.includes("@mngt") || bio.includes("manager") || bio.includes("mgmt");
-                            if (hasManagement) {
-                                // Skip this creator
+                            // MANAGEMENT CHECK (for 'custom_no_email' plan)
+                            const excludeManagement = (filters as any).excludeManagement === true;
+                            if (excludeManagement) {
+                                const bio = (creator.bio || creator.basic_profile_data?.biography || "").toLowerCase();
+                                const hasManagement = bio.includes("management") || bio.includes("agency") || bio.includes("@mngt") || bio.includes("manager") || bio.includes("mgmt");
+                                if (hasManagement) {
+                                    continue;
+                                }
+                            }
+
+                            // Check if in finalCreators first to avoid dups in same batch
+                            if (finalCreators.some(c => c.id === creator.id)) {
                                 continue;
                             }
-                        }
 
-                        // Double check uniqueness (against DB history AND current batch)
-                        // Note: userSeenIds logic needs to be checked.
-                        // Ideally we check if it is in seen list. checking against finalCreators is good for this batch.
-                        // Checking against userSeenIds prevents re-adding old ones.
-                        // For now, let's assume we skip seen ones to provide fresh results.
-
-                        // Check if in finalCreators first to avoid dups in same batch
-                        if (finalCreators.some(c => c.id === creator.id)) {
-                            continue;
-                        }
-
-                        if (!userSeenIds.has(String(creator.id))) {
-                            finalCreators.push(creator);
-                            userSeenIds.add(String(creator.id));
-                            addedForKeyword++;
+                            if (!userSeenIds.has(String(creator.id))) {
+                                finalCreators.push(creator);
+                                userSeenIds.add(String(creator.id));
+                                addedForKeyword++;
+                            }
                         }
                     }
+
+                    console.log(`[Discovery] Keyword "${currentKeyword}" (Offset ${currentOffset}) yielded ${addedForKeyword} NEW creators (Raw: ${externalResults?.length || 0}).`);
+
+                    // SMART PAGING LOGIC
+                    // If we found results but they were ALL duplicates (addedForKeyword === 0),
+                    // AND we haven't hit our target yet,
+                    // AND we haven't maxed out retries:
+                    // THEN try the NEXT PAGE.
+                    if (externalResults && externalResults.length > 0 && addedForKeyword === 0) {
+                        console.log(`[Discovery] Offset ${currentOffset} exhausted (all duplicates). Trying next page...`);
+                        currentOffset += 50;
+                        keywordRetries++;
+                        continue; // Re-run inner loop with higher offset
+                    }
+
+                    // If we got 0 raw results, this keyword is exhausted. Break inner loop.
+                    if (!externalResults || externalResults.length === 0) {
+                        break;
+                    }
+
+                    // If we added some creators but not enough, we might want to continue paging if we are eager?
+                    // For now, let's just proceed to next step (or next keyword if needed outside).
+                    // Actually, if we found SOME, that's success for this iteration. Break inner loop to count it.
+                    break;
+
+                } catch (e) {
+                    console.error(`[Discovery] Search failed for keyword "${currentKeyword}":`, e);
+                    break;
                 }
-                console.log(`[Discovery] Keyword "${currentKeyword}" yielded ${addedForKeyword} NEW creators.`);
-            } catch (e) {
-                console.error(`[Discovery] Search failed for keyword "${currentKeyword}":`, e);
             }
+
 
             keywordIndex++;
         }
