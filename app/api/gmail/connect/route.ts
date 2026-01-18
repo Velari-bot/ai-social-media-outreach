@@ -69,7 +69,9 @@ export async function POST(request: NextRequest) {
     const newAccountData = {
       email: profile.emailAddress,
       access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
+      // IMPORTANT: Google only returns refresh_token on the first consent.
+      // If `tokens.refresh_token` is undefined, keep the old one if it exists!
+      refresh_token: tokens.refresh_token || (existingIndex >= 0 ? accounts[existingIndex].refresh_token : undefined),
       expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
       connected_at: new Date().toISOString(),
       last_sync: new Date().toISOString(),
@@ -93,7 +95,8 @@ export async function POST(request: NextRequest) {
       // Let's keep the *latest* one as legacy fallback for safety, but primary source is 'accounts'
       email: profile.emailAddress,
       access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
+      // Same logic for legacy field fallback
+      refresh_token: tokens.refresh_token || (existingDoc.exists ? (existingDoc.data()?.refresh_token) : undefined),
       last_sync: new Date().toISOString()
     }, { merge: true });
 
