@@ -135,6 +135,7 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
 
     // Usage tracking map: email -> count used in this batch
     const usageMap: Record<string, number> = {};
+    const successfulCampaignIds = new Set<string>();
 
     // Send emails
     for (const emailItem of emails) {
@@ -224,6 +225,9 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
             });
 
             sentCount++;
+            if (emailItem.campaign_id) {
+                successfulCampaignIds.add(emailItem.campaign_id);
+            }
             console.log(`[Outreach Sender] ✅ Sent to ${emailItem.creator_email} via ${sendingEmail}`);
 
             // Small delay
@@ -273,7 +277,40 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
         updated_at: Timestamp.now()
     });
 
+    // UPDATE CAMPAIGN STATUS for all campaigns that had successful sends
+    if (successfulCampaignIds.size > 0) {
+        await updateCampaignStatus(successfulCampaignIds);
+    }
+
     return { sent: sentCount, failed: failedCount };
+}
+
+async function updateCampaignStatus(campaignIds: Set<string>) {
+    if (campaignIds.size === 0) return;
+
+    console.log(`[Outreach Sender] Updating status for ${campaignIds.size} campaigns...`);
+
+    for (const campaignId of Array.from(campaignIds)) {
+        try {
+            const docRef = db.collection('creator_requests').doc(campaignId);
+            const doc = await docRef.get();
+
+            if (doc.exists) {
+                const data = doc.data();
+                // Only update if currently "in_progress" (Sending) or "searching" (Finding)
+                // Do not overwrite "completed" or if it's already "delivered" (to save write)
+                if (data?.status === 'in_progress' || data?.status === 'searching') {
+                    await docRef.update({
+                        status: 'delivered',
+                        updated_at: Timestamp.now()
+                    });
+                    console.log(`[Outreach Sender] Updated campaign ${campaignId} status to 'delivered' (Sent First Email)`);
+                }
+            }
+        } catch (error) {
+            console.error(`[Outreach Sender] Failed to update campaign ${campaignId}:`, error);
+        }
+    }
 }
 
 async function generateOutreachEmail(params: {

@@ -174,12 +174,23 @@ export async function POST(request: NextRequest) {
           // Use the top-level adminDb directly
           const requestRef = adminDb.collection('creator_requests').doc(newRequest.id);
           await requestRef.update({
-            status: 'delivered',
+            status: 'in_progress',
             results_count: foundCount,
             creator_ids: creatorIds,
             updated_at: Timestamp.now()
           });
-          console.log(`[RequestsAPI] Updated request ${newRequest.id} with ${foundCount} results.`);
+          console.log(`[RequestsAPI] Updated request ${newRequest.id} with ${foundCount} results. Status: in_progress`);
+
+          // 7b. Add to Outreach Queue IMMEDIATELY
+          // This ensures non-recurring campaigns send emails, and recurring ones start immediately
+          try {
+            console.log(`[RequestsAPI] Queuing ${foundCount} creators for outreach...`);
+            const { addCreatorsToQueue } = await import('@/lib/services/outreach-queue');
+            await addCreatorsToQueue(creatorIds, userId, newRequest.id, name);
+            console.log(`[RequestsAPI] Successfully queued creators for campaign ${newRequest.id}`);
+          } catch (queueError: any) {
+            console.error(`[RequestsAPI] Failed to queue creators:`, queueError);
+          }
         } catch (dbError: any) {
           console.error(`[RequestsAPI] Failed to update request record ${newRequest.id}:`, dbError.message);
           // We continue anyway so user gets their creators
