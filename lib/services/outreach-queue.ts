@@ -104,6 +104,7 @@ export interface UserEmailSettings {
 
 /**
  * Add creators to outreach queue with smart scheduling
+ */
 export async function queueCreatorsForOutreach(params: {
     userId: string;
     creators: Array<{
