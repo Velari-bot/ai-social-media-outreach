@@ -569,9 +569,24 @@ function DashboardContent() {
                       setAiAutopilot(newState);
                       try {
                         await updateUserAccount({ ai_autopilot_enabled: newState });
-                        toast.success(newState ? "Autopilot enabled" : "Autopilot disabled");
+
+                        // Bulk update all campaigns to match
+                        await fetch('/api/user/campaigns/toggle-all-autopilot', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ userId, enabled: newState })
+                        });
+
+                        // Optimistic UI update for campaigns list
+                        setRecentCampaigns(prev => prev.map(c => ({
+                          ...c,
+                          recurring: newState
+                        })));
+
+                        toast.success(newState ? "Autopilot enabled (All Campaigns)" : "Autopilot disabled");
                       } catch (e) {
                         setAiAutopilot(!newState);
+                        console.error(e);
                         toast.error("Failed to update autopilot");
                       }
                     }}
