@@ -179,7 +179,9 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
                 creatorPlatform: emailItem.creator_platform,
                 userName: userName,
                 userEmail: sendingEmail, // Send from selected account
-                persona: settings.ai_persona || "Cory from Beyond Vision"
+                persona: settings.ai_persona || "Cory from Beyond Vision",
+                templateBody: userData.outreach_persona_message,
+                templateSubject: userData.outreach_subject_line
             });
 
             // Send via Gmail
@@ -281,9 +283,48 @@ async function generateOutreachEmail(params: {
     userName: string;
     userEmail: string;
     persona: string;
+    templateBody?: string;
+    templateSubject?: string;
 }): Promise<{ subject: string; body: string }> {
-    const { creatorName, creatorHandle, creatorPlatform, userName, userEmail, persona } = params;
+    const { creatorName, creatorHandle, creatorPlatform, userName, userEmail, persona, templateBody, templateSubject } = params;
 
+    // 1. STRICT TEMPLATE MODE
+    if (templateBody && templateBody.trim().length > 10) {
+        // Simple variable replacement
+        let body = templateBody
+            .replace(/\[Name\]/gi, creatorName || "there")
+            .replace(/\[First Name\]/gi, creatorName ? creatorName.split(' ')[0] : "there")
+            .replace(/\[Handle\]/gi, creatorHandle || "")
+            .replace(/\[Platform\]/gi, creatorPlatform || "social media");
+
+        // Subject handling
+        let subject = "Collaboration Opportunity";
+        if (templateSubject && templateSubject.trim().length > 0) {
+            subject = templateSubject
+                .replace(/\[Name\]/gi, creatorName || "")
+                .replace(/\[Handle\]/gi, creatorHandle || "");
+        } else {
+            // Generate subject from body using AI if missing? 
+            // Or just use a default. For speed/reliability, default is safer, or quick AI call.
+            // Let's do a quick AI call for subject transparency if missing
+            try {
+                const completion = await getOpenAI().chat.completions.create({
+                    model: "gpt-4",
+                    messages: [
+                        { role: "system", content: "Generate a short, casual subject line for this email body. No quotes." },
+                        { role: "user", content: body }
+                    ]
+                });
+                subject = completion.choices[0].message.content?.replace(/"/g, '') || "Collaboration request";
+            } catch (e) {
+                subject = "Question for you";
+            }
+        }
+
+        return { subject, body };
+    }
+
+    // 2. AI GENERATION MODE
     const completion = await getOpenAI().chat.completions.create({
         model: "gpt-4",
         messages: [
@@ -292,18 +333,21 @@ async function generateOutreachEmail(params: {
                 content: `You are ${persona}. You are reaching out to creators.
                 
                 **YOUR STYLE (Exact Template to Model)**:
-                "Hi [Name], Cory here with Beyond Vision! Hope you're doing well - I'm just getting in touch as we have some available budget with our client, Sheglam for November/December.
-                
+                "Hey!
+
+                Cory here with Beyond Vision! Hope you're doing well - I'm just getting in touch as we have some available budget with our client, Sheglam for November/December. 
+
                 We'd love to get you involved on the campaign as soon as possible, please let me know your rate for 1x TikTok post?
-                
+
                 If you're not interested in this deal, we work with a bunch of other brands so send over your pricing anyway and we can send over some other campaigns.
-                
+
                 Best,
+
                 Cory"
 
                 **Instructions**:
                 1. Adapt the above template for the creator
-                2. Use their name if provided, otherwise use "Hi there"
+                2. Use their name if provided, otherwise using "Hey!" or "Hi there" is fine.
                 3. Keep it brief and personalized
                 4. Sign off as "${userName}" or "Best, ${userName}"
                 5. Generate a subject line that's casual and direct`
@@ -320,7 +364,7 @@ async function generateOutreachEmail(params: {
 
     // Extract subject and body
     const subjectMatch = response.match(/Subject:\s*(.+)/i);
-    const subject = subjectMatch ? subjectMatch[1].trim() : "Quick opportunity with Sheglam";
+    const subject = subjectMatch ? subjectMatch[1].trim() : (templateSubject || "Quick opportunity");
 
     // Remove subject line from body
     const body = response.replace(/Subject:\s*.+\n*/i, '').trim();
