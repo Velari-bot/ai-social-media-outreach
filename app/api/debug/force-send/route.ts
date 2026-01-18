@@ -30,12 +30,16 @@ export async function POST(req: NextRequest) {
         // 2. Update their scheduled_time to NOW so the sender picks them up
         // OR just invoke the sender directly on them.
 
-        // Let's explicitly force their time to NOW to bypass the "future" check
+        // Let's explicitly force their time to PASST (5 mins ago) to bypass the "future" check
+        // and ensure the sender sees them as "ready".
+        const past = Timestamp.fromMillis(Date.now() - 5 * 60 * 1000); // 5 mins ago
+
         const batch = db.batch();
         snapshot.docs.forEach(doc => {
             batch.update(doc.ref, {
-                scheduled_send_time: now,
-                force_sent_debug: true
+                scheduled_send_time: past,
+                force_sent_debug: true,
+                status: 'scheduled' // valid check
             });
         });
         await batch.commit();
