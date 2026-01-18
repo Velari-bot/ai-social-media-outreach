@@ -47,6 +47,8 @@ function SettingsContent() {
   const [limits, setLimits] = useState<DailyLimits | null>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [intent, setIntent] = useState("");
+  const [personaMessage, setPersonaMessage] = useState("");
+  const [subjectLine, setSubjectLine] = useState("");
 
   useEffect(() => {
     async function loadSettings() {
@@ -91,6 +93,8 @@ function SettingsContent() {
             remaining_monthly: 3000 - (acc.email_used_this_month || 0)
           });
           setIntent(acc.outreach_intent || "");
+          setPersonaMessage(acc.outreach_persona_message || "");
+          setSubjectLine(acc.outreach_subject_line || "");
         }
 
       } catch (error) {
@@ -112,7 +116,11 @@ function SettingsContent() {
     setSaving(true);
     try {
       const { updateUserAccount } = await import("@/lib/api-client");
-      const res = await updateUserAccount({ outreach_intent: intent });
+      const res = await updateUserAccount({
+        outreach_intent: intent,
+        outreach_persona_message: personaMessage,
+        outreach_subject_line: subjectLine
+      });
       if (res.success) {
         toast.success("Outreach intent updated");
       } else {
@@ -323,7 +331,7 @@ function SettingsContent() {
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               <label className="block">
                 <span className="text-sm font-bold text-gray-700 uppercase tracking-wider block mb-2">Intent / Goal</span>
                 <input
@@ -333,10 +341,42 @@ function SettingsContent() {
                   onChange={(e) => setIntent(e.target.value)}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 text-black placeholder:text-gray-400 font-medium"
                 />
+                <p className="text-xs text-gray-400 italic mt-2">
+                  {intent.trim() === "" ? "Leave blank to ask for Phone Number and Rate by default." : `AI will prioritize: ${intent}`}
+                </p>
               </label>
-              <p className="text-xs text-gray-400 italic">
-                {intent.trim() === "" ? "Leave blank to ask for Phone Number and Rate by default." : `AI will prioritize: ${intent}`}
-              </p>
+
+              <div className="border-t border-gray-100 pt-6">
+                <label className="block mb-4">
+                  <span className="text-sm font-bold text-gray-700 uppercase tracking-wider block mb-2">Subject Line</span>
+                  <input
+                    type="text"
+                    placeholder="e.g. Collaboration x [Brand Name]"
+                    value={subjectLine}
+                    onChange={(e) => setSubjectLine(e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 text-black placeholder:text-gray-400 font-medium"
+                  />
+                  <p className="text-xs text-gray-400 italic mt-2">
+                    This subject line will be used for the first email. Leave blank for AI generated.
+                  </p>
+                </label>
+
+                <label className="block">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-bold text-gray-700 uppercase tracking-wider">Example First Message (Voice & Style)</span>
+                    <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded-full uppercase tracking-wide">AI Personality</span>
+                  </div>
+                  <p className="text-sm text-gray-500 mb-3">
+                    Paste an example of a first outreach email you've written. The AI will analyze your tone, sentence structure, and signature to mimic your personal style.
+                  </p>
+                  <textarea
+                    placeholder="Hey [Name],&#10;&#10;I loved your recent video on... it was super insightful.&#10;&#10;I'm with [Company] and we're looking to..."
+                    value={personaMessage}
+                    onChange={(e) => setPersonaMessage(e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 text-black placeholder:text-gray-400 font-medium min-h-[200px] leading-relaxed resize-y"
+                  />
+                </label>
+              </div>
             </div>
           </div>
 
