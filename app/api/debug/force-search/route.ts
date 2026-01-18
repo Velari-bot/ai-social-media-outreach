@@ -59,15 +59,48 @@ export async function POST(req: NextRequest) {
                 results_count: admin.firestore.FieldValue.increment(foundCount)
             });
 
-            // Schedule Emails
+            // Schedule Emails for NEW findings
+            // const { addCreatorsToQueue } = await import('@/lib/services/outreach-queue');
+            // await addCreatorsToQueue(newIds.map(String), userId, campaignId, campaign.name);
+        }
+
+        // --- BACKLOG RECOVERY / ROBUST QUEUING ---
+        // Ensure ALL creators in this campaign are queued, not just the new ones.
+        // This fixes cases where previous runs found creators but failed to queue them.
+
+        // 1. Get latest campaign state (including the just-added IDs)
+        const updatedCampaignDoc = await db.collection('creator_requests').doc(campaignId).get();
+        const allCreatorIds = (updatedCampaignDoc.data()?.creator_ids || []) as string[];
+
+        // 2. Get currently queued items for this campaign to avoid re-queuing
+        // Note: This might be large, so we select only creator_id
+        const queueSnap = await db.collection('outreach_queue')
+            .where('campaign_id', '==', campaignId)
+            .select('creator_id')
+            .get();
+
+        const queuedCreatorIds = new Set(queueSnap.docs.map(d => d.data().creator_id));
+
+        // 3. Find missing (Backlog)
+        const missingIds = allCreatorIds.filter(id => !queuedCreatorIds.has(id));
+
+        let backlogScheduled = 0;
+        if (missingIds.length > 0) {
+            console.log(`[Debug] Found ${missingIds.length} creators in backlog (found but not queued). Queuing now...`);
             const { addCreatorsToQueue } = await import('@/lib/services/outreach-queue');
-            await addCreatorsToQueue(newIds.map(String), userId, campaignId, campaign.name);
+
+            // Queue in batches if necessary, but addCreatorsToQueue handles batching internally for fetching.
+            // Queue function also checks credits.
+            const queueResult = await addCreatorsToQueue(missingIds, userId, campaignId, campaign.name);
+            backlogScheduled = queueResult?.queued || 0;
         }
 
         return NextResponse.json({
             success: true,
             found: foundCount,
-            scheduled: foundCount
+            newlyScheduled: foundCount,
+            backlogScheduled: backlogScheduled,
+            totalScheduled: (foundCount > 0 ? foundCount : 0) + backlogScheduled // Approximate (overlap handled above)
         });
 
     } catch (error: any) {
