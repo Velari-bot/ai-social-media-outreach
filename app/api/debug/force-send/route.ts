@@ -15,13 +15,19 @@ export async function POST(req: NextRequest) {
 
         // 1. Get all scheduled emails for this user
         let query = db.collection('outreach_queue')
-            .where('user_id', '==', userId)
-            .where('status', '==', 'scheduled');
+            .where('user_id', '==', userId);
+
+        // If forceAll is true, retry failed ones too
+        if (!forceAll) {
+            query = query.where('status', '==', 'scheduled');
+        } else {
+            query = query.where('status', 'in', ['scheduled', 'failed']);
+        }
 
         const snapshot = await query.get();
 
         if (snapshot.empty) {
-            return NextResponse.json({ message: 'No scheduled emails found for this user.' });
+            return NextResponse.json({ message: 'No scheduled (or failed) emails found for this user.' });
         }
 
         const updates = [];
