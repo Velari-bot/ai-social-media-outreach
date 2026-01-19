@@ -606,6 +606,35 @@ function DashboardContent() {
                   Fix Connection
                 </Link>
               )}
+              {/* Force Retry Button for Stuck Emails */}
+              {status.gmail && (
+                <button
+                  onClick={async () => {
+                    const toastId = toast.loading("Checking for stuck emails...");
+                    try {
+                      const res = await fetch('/api/debug/force-send', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId, forceAll: true })
+                      });
+                      const data = await res.json();
+                      if (data.sendResult && data.sendResult.sent > 0) {
+                        toast.success(`Successfully sent ${data.sendResult.sent} stuck emails!`, { id: toastId });
+                      } else if (data.message && data.message.includes("No scheduled")) {
+                        toast.success("No stuck emails found. All clear!", { id: toastId });
+                      } else {
+                        toast.success("Queue checked. Monitoring...", { id: toastId });
+                      }
+                    } catch (e) {
+                      console.error(e);
+                      toast.error("Failed to check queue", { id: toastId });
+                    }
+                  }}
+                  className="mt-4 block w-full py-2 border-2 border-gray-100 bg-gray-50 text-gray-600 rounded-lg text-xs font-bold text-center hover:bg-gray-100 transition-colors"
+                >
+                  Verify & Retry Queue
+                </button>
+              )}
               {aiAutopilot && (
                 <div className="mt-4 p-3 bg-green-50 border border-green-100 rounded-lg flex gap-2">
                   <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" />
