@@ -27,15 +27,63 @@ export async function POST(req: NextRequest) {
         const snapshot = await query.get();
 
         if (snapshot.empty) {
-            return NextResponse.json({ message: 'No scheduled (or failed) emails found for this user.' });
+            console.log(`[Debug] Queue empty. Checking for lost campaign items...`);
+
+            // Auto-Recovery: Check if there are active campaigns with results but no queue items
+            const campaigns = await db.collection('creator_requests')
+                .where('user_id', '==', userId)
+                .where('status', 'in', ['searching', 'in_progress', 'delivered']) // 'delivered' means "Sent First Email"
+                .get();
+
+            let recoveredCount = 0;
+
+            if (!campaigns.empty) {
+                const { addCreatorsToQueue } = await import('@/lib/services/outreach-queue');
+
+                for (const camp of campaigns.docs) {
+                    const data = camp.data();
+                    const creatorIds = data.creator_ids || [];
+
+                    if (creatorIds.length > 0) {
+                        // Check if these are already in queue (addCreatorsToQueue does this check too, efficiently enough)
+                        // But let's just try to add them. The service skips duplicates.
+                        console.log(`[Debug] Attempting to recover ${creatorIds.length} creators for campaign ${camp.id}`);
+
+                        try {
+                            const result = await addCreatorsToQueue(
+                                creatorIds,
+                                userId,
+                                camp.id,
+                                data.name
+                            );
+                            if (result && result.queued > 0) {
+                                recoveredCount += result.queued;
+                                console.log(`[Debug] Recovered ${result.queued} emails for campaign ${camp.id}`);
+                            }
+                        } catch (e: any) {
+                            console.error(`[Debug] Recovery failed for campaign ${camp.id}:`, e.message);
+                        }
+                    }
+                }
+            }
+
+            if (recoveredCount > 0) {
+                // Now retry sending immediately!
+                const result = await sendScheduledEmails();
+                return NextResponse.json({
+                    success: true,
+                    message: `Recovered ${recoveredCount} missing emails and triggered send.`,
+                    recoveryCount: recoveredCount,
+                    sendResult: result
+                });
+            }
+
+            return NextResponse.json({ message: 'No scheduled (or failed) emails found, and no missing campaign items found.' });
         }
 
         const updates = [];
         const now = Timestamp.now();
-
-        // 2. Update their scheduled_time to NOW so the sender picks them up
-        // OR just invoke the sender directly on them.
-
+        // ... rest of processing ...
         // Let's explicitly force their time to PASST (5 mins ago) to bypass the "future" check
         // and ensure the sender sees them as "ready".
         const past = Timestamp.fromMillis(Date.now() - 5 * 60 * 1000); // 5 mins ago
@@ -61,6 +109,7 @@ export async function POST(req: NextRequest) {
         });
 
     } catch (error: any) {
+        console.error("Force Send Error:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
