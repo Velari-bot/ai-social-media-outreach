@@ -60,6 +60,8 @@ export async function POST(req: NextRequest) {
                                 recoveredCount += result.queued;
                                 console.log(`[Debug] Recovered ${result.queued} emails for campaign ${camp.id}`);
                             }
+                            // Wait between campaigns to avoid write limits
+                            await new Promise(r => setTimeout(r, 1000));
                         } catch (e: any) {
                             console.error(`[Debug] Recovery failed for campaign ${camp.id}:`, e.message);
                         }
