@@ -198,21 +198,17 @@ export async function POST(request: NextRequest) {
           // We continue anyway so user gets their creators
         }
 
-        // 8. Charge based on found creators (ONLY if emails were requested)
-        if (foundCount > 0 && criteria.skipEnrichment !== true) {
-          try {
-            const isYoutube = platforms.some(p => p.toLowerCase() === 'youtube');
-            const costPerCreator = isYoutube ? 2 : 1;
-            const totalCost = foundCount * costPerCreator;
+        // 8. Charge based on found creators
+        // REMOVED: incrementEmailQuota logic.
+        // Reason: The `addCreatorsToQueue` function handles quota deduction (1 credit per email).
+        // Note: This temporarily removes the "2x cost for YouTube" logic, defaulting to 1x.
+        // This prevents the critical double-charging bug.
 
-            console.log(`[RequestsAPI] Charging user ${userId} for ${foundCount} creators (Rate: ${costPerCreator}/creator. Total: ${totalCost}).`);
-            const { incrementEmailQuota } = await import('@/lib/database');
-            await incrementEmailQuota(userId, totalCost);
-            console.log(`[RequestsAPI] Charged user ${userId} ${totalCost} credits.`);
-          } catch (quotaError: any) {
-            console.error(`[RequestsAPI] Failed to charge quota for user ${userId}:`, quotaError.message);
-          }
-        }
+        /* 
+        if (foundCount > 0 && criteria.skipEnrichment !== true) {
+          // ... (Logic removed to prevent double charge)
+        } 
+        */
 
 
         console.log(`[RequestsAPI] Returning successful response for request ${newRequest.id} with creators.`);

@@ -167,7 +167,10 @@ export async function GET(req: NextRequest) {
                     // So we are safe. Discovery costs "Find Credits" (maybe unlimited or monthly).
                     // Sending costs "Daily Email Credits".
 
-                    await incrementEmailQuota(userId, foundCount);
+                    // C. Charge Quota
+                    // REMOVED: incrementEmailQuota(userId, foundCount);
+                    // Reason: The `addCreatorsToQueue` function in outreach-queue.ts handles the quota deduction 
+                    // (1 credit per email queued). Keeping this here would cause a double-charge.
 
                     // D. Update Campaign Stats/Log
                     const newIds = results.creators.map(c => c.id).filter(Boolean);
