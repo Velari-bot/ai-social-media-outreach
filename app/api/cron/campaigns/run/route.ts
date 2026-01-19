@@ -75,9 +75,39 @@ export async function GET(req: NextRequest) {
                 // Cap at 100 per run to ensure reliability, but rely on runs to fill up.
                 // Actually, let's try to do up to active remaining quota (capped at 150 for safety).
 
+                // --- AUTOPILOT CHECKS ---
+
+                // 1. Check Duration / Expiry
+                if (campaign.recurring_config?.duration_days && campaign.recurring_config.duration_days > 0) {
+                    const createdAt = campaign.created_at;
+                    const startDate = typeof createdAt === 'string' ? new Date(createdAt) : (createdAt as any).toDate();
+                    const expiryDate = new Date(startDate);
+                    expiryDate.setDate(expiryDate.getDate() + campaign.recurring_config.duration_days);
+
+                    if (new Date() > expiryDate) {
+                        console.log(`[CampaignCron] Campaign ${campaignId} expired. Stopping.`);
+                        await db.collection('creator_requests').doc(campaignId).update({
+                            is_active: false,
+                            status: 'completed',
+                            updated_at: Timestamp.now()
+                        });
+                        continue;
+                    }
+                }
+
+                // 2. Determine Batch Size
+                const campaignDailyLimit = campaign.recurring_config?.daily_limit || 200;
+
+                // Effective limit is min(UserRemaining, CampaignLimit, SystemCap)
+                const effectiveLimit = Math.min(
+                    remaining,
+                    campaignDailyLimit,
+                    200
+                );
+
                 const batchSize = account.plan === 'enterprise'
-                    ? 200
-                    : Math.min(remaining, 200);
+                    ? Math.min(campaignDailyLimit, 500)
+                    : effectiveLimit;
 
                 if (batchSize <= 0) {
                     skipped++;

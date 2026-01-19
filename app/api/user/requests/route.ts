@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     const userId = decodedToken.uid;
 
     const body = await request.json();
-    const { name, platforms, criteria } = body;
+    const { name, platforms, criteria, isRecurring, recurringConfig } = body;
 
     if (!name || !platforms || !Array.isArray(platforms) || platforms.length === 0) {
       return NextResponse.json(
@@ -101,6 +101,8 @@ export async function POST(request: NextRequest) {
       name,
       platforms,
       criteria: { ...criteria, batchSize: finalBatchSize },
+      is_recurring: !!isRecurring,
+      recurring_config: recurringConfig
     });
 
     if (!newRequest) {

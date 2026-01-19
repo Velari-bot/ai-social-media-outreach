@@ -79,6 +79,10 @@ export async function createRequest(data: {
   platforms: string[];
   criteria: Record<string, any>;
   isRecurring?: boolean;
+  recurringConfig?: {
+    daily_limit: number;
+    duration_days: number;
+  };
 }) {
   return apiRequest<{ success: boolean; request: any; creators?: any[]; meta?: any }>('/api/user/requests', {
     method: 'POST',

@@ -38,6 +38,10 @@ export interface CreatorRequest {
   // Recurring Campaign Fields
   is_recurring?: boolean; // If true, runs daily for max_runs days
   is_active?: boolean; // Can be paused/stopped
+  recurring_config?: {
+    daily_limit: number;
+    duration_days: number;
+  };
   last_run_at?: Timestamp | string;
   frequency?: 'daily'; // Default daily
   run_count?: number; // How many times it has run
@@ -325,6 +329,8 @@ export async function createCreatorRequest(
     name: string;
     platforms: string[];
     criteria: Record<string, any>;
+    is_recurring?: boolean;
+    recurring_config?: any;
   }
 ): Promise<CreatorRequest | null> {
   try {
@@ -336,8 +342,9 @@ export async function createCreatorRequest(
       criteria: requestData.criteria,
       status: 'pending',
       date_submitted: now,
-      is_recurring: true, // Auto-run 24/7 feature
+      is_recurring: !!requestData.is_recurring, // Auto-run 24/7 feature
       is_active: true,
+      recurring_config: requestData.recurring_config || null,
       last_run_at: now, // Mark created time as first "run"
       created_at: now,
       updated_at: now,

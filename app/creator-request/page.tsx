@@ -60,6 +60,8 @@ function CreatorRequestContent() {
   const [requestedCreators, setRequestedCreators] = useState(50);
   const [isAnyNiche, setIsAnyNiche] = useState(false);
   const [isRecurring, setIsRecurring] = useState(false);
+  const [autopilotDailyLimit, setAutopilotDailyLimit] = useState(50);
+  const [autopilotDuration, setAutopilotDuration] = useState(7);
 
   // App State
   const [userId, setUserId] = useState<string | null>(null);
@@ -99,6 +101,9 @@ function CreatorRequestContent() {
           window.location.href = '/email-finder';
           return;
         }
+        // Set default limit to remaining quota if available
+        const quota = accountRes.account.email_quota_daily || 50;
+        setAutopilotDailyLimit(quota);
       }
       if (requestsRes.success) setRecentRequests(requestsRes.requests || []);
     }
@@ -126,7 +131,11 @@ function CreatorRequestContent() {
         name: `${niche}`,
         platforms: [platform],
         criteria,
-        isRecurring
+        isRecurring,
+        recurringConfig: isRecurring ? {
+          daily_limit: autopilotDailyLimit,
+          duration_days: autopilotDuration,
+        } : undefined
       });
 
       if (res.success) {
@@ -428,7 +437,7 @@ function CreatorRequestContent() {
                   </select>
                 </div>
 
-                <div className="bg-green-50 rounded-xl p-4 border border-green-100/50">
+                <div className="bg-green-50 rounded-xl p-4 border border-green-100/50 transition-all">
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -437,12 +446,52 @@ function CreatorRequestContent() {
                       className="mt-1 h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
                     />
                     <div>
-                      <span className="block text-sm font-bold text-gray-900">Enable Autopilot (Daily)</span>
+                      <span className="block text-sm font-bold text-gray-900">Enable Autopilot (Recurring)</span>
                       <span className="block text-xs text-green-700 mt-0.5 leading-snug">
-                        Automatically find new creators every day until your quota is reached.
+                        Automatically find new creators every day.
                       </span>
                     </div>
                   </label>
+
+                  {isRecurring && (
+                    <div className="mt-4 pt-4 border-t border-green-200/50 space-y-3 animate-in fade-in slide-in-from-top-2">
+                      <div>
+                        <label className="block text-[10px] font-bold text-green-800 uppercase tracking-wide mb-1.5 flex justify-between">
+                          <span>Daily Credits Limit</span>
+                          <span>Max: {userAccount?.email_quota_daily || 500}</span>
+                        </label>
+                        <input
+                          type="number"
+                          className="w-full px-3 py-2 text-sm font-bold border-2 border-green-200 rounded-lg focus:outline-none focus:border-green-500 bg-white"
+                          placeholder="e.g. 100"
+                          value={autopilotDailyLimit}
+                          onChange={(e) => setAutopilotDailyLimit(Number(e.target.value))}
+                          min={10}
+                          max={userAccount?.email_quota_daily || 500}
+                        />
+                        <p className="text-[10px] text-green-600 mt-1">
+                          We'll find and email up to this many new creators each day.
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-green-800 uppercase tracking-wide mb-1.5">
+                          Duration (Days)
+                        </label>
+                        <select
+                          className="w-full px-3 py-2 text-sm font-bold border-2 border-green-200 rounded-lg focus:outline-none focus:border-green-500 bg-white cursor-pointer"
+                          value={autopilotDuration}
+                          onChange={(e) => setAutopilotDuration(Number(e.target.value))}
+                        >
+                          <option value={3}>3 Days</option>
+                          <option value={7}>7 Days (Recommended)</option>
+                          <option value={14}>14 Days</option>
+                          <option value={30}>30 Days</option>
+                          <option value={-1}>Run Forever (Until Canceled)</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-4 border-t border-gray-100">
