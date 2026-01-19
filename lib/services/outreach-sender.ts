@@ -278,7 +278,7 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
     });
 
     // UPDATE CAMPAIGN STATUS for all campaigns that had successful sends
-    if (successfulCampaignIds.size > 0) {
+    if (successfulCampaignIds.size > 0 && sentCount > 0) {
         await updateCampaignStatus(successfulCampaignIds);
     }
 
