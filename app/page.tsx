@@ -243,35 +243,85 @@ export default function Home() {
       </section>
 
       {/* Newsletter Section - Traffic Capture */}
-      <section className="py-24 px-6 border-t border-gray-100 bg-white relative z-10">
-        <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center gap-12">
-          <div className="flex-1">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gray-50 border border-gray-200 text-gray-900 text-[10px] font-black uppercase tracking-[0.2em] mb-6 shadow-sm">
+      <section className="py-24 px-6 border-t border-gray-100 bg-white relative z-10 overflow-hidden">
+        {/* Background Decorative Element */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#6B4BFF]/5 blur-[120px] rounded-full pointer-events-none" />
+
+        <div className="max-w-[1240px] mx-auto flex flex-col lg:flex-row items-center gap-16 relative z-10">
+          <div className="flex-1 text-center lg:text-left">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#6B4BFF]/10 border border-[#6B4BFF]/20 text-[#6B4BFF] text-[10px] font-black uppercase tracking-[0.2em] mb-6 shadow-sm">
               <span className="w-2 h-2 rounded-full bg-[#6B4BFF] animate-pulse" />
               Newsletter OS
             </div>
-            <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-6 tracking-tight leading-[1.1]">Masterminding your outreach.</h2>
-            <p className="text-gray-500 text-xl mb-10 font-medium leading-relaxed">Get our weekly "Outreach OS" newsletter. Strategies, templates, and teardowns of successful campaigns.</p>
+            <h2 className="text-4xl md:text-6xl font-black text-gray-900 mb-6 tracking-tight leading-[1.05]">
+              Masterminding <br className="hidden md:block" />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-900 via-[#6B4BFF] to-gray-900 animate-text-shimmer bg-[length:200%_auto]">your outreach.</span>
+            </h2>
+            <p className="text-gray-500 text-xl mb-10 font-medium leading-relaxed max-w-xl mx-auto lg:mx-0">
+              Get our weekly "Outreach OS" newsletter. Strategies, templates, and teardowns of successful campaigns delivered straight to your inbox.
+            </p>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Link href="/newsletter" className="px-10 py-5 bg-black hover:bg-gray-900 text-white rounded-2xl font-black text-lg transition-all shadow-xl shadow-black/10 flex items-center justify-center gap-3 relative group overflow-hidden">
-                <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/5 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+              <Link href="/newsletter" className="px-10 py-5 bg-black hover:bg-gray-900 text-white rounded-2xl font-black text-lg transition-all shadow-2xl shadow-black/20 flex items-center justify-center gap-3 relative group overflow-hidden hover:scale-105 active:scale-95">
+                <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                 <Mail className="w-5 h-5 text-[#6B4BFF]" />
-                Join Newsletter
+                Join 1,200+ Readers
               </Link>
+            </div>
+
+            <div className="mt-8 flex items-center gap-6 justify-center lg:justify-start">
+              <div className="flex -space-x-3">
+                {["/charli.jpg", "/dude.jpg", "/kim.jpg", "/mkbhd.jpg"].map((src, i) => (
+                  <div key={i} className="w-9 h-9 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm">
+                    <img src={src} className="w-full h-full object-cover" />
+                  </div>
+                ))}
+              </div>
+              <p className="text-sm font-bold text-gray-400 italic">"The most valuable 5 mins of my week"</p>
             </div>
           </div>
 
-          <div className="flex-1 bg-white rounded-3xl p-10 border border-gray-100 shadow-[20px_20px_60px_#bebebe,-20px_-20px_60px_#ffffff] relative rotate-2 hover:rotate-0 transition-all duration-700 cursor-default group">
-            <div className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-6">Upcoming Issue</div>
-            <h3 className="text-2xl font-black text-gray-900 mb-3 leading-tight tracking-tight">The "Magic Email" template with 60% reply rate</h3>
-            <p className="text-gray-500 mb-8 text-base font-medium leading-relaxed">We break down exactly how specific subject lines consistently book more calls.</p>
-            <div className="flex items-center gap-4 border-t border-gray-50 pt-6">
-              <div className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center text-white font-black text-sm ring-4 ring-gray-50 transition-transform group-hover:scale-110">A</div>
-              <div>
-                <div className="text-sm font-black text-gray-900 tracking-tight">Aiden Bender</div>
-                <div className="text-xs font-bold text-[#6B4BFF] uppercase tracking-wider">Editor-in-Chief</div>
+          <div className="flex-1 w-full max-w-lg">
+            <div className="relative group">
+              {/* Card Glow */}
+              <div className="absolute -inset-4 bg-gradient-to-r from-[#6B4BFF]/20 to-[#FF5252]/10 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+
+              <div className="relative bg-white rounded-[32px] p-8 md:p-12 border border-gray-100 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.12)] transition-all duration-700 group-hover:-translate-y-2 group-hover:rotate-1">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="text-[10px] font-black text-[#6B4BFF] uppercase tracking-[0.2em] px-3 py-1 bg-[#6B4BFF]/5 rounded-lg border border-[#6B4BFF]/10">Upcoming Issue</div>
+                  <div className="text-[10px] font-bold text-gray-400">Issue #42</div>
+                </div>
+
+                <h3 className="text-2xl md:text-3xl font-black text-gray-900 mb-4 leading-tight tracking-tight">
+                  The "Magic Email" template with <span className="text-[#6B4BFF]">60% reply rate</span>
+                </h3>
+                <p className="text-gray-500 mb-10 text-lg font-medium leading-relaxed">
+                  We break down exactly how specific subject lines consistently book more calls than anything else we've tested.
+                </p>
+
+                <div className="flex items-center justify-between border-t border-gray-50 pt-8">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-gray-900 flex items-center justify-center text-white font-black text-lg transition-transform group-hover:scale-110 group-hover:rotate-3 shadow-lg">A</div>
+                    <div>
+                      <div className="text-base font-black text-gray-900 tracking-tight">Aiden Bender</div>
+                      <div className="text-[10px] font-bold text-[#6B4BFF] uppercase tracking-[0.1em]">Editor-in-Chief</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="w-1 h-1 rounded-full bg-gray-200" />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Decorative Dots */}
+                <div className="absolute top-8 right-8 flex gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                </div>
               </div>
+
+              {/* Back card decoration */}
+              <div className="absolute -z-10 top-4 -right-4 w-full h-full bg-gray-50 rounded-[32px] border border-gray-100 opacity-50 group-hover:opacity-100 transition-all duration-700" />
             </div>
           </div>
         </div>
