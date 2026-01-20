@@ -1,8 +1,10 @@
 import { SignJWT, jwtVerify } from 'jose';
 
-// Use a MORE robust fallback secret and ensure it's trimmed
-const JWT_SECRET = (process.env.JWT_SECRET || 'verality-extension-secret-key-1-2-3-4-5').trim();
-const secret = new TextEncoder().encode(JWT_SECRET);
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    console.warn('⚠️ [Verality Auth] JWT_SECRET is NOT set! Using development fallback secret.');
+}
+const secret = new TextEncoder().encode((JWT_SECRET || 'verality-extension-secret-key-1-2-3-4-5').trim());
 
 export async function signExtensionToken(payload: { userId: string; email: string }) {
     console.log('Signing token for:', payload.userId);
