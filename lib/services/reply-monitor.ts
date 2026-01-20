@@ -172,7 +172,7 @@ async function checkUserReplies(userId: string) {
                         console.log(`[Reply Monitor] Thread ${thread.id} not tracked. Attempting recovery...`);
 
                         const creatorEmailMatch = from.match(/<([^>]+)>/);
-                        const creatorEmail = creatorEmailMatch ? creatorEmailMatch[1] : from;
+                        const creatorEmail = (creatorEmailMatch ? creatorEmailMatch[1] : from).toLowerCase().trim();
 
                         // Find creator in outreach queue
                         const queueSnap = await db.collection('outreach_queue')
@@ -183,7 +183,7 @@ async function checkUserReplies(userId: string) {
 
                         if (!queueSnap.empty) {
                             const queueItem = queueSnap.docs[0].data();
-                            console.log(`[Reply Monitor] Recovered thread ${thread.id}`);
+                            console.log(`[Reply Monitor] Recovered thread ${thread.id} for ${creatorEmail}`);
 
                             await db.collection('email_threads').doc(thread.id!).set({
                                 user_id: userId,
@@ -203,6 +203,7 @@ async function checkUserReplies(userId: string) {
                             threadDoc = await db.collection('email_threads').doc(thread.id!).get();
                             threadData_db = threadDoc.data()!;
                         } else {
+                            console.log(`[Reply Monitor] FAILED recovery for ${thread.id}. Email '${creatorEmail}' not found in queue.`);
                             continue;
                         }
                     }
