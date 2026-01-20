@@ -207,8 +207,8 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
               subject: bm.subject,
               body: bm.body,
               timestamp: bm.timestamp,
-              isUser: !bm.fromEmail?.includes('benderaiden826'),
-              isAI: bm.fromEmail?.includes('benderaiden826')
+              isUser: bm.isUser,
+              isAI: bm.isAI
             })) || []
           }));
           setReplies(mappedReplies);
@@ -238,21 +238,20 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
 
     // Filter by Tab (Inbox vs Sent)
     if (activeTab === "inbox") {
-      // Inbox: Last message is NOT from me
+      // Inbox: Last message is NOT from me (User)
       result = result.filter(r => {
         // Find last message
         const lastMsg = r.thread && r.thread.length > 0 ? r.thread[r.thread.length - 1] : null;
         if (!lastMsg) return true; // Default keep
-        // If last message is from me, it's SENT. So for Inbox, exclude it.
-        // We check if fromEmail includes my email
-        return !lastMsg.fromEmail?.includes(userEmail || "MISSING");
+        // Rely on isUser flag from API
+        return !lastMsg.isUser;
       });
     } else {
-      // Sent: Last message IS from me
+      // Sent: Last message IS from me (User)
       result = result.filter(r => {
         const lastMsg = r.thread && r.thread.length > 0 ? r.thread[r.thread.length - 1] : null;
         if (!lastMsg) return false;
-        return lastMsg.fromEmail?.includes(userEmail || "MISSING");
+        return lastMsg.isUser;
       });
     }
 
@@ -483,8 +482,8 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
                 <button
                   onClick={() => setActiveTab("inbox")}
                   className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "inbox"
-                      ? "bg-white text-black shadow-sm"
-                      : "text-gray-500 hover:text-black"
+                    ? "bg-white text-black shadow-sm"
+                    : "text-gray-500 hover:text-black"
                     }`}
                 >
                   Inbox
@@ -492,8 +491,8 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
                 <button
                   onClick={() => setActiveTab("sent")}
                   className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "sent"
-                      ? "bg-white text-black shadow-sm"
-                      : "text-gray-500 hover:text-black"
+                    ? "bg-white text-black shadow-sm"
+                    : "text-gray-500 hover:text-black"
                     }`}
                 >
                   Sent

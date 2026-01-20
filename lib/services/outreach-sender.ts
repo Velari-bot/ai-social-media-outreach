@@ -142,8 +142,10 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
         // Find suitable account
         // We filter for accounts that have NOT reached their limit (considering current batch usage)
         const availableAccounts = accounts.filter(acc => {
-            const currentUsage = (acc.sent_today || 0) + (usageMap[acc.email] || 0);
-            return currentUsage < (acc.daily_limit || 50);
+            const limit = parseInt(String(acc.daily_limit || 50), 10);
+            const sent = parseInt(String(acc.sent_today || 0), 10);
+            const currentUsage = sent + (usageMap[acc.email] || 0);
+            return currentUsage < limit;
         });
 
         if (availableAccounts.length === 0) {
@@ -154,8 +156,14 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
         // Pick account with lowest usage ratio or just first one? 
         // Let's pick the one with most remaining quota to balance it out
         availableAccounts.sort((a, b) => {
-            const remA = (a.daily_limit || 50) - ((a.sent_today || 0) + (usageMap[a.email] || 0));
-            const remB = (b.daily_limit || 50) - ((b.sent_today || 0) + (usageMap[b.email] || 0));
+            const limitA = parseInt(String(a.daily_limit || 50), 10);
+            const sentA = parseInt(String(a.sent_today || 0), 10);
+            const remA = limitA - (sentA + (usageMap[a.email] || 0));
+
+            const limitB = parseInt(String(b.daily_limit || 50), 10);
+            const sentB = parseInt(String(b.sent_today || 0), 10);
+            const remB = limitB - (sentB + (usageMap[b.email] || 0));
+
             return remB - remA; // Descending order of remaining
         });
 
