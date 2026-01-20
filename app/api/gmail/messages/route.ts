@@ -79,8 +79,8 @@ export async function GET(request: NextRequest) {
             return tB - tA;
         });
 
-        // Take top 20
-        const recentThreads = allDocs.slice(0, 20);
+        // Take top 500
+        const recentThreads = allDocs.slice(0, 500);
 
         // 3. Fetch Details from Gmail
         const detailedThreads = await Promise.all(recentThreads.map(async (threadData: any) => {
