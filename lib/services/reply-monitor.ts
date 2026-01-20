@@ -173,6 +173,7 @@ async function checkUserReplies(userId: string) {
 
                         const creatorEmailMatch = from.match(/<([^>]+)>/);
                         const creatorEmail = (creatorEmailMatch ? creatorEmailMatch[1] : from).toLowerCase().trim();
+                        console.log(`[Reply Monitor] Search Query: '${creatorEmail}'`);
 
                         // Find creator in outreach queue
                         const queueSnap = await db.collection('outreach_queue')
@@ -335,11 +336,12 @@ async function extractCreatorData(message: string): Promise<{
                 role: "system",
                 content: `Extract the following data from the creator's message:
                 1. Phone number (with international code if provided)
-                2. TikTok post rate (in USD)
-                3. Sound Promo rate (in USD)
+                2. TikTok post rate (in USD). LOOK FOR FORMATS LIKE: "usd 400", "400 usd", "$400", "400".
+                3. Sound Promo rate (in USD). LOOK FOR FORMATS LIKE: "usd 200", "200 usd", "$200".
                 
                 Return ONLY a JSON object with keys: phone, tiktok_rate, sound_promo_rate
-                If a field is not found, omit it from the JSON.`
+                If a field is not found, omit it from the JSON.
+                Ensure rates are NUMBERS in the JSON (e.g. 400 not "400").`
             },
             {
                 role: "user",
