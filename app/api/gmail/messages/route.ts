@@ -62,21 +62,29 @@ export async function GET(request: NextRequest) {
         }
 
         // 2. Fetch Threads from Firestore (Source of Truth)
-        // We fetch the most recent threads regardless of status, to show Sentinel/Inbox logic
+        // REMOVED orderBy to avoid "Index Required" error. We sort in memory.
         const threadsSnap = await db.collection('email_threads')
             .where('user_id', '==', userId)
-            .orderBy('updated_at', 'desc')
-            .limit(20)
             .get();
 
         if (threadsSnap.empty) {
             return NextResponse.json({ success: true, messages: [] });
         }
 
+        // Sort in memory (Newest first)
+        const allDocs = threadsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        allDocs.sort((a: any, b: any) => {
+            const tA = a.updated_at?.toDate ? a.updated_at.toDate().getTime() : new Date(a.updated_at).getTime();
+            const tB = b.updated_at?.toDate ? b.updated_at.toDate().getTime() : new Date(b.updated_at).getTime();
+            return tB - tA;
+        });
+
+        // Take top 20
+        const recentThreads = allDocs.slice(0, 20);
+
         // 3. Fetch Details from Gmail
-        const detailedThreads = await Promise.all(threadsSnap.docs.map(async (doc) => {
-            const threadData = doc.data();
-            const threadId = doc.id;
+        const detailedThreads = await Promise.all(recentThreads.map(async (threadData: any) => {
+            const threadId = threadData.id;
             const accountEmail = threadData.connected_account_email;
 
             // Determine which account to use
