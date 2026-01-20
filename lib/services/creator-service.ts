@@ -27,7 +27,7 @@ function hashFilters(filters: CreatorSearchFilters): string {
 function docToCreator(doc: any): Creator {
   const data = doc.data ? doc.data() : doc;
   return {
-    id: parseInt(doc.id) || doc.id,
+    id: doc.id,
     platform: data.platform,
     handle: data.handle,
     verality_id: data.verality_id || data.modash_creator_id || null, // Backwards compat
@@ -370,7 +370,7 @@ export async function enrichCreatorWithClay(params: {
     const enrichmentResult = await clayClient.enrichCreator({
       handle: creator.handle,
       platform: creator.platform,
-      creatorId: typeof params.creatorId === 'number' ? params.creatorId : parseInt(params.creatorId),
+      creatorId: params.creatorId,
       userId: params.userId,
     });
 

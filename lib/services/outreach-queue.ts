@@ -1,5 +1,5 @@
 import { db } from '../firebase-admin';
-import { Timestamp } from 'firebase-admin/firestore';
+import { Timestamp, FieldPath } from 'firebase-admin/firestore';
 
 /**
  * Outreach Queue Item
@@ -325,7 +325,7 @@ export const addCreatorsToQueue = async (
     }
 
     for (const chunk of chunks) {
-        const snap = await db.collection('creators').where('id', 'in', chunk).get();
+        const snap = await db.collection('creators').where(FieldPath.documentId(), 'in', chunk).get();
         snap.docs.forEach(doc => {
             const data = doc.data();
             creators.push({
