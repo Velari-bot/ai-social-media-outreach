@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 interface Lead {
     id: string;
     creator_email: string;
+    creator_url?: string;
     phone_number?: string;
     tiktok_rate?: number;
     sound_promo_rate?: number;
@@ -58,8 +59,9 @@ function DataContent() {
         if (leads.length === 0) return;
 
         // Create CSV
-        const headers = ["Email", "Phone", "TikTok Rate ($)", "Sound Promo ($)", "Last Updated"];
+        const headers = ["Creator URL", "Email", "Phone", "TikTok Rate ($)", "Sound Promo ($)", "Last Updated"];
         const rows = leads.map(l => [
+            l.creator_url || "N/A",
             l.creator_email,
             l.phone_number || "",
             l.tiktok_rate || "",
@@ -177,7 +179,14 @@ function DataContent() {
                                                     <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-xs">
                                                         <User size={14} />
                                                     </div>
-                                                    <span className="font-semibold text-gray-900">{lead.creator_email.split('@')[0]}</span>
+                                                    <div>
+                                                        <div className="font-semibold text-gray-900">{lead.creator_email.split('@')[0]}</div>
+                                                        {lead.creator_url && (
+                                                            <a href={lead.creator_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">
+                                                                View Profile
+                                                            </a>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">

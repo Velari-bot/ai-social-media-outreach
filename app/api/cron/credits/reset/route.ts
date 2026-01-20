@@ -36,9 +36,51 @@ export async function GET(request: NextRequest) {
             resetCount++;
         }
 
-        await batch.commit();
+        if (!usersSnapshot.empty) {
+            await batch.commit();
+        }
 
-        console.log(`[Credit Reset] Reset credits for ${resetCount} users`);
+        console.log(`[Credit Reset] Reset user credits for ${resetCount} users`);
+
+        // SECONDARY: Reset Gmail Connection Daily Limits
+        const connectionsSnapshot = await db.collection('gmail_connections').get();
+        const connBatch = db.batch();
+        let connResetCount = 0;
+
+        for (const connDoc of connectionsSnapshot.docs) {
+            const data = connDoc.data();
+            let hasChanges = false;
+            let updates: any = {};
+
+            // Reset legacy single account
+            if (data.sent_today > 0) {
+                updates.sent_today = 0;
+                hasChanges = true;
+            }
+
+            // Reset multi-accounts
+            if (data.accounts && Array.isArray(data.accounts)) {
+                const updatedAccounts = data.accounts.map((acc: any) => ({
+                    ...acc,
+                    sent_today: 0
+                }));
+                // Only update if actually different to save writes? 
+                // Hard to equality check easily, just update ensures consistency.
+                updates.accounts = updatedAccounts;
+                hasChanges = true;
+            }
+
+            if (hasChanges) {
+                updates.last_daily_reset_at = Timestamp.now();
+                connBatch.update(connDoc.ref, updates);
+                connResetCount++;
+            }
+        }
+
+        if (connResetCount > 0) {
+            await connBatch.commit();
+            console.log(`[Credit Reset] Reset Gmail limits for ${connResetCount} connections`);
+        }
 
         return NextResponse.json({
             success: true,

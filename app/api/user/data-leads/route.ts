@@ -43,6 +43,45 @@ export async function GET(request: NextRequest) {
             l.phone_number || l.tiktok_rate || l.sound_promo_rate
         );
 
+        // Enrich with Creator URL
+        if (valuableLeads.length > 0) {
+            const creatorRefs = valuableLeads
+                .map(l => {
+                    const data = threadsSnap.docs.find(d => d.id === l.id)?.data();
+                    return data?.creator_id ? db.collection('creators').doc(data.creator_id) : null;
+                })
+                .filter((ref): ref is FirebaseFirestore.DocumentReference => ref !== null);
+
+            if (creatorRefs.length > 0) {
+                // db.getAll supports up to 100 refs usually, safer to chunk if massive, but for now fine
+                const creatorsSnap = await db.getAll(...creatorRefs);
+                const creatorsMap = new Map();
+                creatorsSnap.forEach(doc => {
+                    if (doc.exists) {
+                        creatorsMap.set(doc.id, doc.data());
+                    }
+                });
+
+                // Attach URL
+                valuableLeads.forEach(lead => {
+                    const threadData = threadsSnap.docs.find(d => d.id === lead.id)?.data();
+                    const creatorId = threadData?.creator_id;
+                    if (creatorId && creatorsMap.has(creatorId)) {
+                        const c = creatorsMap.get(creatorId);
+                        // Construct URL: Priority TikTok -> Instagram -> Just Handle
+                        let url = "";
+                        if (c.tiktok_handle) url = `https://tiktok.com/@${c.tiktok_handle.replace('@', '')}`;
+                        else if (c.instagram_handle) url = `https://instagram.com/${c.instagram_handle.replace('@', '')}`;
+                        else if (c.username) url = `https://tiktok.com/@${c.username.replace('@', '')}`; // Fallback
+
+                        (lead as any).creator_url = url;
+                    } else {
+                        (lead as any).creator_url = "";
+                    }
+                });
+            }
+        }
+
         // Sort by most recent
         valuableLeads.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
