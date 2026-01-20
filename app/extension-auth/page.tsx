@@ -40,24 +40,18 @@ export default function ExtensionAuthPage() {
 
                 const { token } = await response.json();
 
-                // Wait for the extension to signal it's ready
-                const onExtensionReady = (event: MessageEvent) => {
+                const onMessage = (event: MessageEvent) => {
                     if (event.data && event.data.type === 'VERALITY_EXTENSION_READY') {
-                        window.removeEventListener('message', onExtensionReady);
                         window.postMessage({ type: 'VERALITY_EXTENSION_AUTH', token }, '*');
-
-                        // Show the confirmed success UI
+                    }
+                    if (event.data && event.data.type === 'VERALITY_EXTENSION_AUTH_SUCCESS_ACK') {
                         const indicator = document.getElementById('success-indicator');
                         if (indicator) indicator.style.display = 'block';
-                        const headline = indicator?.parentElement?.querySelector('h2');
-                        if (headline && !headline.textContent?.includes('Confirming')) {
-                            headline.style.display = 'none';
-                        }
+                        const headline = document.getElementById('confirming-heading');
+                        if (headline) headline.style.display = 'none';
                     }
                 };
-                window.addEventListener('message', onExtensionReady);
-
-                // Send immediately as fallback
+                window.addEventListener('message', onMessage);
                 window.postMessage({ type: 'VERALITY_EXTENSION_AUTH', token }, '*');
 
             } catch (err: any) {
@@ -122,7 +116,7 @@ export default function ExtensionAuthPage() {
                                     <CheckCircle2 className="w-12 h-12 text-[#6B4BFF] relative z-10" />
                                 </div>
                                 <div className="text-center">
-                                    <h2 className="text-3xl font-black text-gray-900 tracking-tight mb-4">Confirming Connection...</h2>
+                                    <h2 id="confirming-heading" className="text-3xl font-black text-gray-900 tracking-tight mb-4">Confirming Connection...</h2>
                                     <p className="text-gray-500 text-lg font-medium leading-relaxed">
                                         Waiting for the Verality Extension to confirm the secure bridge.
                                     </p>
