@@ -44,25 +44,26 @@ async function checkQueue() {
 
     const snapshot = await db.collection('outreach_queue')
         .where('user_id', '==', userId)
-        .limit(20)
         .get();
 
-    if (snapshot.empty) {
-        console.log('No queue items found.');
-        return;
-    }
+    const stats = {
+        scheduled: 0,
+        sent: 0,
+        failed: 0,
+        other: 0
+    };
 
-    console.log(`Found ${snapshot.size} recent queue items:`);
     snapshot.docs.forEach(doc => {
-        const data = doc.data();
-        console.log(`ID: ${doc.id}`);
-        console.log(`  To: ${data.creator_email}`);
-        console.log(`  Status: ${data.status}`);
-        console.log(`  Sent At: ${data.sent_at ? data.sent_at.toDate() : 'N/A'}`);
-        console.log(`  Error: ${data.last_error || 'None'}`);
-        console.log(`  ThreadID: ${data.gmail_thread_id || 'N/A'}`);
-        console.log('---');
+        const s = doc.data().status;
+        if (stats[s] !== undefined) stats[s]++;
+        else stats.other++;
     });
+
+    console.log(`Queue Summary (${snapshot.size} total items):`);
+    console.log(`- Scheduled: ${stats.scheduled}`);
+    console.log(`- Sent:      ${stats.sent}`);
+    console.log(`- Failed:    ${stats.failed}`);
+    console.log(`- Other:     ${stats.other}`);
 }
 
 checkQueue().catch(console.error);
