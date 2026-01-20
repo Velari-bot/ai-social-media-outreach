@@ -201,6 +201,42 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
                 userEmail: sendingEmail
             });
 
+            // CRITICAL: Apply VERALITY_AI label to the thread so Reply Monitor can find it
+            try {
+                // 1. Ensure Label Exists
+                let labelId = '';
+                try {
+                    const { data: { labels } } = await gmail.users.labels.list({ userId: 'me' });
+                    const existing = labels?.find(l => l.name === 'VERALITY_AI');
+                    if (existing) {
+                        labelId = existing.id!;
+                    } else {
+                        const { data } = await gmail.users.labels.create({
+                            userId: 'me',
+                            requestBody: {
+                                name: 'VERALITY_AI',
+                                labelListVisibility: 'labelShow',
+                                messageListVisibility: 'show'
+                            }
+                        });
+                        labelId = data.id!;
+                    }
+                } catch (e) {
+                    console.warn('[Outreach Sender] Could not create/find label', e);
+                }
+
+                // 2. Apply Label
+                if (labelId) {
+                    await gmail.users.threads.modify({
+                        userId: 'me',
+                        id: result.threadId,
+                        requestBody: { addLabelIds: [labelId] }
+                    });
+                }
+            } catch (e) {
+                console.error('[Outreach Sender] Failed to label thread:', e);
+            }
+
             // Update usage stats immediately in memory
             usageMap[sendingEmail] = (usageMap[sendingEmail] || 0) + 1;
 
@@ -212,7 +248,7 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
                 gmail_message_id: result.messageId,
                 email_subject: emailContent.subject,
                 email_body: emailContent.body,
-                sent_from_email: sendingEmail, // Track which email sent it
+                sent_from_email: sendingEmail,
                 updated_at: Timestamp.now()
             });
 
@@ -226,7 +262,7 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
                 last_message_at: Timestamp.now(),
                 ai_enabled: settings.ai_auto_reply_enabled !== false,
                 ai_reply_count: 0,
-                connected_account_email: sendingEmail, // Key for reply monitoring
+                connected_account_email: sendingEmail,
                 gmail_labels: ['VERALITY_AI'],
                 created_at: Timestamp.now(),
                 updated_at: Timestamp.now()
@@ -236,7 +272,7 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
             if (emailItem.campaign_id) {
                 successfulCampaignIds.add(emailItem.campaign_id);
             }
-            console.log(`[Outreach Sender] ✅ Sent to ${emailItem.creator_email} via ${sendingEmail}`);
+            console.log(`[Outreach Sender] ✅ Sent to ${emailItem.creator_email} via ${sendingEmail} (Thread: ${result.threadId})`);
 
             // Small delay
             await new Promise(resolve => setTimeout(resolve, 2000));
