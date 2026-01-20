@@ -40,7 +40,16 @@ export default function ExtensionAuthPage() {
 
                 const { token } = await response.json();
 
-                // Send token to extension
+                // Wait for the extension to signal it's ready
+                const onExtensionReady = (event: MessageEvent) => {
+                    if (event.data && event.data.type === 'VERALITY_EXTENSION_READY') {
+                        window.removeEventListener('message', onExtensionReady);
+                        window.postMessage({ type: 'VERALITY_EXTENSION_AUTH', token }, '*');
+                    }
+                };
+                window.addEventListener('message', onExtensionReady);
+
+                // Send immediately as fallback
                 window.postMessage({ type: 'VERALITY_EXTENSION_AUTH', token }, '*');
 
             } catch (err: any) {
