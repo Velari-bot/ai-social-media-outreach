@@ -31,11 +31,11 @@ export default function Home() {
 
       {/* Grid Pattern Overlay */}
       <div
-        className="fixed inset-0 z-[-1] opacity-[0.2] pointer-events-none"
+        className="fixed inset-0 z-[-1] opacity-[0.4] pointer-events-none"
         style={{
           backgroundImage: `
-            linear-gradient(to right, #E5E7EB 1px, transparent 1px),
-            linear-gradient(to bottom, #E5E7EB 1px, transparent 1px)
+            linear-gradient(to right, white 1px, transparent 1px),
+            linear-gradient(to bottom, white 1px, transparent 1px)
           `,
           backgroundSize: '40px 40px'
         }}
@@ -283,7 +283,18 @@ export default function Home() {
           {/* Animated Background Gradients */}
           <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-[#6B4BFF]/20 blur-[120px] rounded-full mix-blend-screen pointer-events-none animate-pulse" />
           <div className="absolute bottom-[-20%] left-[-10%] w-[600px] h-[600px] bg-[#FF5252]/10 blur-[120px] rounded-full mix-blend-screen pointer-events-none animate-pulse animation-delay-2000" />
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none mix-blend-overlay" />
+
+          {/* Subtle Grid for Dark Section */}
+          <div
+            className="absolute inset-0 opacity-[0.05] pointer-events-none"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, white 1px, transparent 1px),
+                linear-gradient(to bottom, white 1px, transparent 1px)
+              `,
+              backgroundSize: '40px 40px'
+            }}
+          />
 
           <div className="relative z-10">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/60 text-[10px] font-black uppercase tracking-[0.3em] mb-8">
@@ -306,12 +317,12 @@ export default function Home() {
                 <CheckCircle2 className="w-4 h-4 text-green-500" /> No credit card required. Cancel anytime.
               </p>
               <div className="flex -space-x-2 mt-2">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="w-8 h-8 rounded-full border-2 border-gray-900 bg-gray-800 flex items-center justify-center overflow-hidden">
-                    <img src={`/dude.jpg`} className="w-full h-full object-cover opacity-80" />
+                {["/charli.jpg", "/kim.jpg", "/mr-beast.jpg", "/mkbhd.jpg", "/dude.jpg"].map((src, i) => (
+                  <div key={i} className="w-8 h-8 rounded-full border-2 border-gray-900 bg-gray-800 flex items-center justify-center overflow-hidden shadow-lg">
+                    <img src={src} className="w-full h-full object-cover" />
                   </div>
                 ))}
-                <div className="pl-4 text-xs font-bold text-gray-500 flex items-center italic">Joined by 1,200+ brands this month</div>
+                <div className="pl-4 text-xs font-bold text-gray-400 flex items-center italic">Joined by 1,200+ brands this month</div>
               </div>
             </div>
           </div>
