@@ -203,8 +203,8 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
         <div className="absolute bottom-[-10%] left-[20%] w-[40%] h-[40%] bg-gradient-to-t from-emerald-50 via-green-50 to-transparent blur-[100px]" />
       </div>
 
-      {/* Adjusted spacing pt-24 to fix overlap */}
-      <div className="flex-1 flex pt-24 h-full relative z-10 px-6 pb-6 gap-6">
+      {/* Adjusted spacing pt-32 to fix overlap */}
+      <div className="flex-1 flex pt-32 h-full relative z-10 px-6 pb-6 gap-6">
 
         {/* Sidebar (List) */}
         <div className="w-[380px] flex flex-col bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm flex-shrink-0 overflow-hidden">
@@ -303,8 +303,8 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
                   {selectedReply.thread && selectedReply.thread.length > 0 ? selectedReply.thread.map((msg, i) => (
                     <div key={i} className={`flex flex-col max-w-[85%] ${msg.isUser || msg.isAI ? 'ml-auto items-end' : 'mr-auto items-start'}`}>
                       <div className={`p-6 rounded-3xl shadow-sm text-sm border relative ${msg.isAI ? 'bg-gradient-to-br from-purple-600 to-indigo-600 text-white border-transparent rounded-br-sm' :
-                          msg.isUser ? 'bg-white text-gray-900 border-gray-100 rounded-br-sm' :
-                            'bg-white border-gray-100 text-gray-800 rounded-bl-sm shadow-md'
+                        msg.isUser ? 'bg-white text-gray-900 border-gray-100 rounded-br-sm' :
+                          'bg-white border-gray-100 text-gray-800 rounded-bl-sm shadow-md'
                         }`}>
                         {msg.isAI && (
                           <div className="absolute -top-3 left-6 bg-white text-purple-600 px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm flex items-center gap-1 border border-purple-100">
