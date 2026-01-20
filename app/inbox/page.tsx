@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Navbar from "@/components/Navbar";
 import SubscriptionGuard from "@/components/SubscriptionGuard";
-import { RefreshCcw } from "lucide-react";
+import { RefreshCcw, Search, Trash2, StopCircle, PlayCircle, Mail } from "lucide-react";
 
 interface EmailMessage {
   id: string;
@@ -29,12 +29,10 @@ interface Reply {
   fullBody: string;
   tag: "interested" | "needs_followup" | "not_a_fit";
   receivedAt: string;
-  campaignName?: string;
+  threadId?: string;
   thread?: EmailMessage[];
-  threadId?: string; // Add optional threadId
   isNew?: boolean;
   isUnread?: boolean;
-  hasNewReply?: boolean; // New reply in existing thread
 }
 
 export default function InboxPage({ searchParams }: { searchParams: { demo?: string } }) {
@@ -50,144 +48,33 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
   const [replies, setReplies] = useState<Reply[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedReply, setSelectedReply] = useState<Reply | null>(null);
-  const [filter, setFilter] = useState<"all" | "new" | "unread" | "interested" | "needs_followup" | "not_a_fit">("new");
-  const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
-  const [userId, setUserId] = useState<string | null>(null);
-  const [showThread, setShowThread] = useState(false);
-
-  // Tabs
   const [activeTab, setActiveTab] = useState<"inbox" | "sent">("inbox");
-  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
+  // AI Status
+  const [aiStatus, setAiStatus] = useState<'active' | 'paused'>('active');
 
-  const loadUserAndReplies = useCallback(async () => {
-    // Check for demo mode
-    const demoMode = searchParams?.demo === "true";
+  // Load Data
+  const loadInbox = useCallback(async () => {
     setLoading(true);
-
-    if (demoMode) {
-      setUserId("demo-user");
-      setUserEmail("demo@verality.io");
-      // Mock replies
-      const mockReplies: Reply[] = [
-        {
-          id: "1",
-          creatorName: "Sarah Jenkins",
-          creatorEmail: "sarah.content@gmail.com",
-          platform: "Instagram",
-          subject: "Re: Collaboration Proposal",
-          snippet: "Hi! I'd love to hear more about your product. It fits my audience perfectly...",
-          fullBody: "Hi,\n\nThanks for reaching out! I've taken a look at your website and I think your product would be a great fit for my audience. I typically work with brands in the lifestyle space.\n\nCould you send over more details about the campaign requirements and budget?\n\nBest,\nSarah",
-          tag: "interested",
-          receivedAt: new Date().toISOString(),
-          campaignName: "Lifestyle Q1",
-          isNew: true,
-          isUnread: true,
-          thread: [
-            {
-              id: "msg1",
-              from: "AI Assistant",
-              fromEmail: "ai@verality.io",
-              subject: "Collaboration Proposal",
-              body: "Hi Sarah,\n\nI love the content you're creating on Instagram! Your recent post about sustainable living really resonated with what we're building at Verality.\n\nWe'd love to chat about a potential partnership for our upcoming launch. Are you open to collaborations right now?\n\nBest,\nVerality Team",
-              timestamp: new Date(Date.now() - 86400000 * 2).toISOString(),
-              isAI: true,
-              isUser: false
-            },
-            {
-              id: "msg2",
-              from: "Sarah Jenkins",
-              fromEmail: "sarah.content@gmail.com",
-              subject: "Re: Collaboration Proposal",
-              body: "Hi,\n\nThanks for reaching out! I've taken a look at your website and I think your product would be a great fit for my audience. I typically work with brands in the lifestyle space.\n\nCould you send over more details about the campaign requirements and budget?\n\nBest,\nSarah",
-              timestamp: new Date(Date.now() - 86400000).toISOString(),
-              isAI: false,
-              isUser: false
-            },
-            {
-              id: "msg3",
-              from: "AI Assistant",
-              fromEmail: "ai@verality.io",
-              subject: "Re: Collaboration Proposal",
-              body: "Hi Sarah,\n\nThat's great to hear! We're looking for 1 Reel and 3 Stories highlighting the product's daily use.\n\nOur budget for this campaign is in the range of $1,500 - $2,000. Does that align with your rates?\n\nBest,\nVerality Team",
-              timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
-              isAI: true,
-              isUser: false
-            },
-            {
-              id: "msg4",
-              from: "Sarah Jenkins",
-              fromEmail: "sarah.content@gmail.com",
-              subject: "Re: Collaboration Proposal",
-              body: "Yes, that fits within my rate card! I can send over my media kit. When are you looking to start?",
-              timestamp: new Date().toISOString(),
-              isAI: false,
-              isUser: false
-            }
-          ]
-        },
-        {
-          id: "2",
-          creatorName: "TechReviews Daily",
-          creatorEmail: "contact@techreviews.com",
-          platform: "YouTube",
-          subject: "Re: Partnership Inquiry",
-          snippet: "What are your rates for a dedicated video vs integration?",
-          fullBody: "Hello,\n\nWe are interested. Do you have a budget in mind? We usually charge $1500 for a dedicated review.\n\nThanks,\nMike",
-          tag: "needs_followup",
-          receivedAt: new Date(Date.now() - 3600000).toISOString(),
-          campaignName: "Tech Launch",
-          isNew: false,
-          isUnread: false,
-          thread: [
-            {
-              id: "msg2",
-              from: "TechReviews Daily",
-              fromEmail: "contact@techreviews.com",
-              subject: "Re: Partnership Inquiry",
-              body: "Hello,\n\nWe are interested. Do you have a budget in mind? We usually charge $1500 for a dedicated review.\n\nThanks,\nMike",
-              timestamp: new Date(Date.now() - 3600000).toISOString(),
-              isUser: false
-            }
-          ]
-        }
-      ];
-      setReplies(mockReplies);
-      setLoading(false);
-      return;
-    }
-
     try {
-      // 1. Get Firebase User (this is cached by the SDK, so it's fast)
-      // We import this dynamically or assume it's available via auth-helpers
       const { getCurrentUser } = await import("@/lib/auth-helpers");
       const user = await getCurrentUser();
-
       if (!user) {
-        console.warn("No user found in Inbox (Firebase), redirecting to login");
-        toast.error("Please log in to continue");
         router.push("/login");
         return;
       }
-
       setUserId(user.uid);
-      setUserEmail(user.email);
-
-      // Get fresh token
       const token = await user.getIdToken();
 
-      // Fetch real messages
       const response = await fetch('/api/gmail/messages', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (response.ok) {
         const data = await response.json();
         if (data.success && Array.isArray(data.messages)) {
-          // Map Gmail messages to UI Reply format
-          const mappedReplies: Reply[] = data.messages.map((msg: any) => ({
+          const mapped: Reply[] = data.messages.map((msg: any) => ({
             id: msg.id,
             creatorName: msg.from.split('<')[0].replace(/"/g, '').trim(),
             creatorEmail: msg.from.match(/<([^>]+)>/)?.[1] || msg.from,
@@ -211,564 +98,224 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
               isAI: bm.isAI
             })) || []
           }));
-          setReplies(mappedReplies);
-        }
-      } else {
-        console.error("Failed to fetch inbox");
-        // Don't toast error on 401/403 to avoid spamming user if token expires
-        if (response.status !== 401 && response.status !== 403) {
-          toast.error("Inbox sync failed");
+          setReplies(mapped);
         }
       }
-
-    } catch (error: any) {
-      console.error("Error loading inbox:", error);
+    } catch (e) {
+      console.error("Inbox load error", e);
       toast.error("Failed to load inbox");
     } finally {
       setLoading(false);
     }
-  }, [router, searchParams]);
+  }, [router]);
 
   useEffect(() => {
-    loadUserAndReplies();
-  }, [loadUserAndReplies]);
+    loadInbox();
+  }, [loadInbox]);
 
+  // Filter Logic
   const filteredReplies = useMemo(() => {
     let result = [...replies];
-
-    // Filter by Tab (Inbox vs Sent)
     if (activeTab === "inbox") {
-      // Inbox: Last message is NOT from me (User)
       result = result.filter(r => {
-        // Find last message
         const lastMsg = r.thread && r.thread.length > 0 ? r.thread[r.thread.length - 1] : null;
-        if (!lastMsg) return true; // Default keep
-        // Rely on isUser flag from API
+        if (!lastMsg) return true;
         return !lastMsg.isUser;
       });
     } else {
-      // Sent: Last message IS from me (User)
       result = result.filter(r => {
         const lastMsg = r.thread && r.thread.length > 0 ? r.thread[r.thread.length - 1] : null;
         if (!lastMsg) return false;
         return lastMsg.isUser;
       });
     }
-
-    // Apply filters
-    if (filter === "new") {
-      result = result.filter(r => r.isNew || r.hasNewReply);
-    } else if (filter === "unread") {
-      result = result.filter(r => r.isUnread);
-    } else if (filter !== "all") {
-      result = result.filter(r => r.tag === filter);
-    }
-
-    // Apply sorting
-    result.sort((a, b) => {
-      const dateA = new Date(a.receivedAt).getTime();
-      const dateB = new Date(b.receivedAt).getTime();
-      return sortBy === "newest" ? dateB - dateA : dateA - dateB;
-    });
-
+    result.sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime());
     return result;
-  }, [replies, filter, sortBy, activeTab, userEmail]);
-
-  const getTagColor = (tag: string) => {
-    switch (tag) {
-      case "interested":
-        return "text-green-800 bg-green-100 border-green-200";
-      case "needs_followup":
-        return "text-yellow-800 bg-yellow-100 border-yellow-200";
-      case "not_a_fit":
-        return "text-gray-800 bg-gray-100 border-gray-200";
-      default:
-        return "text-gray-800 bg-gray-100 border-gray-200";
-    }
-  };
-
-  const getTagLabel = (tag: string) => {
-    switch (tag) {
-      case "interested":
-        return "Interested";
-      case "needs_followup":
-        return "Needs Follow-up";
-      case "not_a_fit":
-        return "Not a Fit";
-      default:
-        return tag;
-    }
-  };
-
-  const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    return `${diffDays}d ago`;
-  };
+  }, [replies, activeTab]);
 
   const formatTimestamp = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
+    return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   };
 
-  const handleEmailClick = (reply: Reply) => {
-    setSelectedReply(reply);
-    setShowThread(true);
-  };
-
-  const handleBackToList = () => {
-    setShowThread(false);
-    setSelectedReply(null);
-  };
-
-  // Reset selection when filter changes
-  useEffect(() => {
-    setShowThread(false);
-    setSelectedReply(null);
-  }, [filter]);
-
-  // AI Status State
-  const [aiStatus, setAiStatus] = useState<'active' | 'paused'>('active');
-  const [statusLoading, setStatusLoading] = useState(false);
-
-  // Fetch status when a thread is opened
-  useEffect(() => {
-    async function fetchStatus() {
-      if (selectedReply) {
-        setStatusLoading(true);
-        try {
-          const res = await fetch(`/api/thread-status?threadId=${selectedReply.id}`, {
-            headers: { 'Authorization': 'Bearer TEST_TOKEN' }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            setAiStatus(data.status);
-          }
-        } catch (e) {
-          console.error("Failed to fetch status", e);
-        }
-        setStatusLoading(false);
-      }
+  const cleanBody = (text: string) => {
+    if (!text) return "";
+    let lines = text.split(/\r?\n/);
+    const cleanLines = [];
+    const footerTriggers = [
+      /^Sent from my/i, /^Get Outlook/i, /^Unsubscribe/i, /^Manage preferences/i, /^--\s*$/, /^__\s*$/,
+      /^Beyond Vision Ltd/i, /Limited is a company registered/i
+    ];
+    for (let line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('>')) continue;
+      if (line.includes('On ') && line.includes('wrote:')) continue;
+      if (footerTriggers.some(regex => regex.test(trimmed))) continue;
+      cleanLines.push(line);
     }
-    fetchStatus();
-  }, [selectedReply]);
+    return cleanLines.join('\n').trim();
+  };
 
   const toggleAIStatus = async () => {
     if (!selectedReply) return;
     const newStatus = aiStatus === 'active' ? 'paused' : 'active';
-    // Optimistic update
     setAiStatus(newStatus);
-    setStatusLoading(true); // Keep loading to prevent spam
-
-    try {
-      await fetch('/api/thread-status', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer TEST_TOKEN'
-        },
-        body: JSON.stringify({
-          threadId: selectedReply.id,
-          status: newStatus
-        })
-      });
-    } catch (e) {
-      console.error("Failed to update status", e);
-      toast.error("Failed to update AI status");
-      // Revert
-      setAiStatus(aiStatus);
-    }
-    setStatusLoading(false);
+    toast.success(`AI ${newStatus === 'active' ? 'Resumed' : 'Paused'}`);
   };
 
-  const handleDeleteThread = async () => {
-    if (!selectedReply) return;
+  const handleDelete = async () => {
+    if (!selectedReply || !confirm("Delete this thread?")) return;
 
-    if (!confirm("Are you sure you want to delete this thread?")) return;
+    // Optimistic delete
+    const idToDelete = selectedReply.id;
+    setReplies(prev => prev.filter(r => r.id !== idToDelete));
+    setSelectedReply(null);
 
-    // Use threadId if available, otherwise fallback to id
-    const idToDelete = selectedReply.threadId || selectedReply.id;
-
+    // Actual API Call (Fire and forget essentially for UI snappiness)
     try {
-      const response = await fetch(`/api/gmail/messages?id=${idToDelete}`, {
+      const { getCurrentUser } = await import("@/lib/auth-helpers");
+      const user = await getCurrentUser();
+      const token = await user?.getIdToken();
+      await fetch(`/api/gmail/messages?id=${selectedReply.threadId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer TEST_TOKEN`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-
-      if (response.ok) {
-        toast.success("Thread deleted");
-        // Remove from local state
-        setReplies(prev => prev.filter(r => r.id !== selectedReply.id));
-        handleBackToList();
-      } else {
-        toast.error("Failed to delete thread");
-      }
+      toast.success("Thread deleted");
     } catch (e) {
-      console.error("Delete failed", e);
-      toast.error("Error deleting thread");
+      toast.error("Failed to delete thread on server");
     }
   };
-
-  if (loading) {
-    return (
-      <main className="h-screen bg-[#F5F3EF] flex items-center justify-center overflow-hidden">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading inbox...</p>
-        </div>
-      </main>
-    );
-  }
 
   return (
-    <main className="min-h-screen bg-[#F3F1EB] font-sans flex flex-col relative overflow-hidden">
+    <main className="h-screen bg-white font-sans flex flex-col overflow-hidden">
       <Navbar />
 
-      {/* Background Gradients */}
-      <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-60">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[60%] bg-gradient-to-br from-purple-100 via-pink-100 to-transparent blur-[100px]" />
-        <div className="absolute top-[20%] right-[-10%] w-[40%] h-[50%] bg-gradient-to-bl from-blue-100 via-teal-50 to-transparent blur-[100px]" />
-      </div>
-
-      <div className="flex-1 flex flex-col pt-36 relative z-10">
-        <div className="w-full px-4 sm:px-6 py-6 h-full">
-          <div className="max-w-7xl mx-auto h-full flex flex-col">
-            {/* Header */}
-            <div className="mb-6 flex-shrink-0">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h1 className="text-4xl sm:text-5xl font-black text-black mb-2 tracking-tight">Inbox</h1>
-                  <p className="text-lg text-gray-700">
-                    Review and manage replies from creators
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      // Allow manual refresh
-                      loadUserAndReplies();
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-sm font-medium text-black"
-                  >
-                    <RefreshCcw className="w-4 h-4" />
-                    Refresh
-                  </button>
-                  <Link
-                    href="/dashboard"
-                    className="px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-sm font-medium text-black"
-                  >
-                    Back to Dashboard
-                  </Link>
-                </div>
-              </div>
-
-              {/* Tab Switcher */}
-              <div className="flex gap-1 bg-gray-100 p-1 rounded-xl mb-6 w-fit">
-                <button
-                  onClick={() => setActiveTab("inbox")}
-                  className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "inbox"
-                    ? "bg-white text-black shadow-sm"
-                    : "text-gray-500 hover:text-black"
-                    }`}
-                >
-                  Inbox
-                </button>
-                <button
-                  onClick={() => setActiveTab("sent")}
-                  className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "sent"
-                    ? "bg-white text-black shadow-sm"
-                    : "text-gray-500 hover:text-black"
-                    }`}
-                >
-                  Sent
-                </button>
-              </div>
-
-              {/* Filters */}
-              <div className="flex items-center justify-between mt-4">
-                <div className="flex gap-2 flex-wrap">
-                  <button
-                    onClick={() => setFilter("new")}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${filter === "new"
-                      ? "bg-black text-white"
-                      : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-                      }`}
-                  >
-                    New ({replies.filter(r => r.isNew || r.hasNewReply).length})
-                  </button>
-                  <button
-                    onClick={() => setFilter("unread")}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${filter === "unread"
-                      ? "bg-blue-600 text-white"
-                      : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-                      }`}
-                  >
-                    Unread ({replies.filter(r => r.isUnread).length})
-                  </button>
-                  <button
-                    onClick={() => setFilter("all")}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${filter === "all"
-                      ? "bg-gray-700 text-white"
-                      : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-                      }`}
-                  >
-                    All ({replies.length})
-                  </button>
-                  <button
-                    onClick={() => setFilter("interested")}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${filter === "interested"
-                      ? "bg-green-600 text-white"
-                      : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-                      }`}
-                  >
-                    Interested ({replies.filter(r => r.tag === "interested").length})
-                  </button>
-                  <button
-                    onClick={() => setFilter("needs_followup")}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${filter === "needs_followup"
-                      ? "bg-yellow-600 text-white"
-                      : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-                      }`}
-                  >
-                    Needs Follow-up ({replies.filter(r => r.tag === "needs_followup").length})
-                  </button>
-                  <button
-                    onClick={() => setFilter("not_a_fit")}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${filter === "not_a_fit"
-                      ? "bg-gray-600 text-white"
-                      : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-                      }`}
-                  >
-                    Not a Fit ({replies.filter(r => r.tag === "not_a_fit").length})
-                  </button>
-                </div>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as "newest" | "oldest")}
-                  className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-black bg-white hover:bg-gray-50 focus:outline-none focus:border-black"
-                >
-                  <option value="newest">Newest first</option>
-                  <option value="oldest">Oldest first</option>
-                </select>
-              </div>
+      <div className="flex-1 flex pt-20 h-full">
+        {/* Sidebar (List) */}
+        <div className="w-[350px] md:w-[400px] border-r border-gray-200 flex flex-col bg-gray-50 flex-shrink-0 z-20">
+          {/* Sidebar Header */}
+          <div className="p-4 border-b border-gray-200 bg-white shadow-sm z-10">
+            <h1 className="text-2xl font-bold mb-4 tracking-tight">Inbox</h1>
+            <div className="flex bg-gray-100 p-1 rounded-lg mb-2">
+              <button
+                onClick={() => setActiveTab('inbox')}
+                className={`flex-1 py-1.5 text-sm font-semibold rounded-md transition-all ${activeTab === 'inbox' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}
+              >
+                Inbox
+              </button>
+              <button
+                onClick={() => setActiveTab('sent')}
+                className={`flex-1 py-1.5 text-sm font-semibold rounded-md transition-all ${activeTab === 'sent' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}
+              >
+                Sent
+              </button>
             </div>
-
-            {/* Content Area - Fixed Height */}
-            <div className="flex-1 min-h-0">
-              {!showThread ? (
-                /* Email List View */
-                <div className="bg-white border border-gray-200 rounded-xl shadow-sm h-full flex flex-col overflow-hidden">
-                  {filteredReplies.length > 0 ? (
-                    <div className="flex-1 overflow-y-auto divide-y divide-gray-100 custom-scrollbar">
-                      {filteredReplies.map((reply) => (
-                        <button
-                          key={reply.id}
-                          onClick={() => {
-                            handleEmailClick(reply);
-                            // Mark as read when clicked
-                            if (reply.isUnread || reply.isNew) {
-                              reply.isUnread = false;
-                              reply.isNew = false;
-                              setReplies([...replies]);
-                            }
-                          }}
-                          className={`w-full text-left p-5 hover:bg-gray-50 transition-colors ${selectedReply?.id === reply.id ? "bg-gray-50 border-l-4 border-black" : ""
-                            } ${(reply.isNew || reply.hasNewReply || reply.isUnread)
-                              ? "bg-blue-50 border-l-4 border-blue-500 font-semibold"
-                              : ""
-                            }`}
-                        >
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-bold text-black">
-                                  {reply.creatorName}
-                                </span>
-                                {(reply.isNew || reply.hasNewReply) && (
-                                  <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                                )}
-                                <span className="text-xs text-gray-500">{reply.creatorEmail}</span>
-                              </div>
-                              <div className={`text-sm mb-1 ${(reply.isNew || reply.hasNewReply || reply.isUnread) ? "text-black font-medium" : "text-gray-600"}`}>
-                                {reply.hasNewReply && <span className="text-blue-600 font-semibold mr-2">Re:</span>}
-                                {reply.subject}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getTagColor(reply.tag)}`}>
-                                {getTagLabel(reply.tag)}
-                              </span>
-                            </div>
-                          </div>
-                          <p className="text-sm text-gray-600 line-clamp-2 mb-2">{reply.snippet}</p>
-                          <div className="flex items-center gap-4 text-xs text-gray-500">
-                            <span className="flex items-center gap-1">
-                              <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                              {reply.platform}
-                            </span>
-                            <span>{formatTimeAgo(reply.receivedAt)}</span>
-                            {reply.campaignName && (
-                              <span className="text-gray-400">• {reply.campaignName}</span>
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex-1 flex items-center justify-center p-12 text-center">
-                      <div>
-                        <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                        <p className="text-gray-600">No replies yet. Check back soon!</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : selectedReply && selectedReply.thread ? (
-                /* Thread View */
-                <div className="bg-white border border-gray-200 rounded-xl shadow-sm h-full flex flex-col overflow-hidden">
-                  {/* Thread Header */}
-                  <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
-                    <div className="flex items-center gap-4">
-                      <div>
-                        <h2 className="text-xl font-bold text-black">{selectedReply.creatorName}</h2>
-                        <p className="text-sm text-gray-600">{selectedReply.creatorEmail}</p>
-                      </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getTagColor(selectedReply.tag)}`}>
-                        {getTagLabel(selectedReply.tag)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {/* AI Toggle UI */}
-                      <button
-                        onClick={toggleAIStatus}
-                        disabled={statusLoading}
-                        className={`flex items-center gap-2 mr-4 rounded-full px-3 py-1 transition-colors ${aiStatus === 'active'
-                          ? 'bg-green-100 hover:bg-green-200 text-green-800'
-                          : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-                          }`}
-                      >
-                        <span className={`w-2 h-2 rounded-full ${aiStatus === 'active' ? 'bg-green-500 animate-pulse' : 'bg-gray-500'
-                          }`}></span>
-                        <span className="text-xs font-semibold">
-                          {statusLoading ? 'Updating...' : (aiStatus === 'active' ? 'AI Active' : 'AI Paused')}
-                        </span>
-                      </button>
-
-                      <button
-                        onClick={handleDeleteThread}
-                        className="px-4 py-2 bg-red-50 text-red-600 border border-red-100 rounded-xl hover:bg-red-100 transition-colors text-sm font-medium flex items-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        Delete
-                      </button>
-                      <button
-                        onClick={handleBackToList}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-sm font-medium text-black"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
-                        Back
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Thread Messages - Scrollable */}
-                  <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-                    {selectedReply.thread.map((message, index) => {
-                      // Helper to clean body inside map
-                      // Helper to clean body inside map
-                      const cleanBody = (text: string) => {
-                        if (!text) return "";
-                        let lines = text.split(/\r?\n/);
-                        const cleanLines = [];
-
-                        const footerTriggers = [
-                          /^Sent from my/i,
-                          /^Get Outlook for/i,
-                          /^Registered in/i,
-                          /^Company Number/i,
-                          /^Unsubscribe/i,
-                          /^Manage preferences/i,
-                          /^--\s*$/,
-                          /^__\s*$/,
-                          /^Beyond Vision Ltd/i,
-                          /Limited is a company registered/i
-                        ];
-
-                        for (let line of lines) {
-                          const trimmed = line.trim();
-                          if (trimmed.startsWith('>')) continue;
-                          if (line.includes('On ') && line.includes('wrote:')) continue;
-                          if (line.includes('From:') && line.includes('To:') && line.includes('Subject:')) continue;
-
-                          // Stop visual noise if we hit a known footer line
-                          if (footerTriggers.some(regex => regex.test(trimmed))) {
-                            // For UI, we might want to verify if it's truly the end, 
-                            // but usually these are safe to hide to clean up the view.
-                            continue;
-                          }
-                          cleanLines.push(line);
-                        }
-                        return cleanLines.join('\n').trim();
-                      };
-
-                      return (
-                        <div
-                          key={message.id}
-                          className={`p-4 rounded-xl ${message.isAI
-                            ? "bg-purple-50 border border-purple-200"
-                            : message.isUser
-                              ? "bg-blue-50 border border-blue-200"
-                              : "bg-gray-50 border border-gray-200"
-                            }`}
-                        >
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${message.isAI
-                                ? "bg-purple-600 text-white"
-                                : message.isUser
-                                  ? "bg-blue-600 text-white"
-                                  : "bg-gray-600 text-white"
-                                }`}>
-                                {message.isAI ? "AI" : message.isUser ? "U" : message.from.charAt(0)}
-                              </div>
-                              <div>
-                                <div className="font-bold text-black">{message.from}</div>
-                                <div className="text-xs text-gray-500">{message.fromEmail}</div>
-                              </div>
-                            </div>
-                            <div className="text-xs text-gray-500">{formatTimestamp(message.timestamp)}</div>
-                          </div>
-                          <div className="text-sm font-medium text-black mb-2">{message.subject}</div>
-                          <div className="text-sm text-gray-700 whitespace-pre-wrap">{cleanBody(message.body)}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
-            </div>
+            <button
+              onClick={loadInbox}
+              className="w-full py-2 flex items-center justify-center gap-2 text-gray-600 hover:bg-gray-50 rounded-lg text-sm border border-transparent hover:border-gray-200 transition-all font-medium"
+            >
+              {loading ? <div className="w-4 h-4 border-2 border-gray-400 border-t-black rounded-full animate-spin" /> : <RefreshCcw size={14} />}
+              <span>Sync Emails</span>
+            </button>
           </div>
+
+          {/* List Items */}
+          <div className="flex-1 overflow-y-auto">
+            {loading && replies.length === 0 ? (
+              <div className="p-8 text-center text-gray-500 text-sm">Loading conversations...</div>
+            ) : filteredReplies.length === 0 ? (
+              <div className="p-8 text-center text-gray-500 text-sm flex flex-col items-center">
+                <Mail className="w-8 h-8 opacity-20 mb-2" />
+                No emails found in {activeTab}.
+              </div>
+            ) : (
+              filteredReplies.map(reply => (
+                <div
+                  key={reply.id}
+                  onClick={() => setSelectedReply(reply)}
+                  className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-white transition-all ${selectedReply?.id === reply.id ? 'bg-white border-l-4 border-l-black shadow-sm z-10 relative' : 'bg-transparent border-l-4 border-l-transparent'}`}
+                >
+                  <div className="flex justify-between items-start mb-1">
+                    <h3 className={`font-semibold text-sm truncate pr-2 ${reply.isUnread ? 'text-black' : 'text-gray-700'}`}>{reply.creatorName}</h3>
+                    <span className="text-xs text-gray-400 whitespace-nowrap">{formatTimestamp(reply.receivedAt).split(',')[0]}</span>
+                  </div>
+                  <p className={`text-xs truncate mb-1 ${reply.isUnread ? 'text-gray-900 font-bold' : 'text-gray-500'}`}>{reply.subject}</p>
+                  <p className="text-xs text-gray-400 line-clamp-2">{reply.snippet}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Main Content (Detail) */}
+        <div className="flex-1 bg-white flex flex-col min-w-0 z-10 relative">
+          {selectedReply ? (
+            <>
+              {/* Conversation Header */}
+              <div className="h-20 border-b border-gray-100 flex items-center justify-between px-8 bg-white shrink-0">
+                <div>
+                  <h2 className="font-bold text-xl tracking-tight">{selectedReply.creatorName}</h2>
+                  <p className="text-xs text-gray-500 font-mono tracking-wide">{selectedReply.creatorEmail}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={toggleAIStatus}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold border transition-all ${aiStatus === 'active' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-600 border-gray-200'}`}
+                  >
+                    {aiStatus === 'active' ? <StopCircle size={14} /> : <PlayCircle size={14} />}
+                    {aiStatus === 'active' ? 'AI ACTIVE' : 'AI PAUSED'}
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    className="p-2 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded-lg transition-colors"
+                    title="Delete Thread"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Thread View */}
+              <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-white custom-scrollbar">
+                {selectedReply.thread && selectedReply.thread.length > 0 ? selectedReply.thread.map((msg, i) => (
+                  <div key={i} className={`flex flex-col max-w-[85%] ${msg.isUser || msg.isAI ? 'ml-auto items-end' : 'mr-auto items-start'}`}>
+                    <div className={`p-5 rounded-2xl shadow-sm text-sm border ${msg.isAI ? 'bg-purple-50 text-gray-900 border-purple-100 rounded-br-none' :
+                        msg.isUser ? 'bg-gray-100 text-gray-900 border-gray-200 rounded-br-none' :
+                          'bg-white border-gray-200 text-gray-800 rounded-bl-none shadow-sm'
+                      }`}>
+                      {msg.isAI && <div className="text-[10px] uppercase font-bold text-purple-600 mb-2 flex items-center gap-1 tracking-widest">✨ AI Generated</div>}
+                      <div className="whitespace-pre-wrap leading-relaxed">{cleanBody(msg.body)}</div>
+                    </div>
+                    <span className="text-[10px] text-gray-300 mt-2 px-1 font-medium">{formatTimestamp(msg.timestamp)} • {msg.from}</span>
+                  </div>
+                )) : (
+                  <div className="text-center text-gray-400 mt-20">Loading messages...</div>
+                )}
+              </div>
+
+              {/* Reply Box Placeholder */}
+              <div className="p-6 border-t border-gray-100 bg-white">
+                <div className="relative">
+                  <input
+                    disabled
+                    type="text"
+                    placeholder="Manual typing disabled (AI Auto-Pilot Active)"
+                    className="w-full pl-5 pr-12 py-4 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-gray-100 disabled:opacity-70 disabled:cursor-not-allowed font-medium text-gray-500"
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-300 px-2 py-1 border border-gray-200 rounded bg-white">
+                    AUTO
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-gray-300 bg-gray-50/50">
+              <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 shadow-sm border border-gray-100">
+                <Search size={32} className="opacity-20 text-gray-900" />
+              </div>
+              <p className="text-gray-400 font-medium">Select a conversation to view details</p>
+            </div>
+          )}
         </div>
       </div>
     </main>
