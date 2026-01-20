@@ -45,6 +45,14 @@ export default function ExtensionAuthPage() {
                     if (event.data && event.data.type === 'VERALITY_EXTENSION_READY') {
                         window.removeEventListener('message', onExtensionReady);
                         window.postMessage({ type: 'VERALITY_EXTENSION_AUTH', token }, '*');
+
+                        // Show the confirmed success UI
+                        const indicator = document.getElementById('success-indicator');
+                        if (indicator) indicator.style.display = 'block';
+                        const headline = indicator?.parentElement?.querySelector('h2');
+                        if (headline && !headline.textContent?.includes('Confirming')) {
+                            headline.style.display = 'none';
+                        }
                     }
                 };
                 window.addEventListener('message', onExtensionReady);
@@ -114,13 +122,19 @@ export default function ExtensionAuthPage() {
                                     <CheckCircle2 className="w-12 h-12 text-[#6B4BFF] relative z-10" />
                                 </div>
                                 <div className="text-center">
-                                    <h2 className="text-3xl font-black text-gray-900 tracking-tight mb-4">Successfully Connected</h2>
+                                    <h2 className="text-3xl font-black text-gray-900 tracking-tight mb-4">Confirming Connection...</h2>
                                     <p className="text-gray-500 text-lg font-medium leading-relaxed">
-                                        Account bridged. You can now close this tab and start using the Verality extension on YouTube.
+                                        Waiting for the Verality Extension to confirm the secure bridge.
                                     </p>
                                 </div>
 
-                                <div className="w-full pt-4">
+                                <div className="w-full pt-4" id="success-indicator" style={{ display: 'none' }}>
+                                    <div className="text-center mb-6">
+                                        <h2 className="text-3xl font-black text-[#6B4BFF] tracking-tight mb-4">Successfully Connected</h2>
+                                        <p className="text-gray-500 text-lg font-medium leading-relaxed">
+                                            Account bridged. You can now close this tab.
+                                        </p>
+                                    </div>
                                     <div className="flex items-center justify-center gap-3 px-6 py-4 bg-gray-50 rounded-2xl border border-gray-100 border-dashed">
                                         <ShieldCheck className="w-5 h-5 text-green-500" />
                                         <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">Secure Connection Active</span>
