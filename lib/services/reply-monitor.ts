@@ -84,11 +84,11 @@ async function checkUserReplies(userId: string) {
     const userName = userData.name || userData.first_name || 'Cory';
     const userEmail = userData.email || settings.gmail_email;
 
-    // Check for threads with VERALITY_AI label
+    // Check for unread threads (removed label restriction to catch all campaign replies)
     const threadsRes = await gmail.users.threads.list({
         userId: 'me',
-        q: 'label:VERALITY_AI is:unread',
-        maxResults: 20
+        q: 'is:unread',
+        maxResults: 50
     });
 
     const threads = threadsRes.data.threads || [];
@@ -127,14 +127,56 @@ async function checkUserReplies(userId: string) {
 
             repliesFound++;
 
-            // Get thread tracking
-            const threadDoc = await db.collection('email_threads').doc(thread.id!).get();
+            // Get thread tracking or attempt recovery
+            let threadDoc = await db.collection('email_threads').doc(thread.id!).get();
+            let threadData_db = threadDoc.exists ? threadDoc.data()! : null;
+
             if (!threadDoc.exists) {
-                console.log(`[Reply Monitor] Thread ${thread.id} not tracked, skipping`);
-                continue;
+                console.log(`[Reply Monitor] Thread ${thread.id} not tracked. Attempting recovery...`);
+
+                // Extract From Email to find the creator
+                const creatorEmailMatch = from.match(/<([^>]+)>/);
+                const creatorEmail = creatorEmailMatch ? creatorEmailMatch[1] : from;
+
+                // Find creator in outreach queue or creators collection
+                // 1. Check Outreach Queue (most likely place for recent sends)
+                const queueSnap = await db.collection('outreach_queue')
+                    .where('creator_email', '==', creatorEmail)
+                    .orderBy('created_at', 'desc')
+                    .limit(1)
+                    .get();
+
+                if (!queueSnap.empty) {
+                    const queueItem = queueSnap.docs[0].data();
+                    console.log(`[Reply Monitor] Recovered thread ${thread.id} from queue item ${queueSnap.docs[0].id}`);
+
+                    // Create Email Thread Doc
+                    await db.collection('email_threads').doc(thread.id!).set({
+                        user_id: userId,
+                        creator_id: queueItem.creator_id,
+                        creator_email: creatorEmail,
+                        status: 'active',
+                        last_message_from: 'creator', // We just got a reply
+                        last_message_at: Timestamp.now(),
+                        ai_enabled: settings.ai_auto_reply_enabled !== false,
+                        ai_reply_count: 0,
+                        connected_account_email: userEmail,
+                        gmail_labels: ['VERALITY_AI'],
+                        created_at: Timestamp.now(),
+                        updated_at: Timestamp.now()
+                    });
+
+                    // Re-fetch
+                    threadDoc = await db.collection('email_threads').doc(thread.id!).get();
+                    threadData_db = threadDoc.data()!;
+                } else {
+                    console.log(`[Reply Monitor] Could not recover thread ${thread.id} (Creator ${creatorEmail} not found in queue). Skipping.`);
+                    continue;
+                }
             }
 
-            const threadData_db = threadDoc.data()!;
+            // At this point threadData_db is populated
+            if (!threadData_db) continue;
 
             // Check if AI should respond
             if (!threadData_db.ai_enabled) {

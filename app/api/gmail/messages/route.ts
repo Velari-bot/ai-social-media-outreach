@@ -176,7 +176,12 @@ export async function GET(request: NextRequest) {
                     isUnread: messages.some(m => m.labelIds?.includes('UNREAD')),
                     fullThread: threadHistory,
                     // Pass specific thread data from DB if needed
-                    dbStatus: threadData.status
+                    dbStatus: threadData.status,
+                    insights: {
+                        phone: threadData.phone_number,
+                        tiktok_rate: threadData.tiktok_rate,
+                        sound_promo_rate: threadData.sound_promo_rate
+                    }
                 };
             } catch (e) {
                 console.error(`Error fetching thread ${threadId} from Gmail (Account: ${accountEmail})`, e);

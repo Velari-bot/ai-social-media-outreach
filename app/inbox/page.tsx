@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Navbar from "@/components/Navbar";
 import SubscriptionGuard from "@/components/SubscriptionGuard";
-import { RefreshCcw, Search, Trash2, StopCircle, PlayCircle, Mail } from "lucide-react";
+import { RefreshCcw, Search, Trash2, StopCircle, PlayCircle, Mail, Phone, DollarSign, Sparkles } from "lucide-react";
 
 interface EmailMessage {
   id: string;
@@ -33,6 +33,11 @@ interface Reply {
   thread?: EmailMessage[];
   isNew?: boolean;
   isUnread?: boolean;
+  insights?: {
+    phone?: string;
+    tiktok_rate?: number;
+    sound_promo_rate?: number;
+  };
 }
 
 export default function InboxPage({ searchParams }: { searchParams: { demo?: string } }) {
@@ -87,6 +92,7 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
             isNew: msg.isUnread,
             isUnread: msg.isUnread,
             threadId: msg.threadId,
+            insights: msg.insights || {},
             thread: msg.fullThread?.map((bm: any) => ({
               id: bm.id,
               from: bm.from,
@@ -164,7 +170,7 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
   };
 
   const handleDelete = async () => {
-    if (!selectedReply || !confirm("Delete this thread?")) return;
+    if (!selectedReply || !confirm("Delete this thread permanently?")) return;
 
     // Optimistic delete
     const idToDelete = selectedReply.id;
@@ -197,29 +203,36 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
         <div className="absolute bottom-[-10%] left-[20%] w-[40%] h-[40%] bg-gradient-to-t from-emerald-50 via-green-50 to-transparent blur-[100px]" />
       </div>
 
-      <div className="flex-1 flex pt-20 h-full relative z-10">
+      {/* Adjusted spacing pt-24 to fix overlap */}
+      <div className="flex-1 flex pt-24 h-full relative z-10 px-6 pb-6 gap-6">
+
         {/* Sidebar (List) */}
-        <div className="w-[350px] md:w-[400px] border-r border-gray-200/60 flex flex-col bg-white/80 backdrop-blur-sm flex-shrink-0 z-20 shadow-sm">
+        <div className="w-[380px] flex flex-col bg-white/60 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm flex-shrink-0 overflow-hidden">
           {/* Sidebar Header */}
-          <div className="p-4 border-b border-gray-200 bg-white shadow-sm z-10">
-            <h1 className="text-2xl font-bold mb-4 tracking-tight">Inbox</h1>
-            <div className="flex bg-gray-100 p-1 rounded-lg mb-2">
+          <div className="p-4 border-b border-gray-100 bg-white/50">
+            <h1 className="text-2xl font-black mb-4 tracking-tight flex items-center gap-2">
+              Inbox
+              <span className="text-xs font-normal text-gray-500 bg-white border border-gray-200 px-2 py-0.5 rounded-full">
+                {replies.length}
+              </span>
+            </h1>
+            <div className="flex bg-gray-100/50 p-1 rounded-xl mb-3">
               <button
                 onClick={() => setActiveTab('inbox')}
-                className={`flex-1 py-1.5 text-sm font-semibold rounded-md transition-all ${activeTab === 'inbox' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}
+                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'inbox' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}
               >
                 Inbox
               </button>
               <button
                 onClick={() => setActiveTab('sent')}
-                className={`flex-1 py-1.5 text-sm font-semibold rounded-md transition-all ${activeTab === 'sent' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}
+                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'sent' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}
               >
                 Sent
               </button>
             </div>
             <button
               onClick={loadInbox}
-              className="w-full py-2 flex items-center justify-center gap-2 text-gray-600 hover:bg-gray-50 rounded-lg text-sm border border-transparent hover:border-gray-200 transition-all font-medium"
+              className="w-full py-2.5 flex items-center justify-center gap-2 text-gray-600 hover:bg-white rounded-xl text-sm border border-transparent hover:border-gray-200 transition-all font-semibold"
             >
               {loading ? <div className="w-4 h-4 border-2 border-gray-400 border-t-black rounded-full animate-spin" /> : <RefreshCcw size={14} />}
               <span>Sync Emails</span>
@@ -227,7 +240,7 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
           </div>
 
           {/* List Items */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
             {loading && replies.length === 0 ? (
               <div className="p-8 text-center text-gray-500 text-sm">Loading conversations...</div>
             ) : filteredReplies.length === 0 ? (
@@ -240,87 +253,153 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
                 <div
                   key={reply.id}
                   onClick={() => setSelectedReply(reply)}
-                  className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-white transition-all ${selectedReply?.id === reply.id ? 'bg-white border-l-4 border-l-black shadow-sm z-10 relative' : 'bg-transparent border-l-4 border-l-transparent'}`}
+                  className={`p-4 border-b border-gray-100/50 cursor-pointer hover:bg-white/50 transition-all ${selectedReply?.id === reply.id ? 'bg-white border-l-4 border-l-black shadow-sm' : 'bg-transparent border-l-4 border-l-transparent'}`}
                 >
-                  <div className="flex justify-between items-start mb-1">
-                    <h3 className={`font-semibold text-sm truncate pr-2 ${reply.isUnread ? 'text-black' : 'text-gray-700'}`}>{reply.creatorName}</h3>
-                    <span className="text-xs text-gray-400 whitespace-nowrap">{formatTimestamp(reply.receivedAt).split(',')[0]}</span>
+                  <div className="flex justify-between items-center mb-1">
+                    <h3 className={`font-bold text-sm truncate pr-2 ${reply.isUnread ? 'text-black' : 'text-gray-700'}`}>{reply.creatorName}</h3>
+                    <span className="text-[10px] text-gray-400 whitespace-nowrap">{formatTimestamp(reply.receivedAt).split(',')[0]}</span>
                   </div>
-                  <p className={`text-xs truncate mb-1 ${reply.isUnread ? 'text-gray-900 font-bold' : 'text-gray-500'}`}>{reply.subject}</p>
-                  <p className="text-xs text-gray-400 line-clamp-2">{reply.snippet}</p>
+                  <p className={`text-xs truncate mb-1.5 ${reply.isUnread ? 'text-gray-900 font-bold' : 'text-gray-500'}`}>{reply.subject}</p>
+                  <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">{reply.snippet}</p>
                 </div>
               ))
             )}
           </div>
         </div>
 
-        {/* Main Content (Detail) */}
-        <div className="flex-1 bg-white flex flex-col min-w-0 z-10 relative">
-          {selectedReply ? (
-            <>
-              {/* Conversation Header */}
-              <div className="h-20 border-b border-gray-100 flex items-center justify-between px-8 bg-white shrink-0">
-                <div>
-                  <h2 className="font-bold text-xl tracking-tight">{selectedReply.creatorName}</h2>
-                  <p className="text-xs text-gray-500 font-mono tracking-wide">{selectedReply.creatorEmail}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={toggleAIStatus}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold border transition-all ${aiStatus === 'active' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-600 border-gray-200'}`}
-                  >
-                    {aiStatus === 'active' ? <StopCircle size={14} /> : <PlayCircle size={14} />}
-                    {aiStatus === 'active' ? 'AI ACTIVE' : 'AI PAUSED'}
-                  </button>
-                  <button
-                    onClick={handleDelete}
-                    className="p-2 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded-lg transition-colors"
-                    title="Delete Thread"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              </div>
+        {/* Main Content (Detail) + Insights */}
+        <div className="flex-1 flex gap-6 min-w-0">
 
-              {/* Thread View */}
-              <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-white custom-scrollbar">
-                {selectedReply.thread && selectedReply.thread.length > 0 ? selectedReply.thread.map((msg, i) => (
-                  <div key={i} className={`flex flex-col max-w-[85%] ${msg.isUser || msg.isAI ? 'ml-auto items-end' : 'mr-auto items-start'}`}>
-                    <div className={`p-5 rounded-2xl shadow-sm text-sm border ${msg.isAI ? 'bg-purple-50 text-gray-900 border-purple-100 rounded-br-none' :
-                      msg.isUser ? 'bg-gray-100 text-gray-900 border-gray-200 rounded-br-none' :
-                        'bg-white border-gray-200 text-gray-800 rounded-bl-none shadow-sm'
-                      }`}>
-                      {msg.isAI && <div className="text-[10px] uppercase font-bold text-purple-600 mb-2 flex items-center gap-1 tracking-widest">✨ AI Generated</div>}
-                      <div className="whitespace-pre-wrap leading-relaxed">{cleanBody(msg.body)}</div>
+          {/* Message Thread */}
+          <div className="flex-1 bg-white/80 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm flex flex-col overflow-hidden">
+            {selectedReply ? (
+              <>
+                {/* Conversation Header */}
+                <div className="h-20 border-b border-gray-100 flex items-center justify-between px-8 bg-white/50 shrink-0">
+                  <div>
+                    <h2 className="font-bold text-xl tracking-tight text-gray-900">{selectedReply.creatorName}</h2>
+                    <p className="text-xs text-gray-500 font-mono tracking-wide">{selectedReply.creatorEmail}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={toggleAIStatus}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold border transition-all ${aiStatus === 'active' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-600 border-gray-200'}`}
+                    >
+                      {aiStatus === 'active' ? <StopCircle size={14} /> : <PlayCircle size={14} />}
+                      {aiStatus === 'active' ? 'AI ACTIVE' : 'AI PAUSED'}
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      className="p-2.5 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-xl transition-colors border border-gray-100"
+                      title="Delete Thread"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Thread View */}
+                <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+                  {selectedReply.thread && selectedReply.thread.length > 0 ? selectedReply.thread.map((msg, i) => (
+                    <div key={i} className={`flex flex-col max-w-[85%] ${msg.isUser || msg.isAI ? 'ml-auto items-end' : 'mr-auto items-start'}`}>
+                      <div className={`p-6 rounded-3xl shadow-sm text-sm border relative ${msg.isAI ? 'bg-gradient-to-br from-purple-600 to-indigo-600 text-white border-transparent rounded-br-sm' :
+                          msg.isUser ? 'bg-white text-gray-900 border-gray-100 rounded-br-sm' :
+                            'bg-white border-gray-100 text-gray-800 rounded-bl-sm shadow-md'
+                        }`}>
+                        {msg.isAI && (
+                          <div className="absolute -top-3 left-6 bg-white text-purple-600 px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm flex items-center gap-1 border border-purple-100">
+                            <Sparkles size={10} /> AI
+                          </div>
+                        )}
+                        <div className={`whitespace-pre-wrap leading-relaxed ${msg.isAI ? 'text-purple-50' : ''}`}>{cleanBody(msg.body)}</div>
+                      </div>
+                      <span className="text-[10px] text-gray-400 mt-2 px-2 font-medium">{formatTimestamp(msg.timestamp)} • {msg.from}</span>
                     </div>
-                    <span className="text-[10px] text-gray-300 mt-2 px-1 font-medium">{formatTimestamp(msg.timestamp)} • {msg.from}</span>
-                  </div>
-                )) : (
-                  <div className="text-center text-gray-400 mt-20">Loading messages...</div>
-                )}
-              </div>
+                  )) : (
+                    <div className="text-center text-gray-400 mt-20">Loading messages...</div>
+                  )}
+                </div>
 
-              {/* Reply Box Placeholder */}
-              <div className="p-6 border-t border-gray-100 bg-white">
-                <div className="relative">
-                  <input
-                    disabled
-                    type="text"
-                    placeholder="Manual typing disabled (AI Auto-Pilot Active)"
-                    className="w-full pl-5 pr-12 py-4 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-gray-100 disabled:opacity-70 disabled:cursor-not-allowed font-medium text-gray-500"
-                  />
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-300 px-2 py-1 border border-gray-200 rounded bg-white">
-                    AUTO
+                {/* Reply Box Placeholder */}
+                <div className="p-6 border-t border-gray-100 bg-white/50">
+                  <div className="relative">
+                    <input
+                      disabled
+                      type="text"
+                      placeholder="AI is handling this conversation..."
+                      className="w-full pl-6 pr-16 py-4 rounded-2xl border border-gray-200 bg-gray-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-gray-100 disabled:opacity-60 disabled:cursor-not-allowed font-medium text-gray-500 shadow-inner"
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-300 px-2 py-1 border border-gray-200 rounded-lg bg-white uppercase tracking-wider">
+                      Auto-Pilot
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-gray-300 bg-white/50">
+                <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 shadow-sm border border-gray-100">
+                  <Search size={32} className="opacity-20 text-gray-900" />
+                </div>
+                <p className="text-gray-400 font-medium">Select a conversation to view details</p>
+              </div>
+            )}
+          </div>
+
+          {/* Insights Panel (Right Side) - ONLY show if a reply is selected */}
+          {selectedReply && (
+            <div className="w-[300px] flex flex-col gap-4">
+              {/* AI Extraction Card */}
+              <div className="bg-white/70 backdrop-blur-md border border-white/60 rounded-2xl p-6 shadow-sm">
+                <h3 className="font-black text-sm uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
+                  <Sparkles size={14} className="text-purple-500" />
+                  AI Insights
+                </h3>
+
+                <div className="space-y-4">
+                  <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm transition-all hover:scale-[1.02]">
+                    <div className="text-xs font-semibold text-gray-400 mb-1 flex items-center gap-1">
+                      <Phone size={12} /> Phone Number
+                    </div>
+                    <div className="font-mono text-sm font-bold text-gray-800 break-all">
+                      {selectedReply.insights?.phone || (
+                        <span className="text-gray-300 italic font-sans text-xs">Waiting for reply...</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm transition-all hover:scale-[1.02]">
+                    <div className="text-xs font-semibold text-gray-400 mb-1 flex items-center gap-1">
+                      <DollarSign size={12} /> TikTok Rate
+                    </div>
+                    <div className="font-bold text-gray-800">
+                      {selectedReply.insights?.tiktok_rate ? `$${selectedReply.insights.tiktok_rate}` : (
+                        <span className="text-gray-300 italic font-normal text-xs">Negotiating...</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm transition-all hover:scale-[1.02]">
+                    <div className="text-xs font-semibold text-gray-400 mb-1 flex items-center gap-1">
+                      <DollarSign size={12} /> Sound Promo Rate
+                    </div>
+                    <div className="font-bold text-gray-800">
+                      {selectedReply.insights?.sound_promo_rate ? `$${selectedReply.insights.sound_promo_rate}` : (
+                        <span className="text-gray-300 italic font-normal text-xs">Negotiating...</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-gray-300 bg-gray-50/50">
-              <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 shadow-sm border border-gray-100">
-                <Search size={32} className="opacity-20 text-gray-900" />
+
+              {/* Quick Actions (Future placeholder) */}
+              <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl p-6 shadow-lg text-white">
+                <h3 className="font-bold text-sm mb-2">Campaign Status</h3>
+                <p className="text-xs text-gray-400 mb-4">This creator is currently active in your outreach campaign.</p>
+                <div className="flex items-center gap-2 text-xs font-mono bg-white/10 p-2 rounded-lg">
+                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                  Status: ACTIVE
+                </div>
               </div>
-              <p className="text-gray-400 font-medium">Select a conversation to view details</p>
             </div>
           )}
         </div>
