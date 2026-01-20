@@ -3,7 +3,6 @@ import { db } from '@/lib/firebase-admin';
 import * as admin from 'firebase-admin';
 import { CreatorRequest, getUserAccount } from '@/lib/database';
 import { discoveryPipeline } from '@/lib/services/discovery-pipeline';
-import { incrementEmailQuota } from '@/lib/database';
 import { Timestamp } from 'firebase-admin/firestore';
 
 export const dynamic = 'force-dynamic';
@@ -13,9 +12,6 @@ export async function GET(req: NextRequest) {
     // 1. Auth Check (Cron Authorization)
     const authHeader = req.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-        // Allow running without auth in dev if needed, or better, secure it.
-        // For development, we can skip if CRON_SECRET is not set, 
-        // but in production it's critical.
         if (process.env.NODE_ENV === 'production') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
@@ -25,16 +21,9 @@ export async function GET(req: NextRequest) {
         console.log('[CampaignCron] Starting daily campaign run...');
 
         // 2. Fetch Active Recurring Campaigns
-        // Note: For now, we fetch ALL active recurring requests.
-        // Logic: A "Campaign" is essentially a CreatorRequest that is flagged as recurring.
-
         let query = db.collection('creator_requests')
             .where('is_recurring', '==', true)
             .where('is_active', '==', true);
-
-        // Optimization: Only run those that haven't run today?
-        // Let's assume the cron runs once a day. 
-        // Or we can check last_run_at.
 
         const snapshot = await query.get();
         if (snapshot.empty) {
@@ -69,14 +58,6 @@ export async function GET(req: NextRequest) {
                     continue;
                 }
 
-                // Determine batch size (use remaining, but cap at say 50 or the original batch size)
-                // IGNORE the original batch size (which defaults to 50) for Autopilot.
-                // We want to MAX out credits daily.
-                // Cap at 100 per run to ensure reliability, but rely on runs to fill up.
-                // Actually, let's try to do up to active remaining quota (capped at 150 for safety).
-
-                // --- AUTOPILOT CHECKS ---
-
                 // 1. Check Duration / Expiry
                 if (campaign.recurring_config?.duration_days && campaign.recurring_config.duration_days > 0) {
                     const createdAt = campaign.created_at;
@@ -97,14 +78,7 @@ export async function GET(req: NextRequest) {
 
                 // 2. Determine Batch Size
                 const campaignDailyLimit = campaign.recurring_config?.daily_limit || 200;
-
-                // Effective limit is min(UserRemaining, CampaignLimit, SystemCap)
-                const effectiveLimit = Math.min(
-                    remaining,
-                    campaignDailyLimit,
-                    200
-                );
-
+                const effectiveLimit = Math.min(remaining, campaignDailyLimit, 200);
                 const batchSize = account.plan === 'enterprise'
                     ? Math.min(campaignDailyLimit, 500)
                     : effectiveLimit;
@@ -114,33 +88,23 @@ export async function GET(req: NextRequest) {
                     continue;
                 }
 
+                // 3. Rate Limit: Only run once every 20 hours
+                if (campaign.last_run_at) {
+                    const lastRun = typeof campaign.last_run_at === 'string' ? new Date(campaign.last_run_at) : (campaign.last_run_at as any).toDate();
+                    const hoursSinceLastRun = (Date.now() - lastRun.getTime()) / (1000 * 60 * 60);
+                    if (hoursSinceLastRun < 20) {
+                        console.log(`[CampaignCron] Campaign ${campaignId} ran ${hoursSinceLastRun.toFixed(1)}h ago. Skipping.`);
+                        skipped++;
+                        continue;
+                    }
+                }
+
                 console.log(`[CampaignCron] Running campaign ${campaignId} for user ${userId}. Batch: ${batchSize}`);
 
                 // B. Run Discovery
-                // We re-use logic from user/requests/route.ts
                 const platform = (campaign.platforms && campaign.platforms.length > 0)
                     ? campaign.platforms[0].toLowerCase()
                     : 'instagram';
-
-                // IMPORTANT: We must ensure we don't find the same creators we already found for this campaign.
-                // DiscoveryPipeline handles DB-level dedup (creators already in DB).
-                // But if we want *new* creators, the pipeline handles that by checking if they are in 'creators' collection.
-                // If a creator was found before (for another user), they are in 'creators'.
-                // Discovery Pipeline logic: 
-                // "Deduplicate against internal DB" -> it checks if creator is in DB.
-                // If in DB, it returns them. 
-                // Wait, if a creator is in DB, users CAN contact them again if THEY haven't contacted them.
-                // But the user request is "fetching NEW creators every day". 
-                // If "fetch new" means "new to the platform", that's what the pipeline does (checks 'creators' collection).
-                // If it means "new to this user", we assume the pipeline or UI handles visibility.
-
-                // ISSUE: discoveryPipeline filters out creators already in DB.
-                // So if we run this daily, we might re-find old creators if we aren't careful?
-                // No, discoveryPipeline: "if (!internalHandles.has(handle))... uniqueNewCreators.push(item)".
-                // It fetches from External, then filters out those ALREADY in Internal DB.
-                // Then it saves new ones.
-                // So it essentially ALWAYS finds *net new* creators to the system.
-                // This matches "fetching new creators every day".
 
                 const results = await discoveryPipeline.discover({
                     userId,
@@ -149,72 +113,45 @@ export async function GET(req: NextRequest) {
                     requestedCount: batchSize,
                     campaignId: campaignId,
                     startingOffset: campaign.results_count || 0
-                    // skipEnrichment: false is default/implied now
                 });
 
                 const foundCount = results.creators?.length || 0;
 
+                // D. Update Campaign Stats/Log
+                const newIds = results.creators.map(c => c.id).filter(Boolean);
+
+                const campaignUpdates: any = {
+                    last_run_at: Timestamp.now(),
+                    updated_at: Timestamp.now()
+                };
+
                 if (foundCount > 0) {
-                    // C. Charge Quota (Only for NEW findings, backlog was presumably charged or will be charged on queue)
-                    // Wait, incrementEmailQuota tracks TOTAL discoveries.
-                    // Queuing consumes 'email_usage'. Two different quotas?
-                    // 'findings_quota' vs 'email_quota'.
-                    // UserAccount has 'email_quota_daily'.
-                    // incrementEmailQuota increments 'email_usage'? No.
-                    // Let's check incrementEmailQuota.
-                    // It increments 'creators_found_this_month'. It does NOT touch daily email quota.
-                    // 'addCreatorsToQueue' touches 'email_used_today'.
-                    // So we are safe. Discovery costs "Find Credits" (maybe unlimited or monthly).
-                    // Sending costs "Daily Email Credits".
-
-                    // C. Charge Quota
-                    // REMOVED: incrementEmailQuota(userId, foundCount);
-                    // Reason: The `addCreatorsToQueue` function in outreach-queue.ts handles the quota deduction 
-                    // (1 credit per email queued). Keeping this here would cause a double-charge.
-
-                    // D. Update Campaign Stats/Log
-                    const newIds = results.creators.map(c => c.id).filter(Boolean);
-
-                    await db.collection('creator_requests').doc(campaignId).update({
-                        last_run_at: Timestamp.now(),
-                        creator_ids: admin.firestore.FieldValue.arrayUnion(...newIds),
-                        results_count: admin.firestore.FieldValue.increment(foundCount)
-                    });
-
+                    campaignUpdates.creator_ids = admin.firestore.FieldValue.arrayUnion(...newIds);
+                    campaignUpdates.results_count = admin.firestore.FieldValue.increment(foundCount);
                     totalCreatorsFound += foundCount;
                     console.log(`[CampaignCron] Success: Found ${foundCount} creators for ${campaignId}`);
                 } else {
                     console.log(`[CampaignCron] No new creators found for ${campaignId}`);
                 }
 
-                // E. ROBUST QUEUING / BACKLOG PROCESSING
-                // We ALWAYS run this to ensure any creators found (now or in past) are queued if they haven't been yet.
-                // This fixes the "0 emails sent" issue if backlog exists.
+                await db.collection('creator_requests').doc(campaignId).update(campaignUpdates);
 
-                // 1. Get latest attached creators to campaign
+                // E. ROBUST QUEUING
                 const updatedCampaignDoc = await db.collection('creator_requests').doc(campaignId).get();
                 const allCreatorIds = (updatedCampaignDoc.data()?.creator_ids || []) as string[];
 
-                // 2. Get currently queued items to avoid duplicates
                 const queueSnap = await db.collection('outreach_queue')
                     .where('campaign_id', '==', campaignId)
                     .select('creator_id')
                     .get();
 
                 const queuedCreatorIds = new Set(queueSnap.docs.map(d => d.data().creator_id));
-
-                // 3. Find missing (Backlog)
                 const idsToQueue = allCreatorIds.filter(id => !queuedCreatorIds.has(id));
 
                 if (idsToQueue.length > 0) {
                     console.log(`[CampaignCron] Processing backlog/new items. Attempting to queue ${idsToQueue.length} creators...`);
                     const { addCreatorsToQueue } = await import('@/lib/services/outreach-queue');
-
-                    // This function handles the Daily Email Quota check.
-                    // If out of quota, it will skip them, but we tried.
                     await addCreatorsToQueue(idsToQueue, userId, campaignId, campaign.name);
-                } else {
-                    console.log(`[CampaignCron] No pending backlog for ${campaignId}`);
                 }
 
                 processed++;

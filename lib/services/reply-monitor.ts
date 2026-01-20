@@ -7,7 +7,7 @@
 import { db } from '@/lib/firebase-admin';
 import { google } from 'googleapis';
 import OpenAI from 'openai';
-import { Timestamp } from 'firebase-admin/firestore';
+import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 
 let openai_inst: OpenAI | null = null;
 function getOpenAI() {
@@ -57,6 +57,12 @@ export async function monitorAllReplies() {
             const result = await checkUserReplies(userId);
             totalReplies += result.repliesFound;
             totalResponses += result.responsesSent;
+
+            // Update last check timestamp
+            await db.collection('user_email_settings').doc(userId).update({
+                last_reply_check: Timestamp.now(),
+                updated_at: Timestamp.now()
+            });
         } catch (error: any) {
             // console.error(`[Reply Monitor] Error for user ${userId}:`, error.message);
         }
@@ -128,10 +134,10 @@ async function checkUserReplies(userId: string) {
             // 2. Name from User Account (Global)
             let senderName = account.name || globalName;
 
-            // Check for unread threads
+            // Check for threads in the last 2 days
             const threadsRes = await gmail.users.threads.list({
                 userId: 'me',
-                q: 'is:unread',
+                q: 'label:INBOX newer_than:2d',
                 maxResults: 50
             });
 
@@ -173,18 +179,27 @@ async function checkUserReplies(userId: string) {
 
                         const creatorEmailMatch = from.match(/<([^>]+)>/);
                         const creatorEmail = (creatorEmailMatch ? creatorEmailMatch[1] : from).toLowerCase().trim();
-                        console.log(`[Reply Monitor] Search Query: '${creatorEmail}'`);
+                        console.log(`[Reply Monitor] Attempting recovery for thread ${thread.id} (Email: ${creatorEmail})`);
 
-                        // Find creator in outreach queue
-                        const queueSnap = await db.collection('outreach_queue')
-                            .where('creator_email', '==', creatorEmail)
-                            .orderBy('created_at', 'desc')
+                        // 1. Try to find by thread ID (most reliable)
+                        let queueSnap = await db.collection('outreach_queue')
+                            .where('gmail_thread_id', '==', thread.id)
                             .limit(1)
                             .get();
 
+                        // 2. Fallback to creator email
+                        if (queueSnap.empty) {
+                            queueSnap = await db.collection('outreach_queue')
+                                .where('creator_email', '==', creatorEmail)
+                                .where('user_id', '==', userId)
+                                .orderBy('created_at', 'desc')
+                                .limit(1)
+                                .get();
+                        }
+
                         if (!queueSnap.empty) {
                             const queueItem = queueSnap.docs[0].data();
-                            console.log(`[Reply Monitor] Recovered thread ${thread.id} for ${creatorEmail}`);
+                            console.log(`[Reply Monitor] Recovered thread ${thread.id} for creator ${queueItem.creator_id}`);
 
                             await db.collection('email_threads').doc(thread.id!).set({
                                 user_id: userId,
@@ -201,6 +216,21 @@ async function checkUserReplies(userId: string) {
                                 updated_at: Timestamp.now()
                             });
 
+                            // UPDATE QUEUE STATUS
+                            // Find the queue item and mark it as replied
+                            const queueDocs = await db.collection('outreach_queue')
+                                .where('creator_email', '==', creatorEmail)
+                                .where('user_id', '==', userId)
+                                .limit(1)
+                                .get();
+
+                            if (!queueDocs.empty) {
+                                await queueDocs.docs[0].ref.update({
+                                    status: 'replied',
+                                    updated_at: Timestamp.now()
+                                });
+                            }
+
                             threadDoc = await db.collection('email_threads').doc(thread.id!).get();
                             threadData_db = threadDoc.data()!;
                         } else {
@@ -209,7 +239,25 @@ async function checkUserReplies(userId: string) {
                         }
                     }
 
-                    if (!threadData_db || !threadData_db.ai_enabled) continue;
+                    if (!threadData_db || !threadData_db.ai_enabled) {
+                        console.log(`[Reply Monitor] Thread ${thread.id} skipped - AI disabled or data missing.`);
+                        continue;
+                    }
+
+                    // Skip if we already processed this exact message
+                    if (threadData_db.last_processed_message_id === lastMessage.id) {
+                        console.log(`[Reply Monitor] Thread ${thread.id} already processed (Message ID: ${lastMessage.id})`);
+                        continue;
+                    }
+
+                    console.log(`[Reply Monitor] Processing reply for thread ${thread.id} from creator ${threadData_db.creator_email}`);
+
+                    // Skip if the last message is from US (secondary check)
+                    if (threadData_db.last_message_from === 'user' && threadData_db.last_message_at) {
+                        // If it was more than 1 minute ago, maybe we can assume it's stable.
+                        // But mostly if it's from 'user', we shouldn't reply again unless creator replied.
+                        // Actually, the header check above (line 160) already handles this for the very last message.
+                    }
 
                     // Use sender name specific to this thread if tracked, else current account logic
                     // If we just recovered it, we set connected_account_email to account.email.
@@ -224,7 +272,10 @@ async function checkUserReplies(userId: string) {
                         persona: settings.ai_persona || `Outreach Specialist at Verality`
                     });
 
+                    console.log(`[Reply Monitor] AI Response for ${thread.id}: ${aiResponse.substring(0, 50)}...`);
+
                     if (aiResponse.toLowerCase().includes('ignore')) {
+                        console.log(`[Reply Monitor] AI decided to IGNORE thread ${thread.id}`);
                         await db.collection('email_threads').doc(thread.id!).update({
                             status: 'closed',
                             updated_at: Timestamp.now()
@@ -250,6 +301,7 @@ async function checkUserReplies(userId: string) {
                     await db.collection('email_threads').doc(thread.id!).update({
                         last_message_from: 'user',
                         last_message_at: Timestamp.now(),
+                        last_processed_message_id: lastMessage.id, // TRACK THIS
                         ai_reply_count: (threadData_db.ai_reply_count || 0) + 1,
                         phone_number: extractedData.phone || threadData_db.phone_number,
                         tiktok_rate: extractedData.tiktok_rate || threadData_db.tiktok_rate,
@@ -257,6 +309,12 @@ async function checkUserReplies(userId: string) {
                         key_points: extractedData.key_points || [],
                         updated_at: Timestamp.now()
                     });
+
+                    // Increment User Stats
+                    await db.collection('user_email_settings').doc(userId).set({
+                        total_replies_received: FieldValue.increment(1),
+                        updated_at: Timestamp.now()
+                    }, { merge: true });
 
                     // Mark read
                     await gmail.users.threads.modify({
