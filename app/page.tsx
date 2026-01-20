@@ -174,62 +174,62 @@ export default function Home() {
       </section>
 
       {/* Feature Grid */}
-      <section className="py-24 bg-white relative">
+      <section className="py-24 bg-white relative z-10">
         <div className="max-w-[1440px] px-6 mx-auto">
-          <div className="text-center max-w-3xl mx-auto mb-20 animate-in fade-in slide-in-from-bottom-8 duration-700 view-timeline">
+          <div className="text-center max-w-3xl mx-auto mb-20">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 tracking-tight">Everything you need to <br className="hidden md:block" />scale your outreach.</h2>
             <p className="text-lg text-gray-500">Stop juggling tools. Verality unifies search, email, and CRM into one powerful platform.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Feature 1 */}
-            <div className="bg-white rounded-[32px] p-8 md:p-10 border border-gray-100 shadow-xl shadow-gray-200/40 hover:shadow-2xl hover:shadow-gray-200/60 transition-all duration-300 md:col-span-2 group relative overflow-hidden cursor-default">
+            <div className="bg-white rounded-[32px] p-8 md:p-12 border border-gray-100 shadow-xl shadow-gray-200/50 hover:shadow-2xl hover:shadow-gray-200/70 transition-all duration-300 md:col-span-2 group relative overflow-hidden">
               <div className="relative z-10 max-w-lg">
-                <div className="w-12 h-12 bg-black text-white rounded-xl flex items-center justify-center mb-8 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <Search className="w-6 h-6" />
+                <div className="w-14 h-14 bg-black text-white rounded-2xl flex items-center justify-center mb-8 shadow-lg shadow-black/10 group-hover:scale-105 transition-transform duration-300">
+                  <Search className="w-7 h-7" />
                 </div>
-                <h3 className="text-2xl font-bold mb-4 text-gray-900">AI-Powered Creator Search</h3>
-                <p className="text-gray-500 font-medium leading-relaxed">Find the perfect creators instantly. Filter by engagement rate, keywords, niche, and follower counts across all major platforms. Our AI parses millions of bio's to find exact matches.</p>
+                <h3 className="text-3xl font-bold mb-4 text-gray-900 tracking-tight">AI-Powered Creator Search</h3>
+                <p className="text-gray-500 text-lg leading-relaxed">Find the perfect creators instantly. Filter by engagement rate, keywords, niche, and follower counts across all major platforms. Our AI parses millions of bio's to find exact matches.</p>
               </div>
-              <div className="absolute top-1/2 right-10 -translate-y-1/2 opacity-5 hidden lg:block group-hover:opacity-10 transition-opacity duration-500">
-                <Search className="w-64 h-64" />
+              <div className="absolute top-1/2 right-10 -translate-y-1/2 opacity-[0.03] hidden lg:block group-hover:opacity-[0.06] transition-opacity duration-500 transform group-hover:scale-110">
+                <Search className="w-72 h-72" />
               </div>
             </div>
 
             {/* Feature 2 */}
-            <div className="bg-gray-50 rounded-[32px] p-8 md:p-10 border border-gray-100 hover:bg-white hover:shadow-xl hover:shadow-gray-200/40 transition-all duration-300 group cursor-default">
-              <div className="w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center mb-8 shadow-lg shadow-blue-600/20 group-hover:rotate-12 transition-transform duration-300">
+            <div className="bg-white rounded-[32px] p-8 md:p-10 border border-gray-100 shadow-lg shadow-gray-200/40 hover:shadow-xl hover:shadow-gray-200/60 transition-all duration-300 group">
+              <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-8 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
                 <Send className="w-6 h-6" />
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-gray-900">Smart Drip Campaigns</h3>
+              <h3 className="text-2xl font-bold mb-3 text-gray-900">Smart Drip Campaigns</h3>
               <p className="text-gray-500 font-medium leading-relaxed">Set up multi-step email sequences. Verality automatically stops follow-ups when a creator replies.</p>
             </div>
 
             {/* Feature 3 */}
-            <div className="bg-gray-50 rounded-[32px] p-8 md:p-10 border border-gray-100 hover:bg-white hover:shadow-xl hover:shadow-gray-200/40 transition-all duration-300 group cursor-default">
-              <div className="w-12 h-12 bg-purple-600 text-white rounded-xl flex items-center justify-center mb-8 shadow-lg shadow-purple-600/20 group-hover:-rotate-12 transition-transform duration-300">
+            <div className="bg-white rounded-[32px] p-8 md:p-10 border border-gray-100 shadow-lg shadow-gray-200/40 hover:shadow-xl hover:shadow-gray-200/60 transition-all duration-300 group">
+              <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-8 group-hover:bg-purple-600 group-hover:text-white transition-colors duration-300">
                 <BarChart3 className="w-6 h-6" />
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-gray-900">Live Pipeline</h3>
+              <h3 className="text-2xl font-bold mb-3 text-gray-900">Live Pipeline</h3>
               <p className="text-gray-500 font-medium leading-relaxed">Kanban-style board to track every relationship. Drag and drop creators through your custom deal flow.</p>
             </div>
 
             {/* Feature 4 (Large Visual) */}
-            <div className="bg-black rounded-[32px] p-8 md:p-10 md:col-span-2 border border-gray-800 shadow-2xl text-white group overflow-hidden relative flex flex-col justify-between">
+            <div className="bg-[#0A0A0A] rounded-[32px] p-8 md:p-12 md:col-span-2 border border-white/10 shadow-2xl text-white group overflow-hidden relative flex flex-col justify-between min-h-[320px]">
               <div className="relative z-10 max-w-lg">
-                <h3 className="text-2xl font-bold mb-4">Team Collaboration</h3>
-                <p className="text-gray-400 font-medium leading-relaxed mb-8">Invite your entire team. Assign specific creators to agents, track individual performance, and share notes in real-time.</p>
+                <h3 className="text-3xl font-bold mb-4">Team Collaboration</h3>
+                <p className="text-gray-400 text-lg leading-relaxed mb-8">Invite your entire team. Assign specific creators to agents, track individual performance, and share notes in real-time.</p>
                 <div className="flex -space-x-3">
                   {["/charli.jpg", "/dude.jpg", "/kim.jpg"].map((src, i) => (
-                    <div key={i} className="w-10 h-10 rounded-full border-2 border-black overflow-hidden bg-gray-800">
-                      <img src={src} className="w-full h-full object-cover opacity-80" />
+                    <div key={i} className="w-12 h-12 rounded-full border-[3px] border-[#0A0A0A] overflow-hidden bg-gray-800 ring-2 ring-white/10">
+                      <img src={src} className="w-full h-full object-cover" />
                     </div>
                   ))}
-                  <div className="w-10 h-10 rounded-full border-2 border-black bg-gray-800 flex items-center justify-center text-xs font-bold text-white">+5</div>
+                  <div className="w-12 h-12 rounded-full border-[3px] border-[#0A0A0A] bg-gray-800 flex items-center justify-center text-sm font-bold text-white ring-2 ring-white/10">+5</div>
                 </div>
               </div>
               {/* Abstract decorative element */}
-              <div className="absolute right-0 bottom-0 w-64 h-64 bg-gradient-to-tl from-purple-900/50 to-transparent rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute right-0 bottom-0 w-80 h-80 bg-gradient-to-tl from-indigo-900/40 via-purple-900/20 to-transparent rounded-full blur-[80px] pointer-events-none group-hover:scale-110 transition-transform duration-700" />
             </div>
           </div>
         </div>
@@ -238,7 +238,7 @@ export default function Home() {
 
 
       {/* Newsletter Section - Traffic Capture */}
-      <section className="py-24 px-6 border-t border-gray-100 bg-white">
+      <section className="py-24 px-6 border-t border-gray-100 bg-white relative z-10">
         <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center gap-12">
           <div className="flex-1">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-100 border border-gray-200 text-gray-900 text-xs font-bold uppercase tracking-wider mb-6">
@@ -249,19 +249,19 @@ export default function Home() {
             <p className="text-gray-500 text-lg mb-8">Get our weekly "Outreach OS" newsletter. Strategies, templates, and teardowns of successful campaigns.</p>
 
             <div className="flex flex-col sm:flex-row gap-3">
-              <Link href="/newsletter" className="px-8 py-4 bg-black hover:bg-gray-900 text-white rounded-xl font-bold text-lg transition-all shadow-lg shadow-black/20 flex items-center justify-center gap-2">
+              <Link href="/newsletter" className="px-8 py-4 bg-black hover:bg-gray-800 text-white rounded-xl font-bold text-lg transition-all shadow-xl shadow-black/10 flex items-center justify-center gap-2 transform hover:-translate-y-1">
                 <span className="bg-white/20 p-1 rounded-md"><Mail className="w-4 h-4" /></span>
                 Join Newsletter
               </Link>
             </div>
           </div>
 
-          <div className="flex-1 bg-gray-50 rounded-2xl p-8 border border-gray-200 relative rotate-2 hover:rotate-0 transition-transform duration-500 cursor-default">
+          <div className="flex-1 bg-[#FAFAFA] rounded-3xl p-8 border border-gray-200 relative rotate-2 hover:rotate-0 transition-transform duration-500 shadow-lg">
             <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Upcoming Issue</div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">The "Magic Email" template with 60% reply rate</h3>
-            <p className="text-gray-500 mb-6 text-sm">We break down exactly how specific subject lines consistently book more calls.</p>
-            <div className="flex items-center gap-3 border-t border-gray-200 pt-4">
-              <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-white font-bold text-xs">A</div>
+            <p className="text-gray-500 mb-6 text-sm leading-relaxed">We break down exactly how specific subject lines consistently book more calls.</p>
+            <div className="flex items-center gap-3 border-t border-gray-100 pt-4">
+              <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-white font-bold text-xs ring-2 ring-gray-100">A</div>
               <div className="text-xs font-bold text-gray-900">Aiden Bender <span className="text-gray-400 font-normal ml-1">Editor</span></div>
             </div>
           </div>
@@ -269,24 +269,24 @@ export default function Home() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-24 px-6">
-        <div className="max-w-5xl mx-auto bg-gray-900 rounded-[48px] p-12 md:p-24 text-center relative overflow-hidden shadow-2xl">
+      <section className="py-24 px-6 relative z-10">
+        <div className="max-w-5xl mx-auto bg-gradient-to-br from-[#111111] via-[#050505] to-[#000000] rounded-[48px] p-12 md:p-24 text-center relative overflow-hidden shadow-2xl border border-white/5">
           {/* Background Gradients */}
-          <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-500/30 blur-[120px] rounded-full mix-blend-screen pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-fuchsia-500/30 blur-[120px] rounded-full mix-blend-screen pointer-events-none" />
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/20 blur-[140px] rounded-full mix-blend-screen pointer-events-none animate-pulse" />
+          <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-500/20 blur-[140px] rounded-full mix-blend-screen pointer-events-none" />
 
           <div className="relative z-10">
-            <h2 className="text-4xl md:text-6xl font-bold text-white mb-8 tracking-tight">Ready to scale your outreach?</h2>
-            <p className="text-lg text-gray-400 mb-10 max-w-2xl mx-auto">Join the new standard in influencer marketing. Start your 14-day free trial today.</p>
+            <h2 className="text-4xl md:text-7xl font-bold text-white mb-8 tracking-tight leading-tight">Ready to scale your outreach?</h2>
+            <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto font-medium">Join the new standard in influencer marketing. Start your 14-day free trial today.</p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Link href="/signup" className="px-8 py-4 bg-white text-black rounded-xl font-bold text-lg hover:bg-gray-100 transition-colors shadow-lg shadow-white/10">
+              <Link href="/signup" className="px-10 py-5 bg-white text-black rounded-2xl font-bold text-lg hover:bg-gray-100 transition-all shadow-xl shadow-white/5 hover:scale-105 active:scale-95">
                 Get Started Free
               </Link>
-              <Link href="/book" className="px-8 py-4 bg-transparent border border-gray-700 text-white rounded-xl font-bold text-lg hover:bg-white/5 transition-colors">
+              <Link href="/book" className="px-10 py-5 bg-white/5 border border-white/10 text-white rounded-2xl font-bold text-lg hover:bg-white/10 transition-all backdrop-blur-sm">
                 Book a Demo
               </Link>
             </div>
-            <p className="mt-8 text-sm text-gray-500">No credit card required. Cancel anytime.</p>
+            <p className="mt-10 text-sm text-gray-500 font-medium">No credit card required. Cancel anytime.</p>
           </div>
         </div>
       </section>
