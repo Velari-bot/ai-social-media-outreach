@@ -5,7 +5,10 @@ import { verifyExtensionToken } from '@/lib/extension-auth';
 export async function GET(req: NextRequest) {
     try {
         const authHeader = req.headers.get('Authorization');
+        console.log('[API/me] Auth Header:', authHeader ? `Present (${authHeader.substring(0, 15)}...)` : 'MISSING');
+
         const token = authHeader?.startsWith('Bearer ') ? authHeader.split('Bearer ')[1] : null;
+        console.log('[API/me] Extracted Token:', token ? 'Success' : 'FAIL');
 
         if (!token) {
             return NextResponse.json({ error: 'Unauthorized', details: 'No token provided' }, { status: 401 });
