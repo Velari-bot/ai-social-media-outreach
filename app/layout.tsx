@@ -58,7 +58,7 @@ export const metadata: Metadata = {
 
 import AffiliateTracker from "@/components/AffiliateTracker";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
-import Footer from "@/components/Footer";
+import FooterWrapper from "@/components/FooterWrapper";
 import { Suspense } from "react";
 
 import CursorBloom from "@/components/CursorBloom";
@@ -89,7 +89,7 @@ export default function RootLayout({
             },
           }}
         />
-        <Footer />
+        <FooterWrapper />
       </body>
     </html>
   );

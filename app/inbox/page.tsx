@@ -187,12 +187,19 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
   };
 
   return (
-    <main className="h-screen bg-white font-sans flex flex-col overflow-hidden">
+    <main className="h-screen bg-[#F3F1EB] font-sans flex flex-col overflow-hidden relative">
       <Navbar />
 
-      <div className="flex-1 flex pt-20 h-full">
+      {/* Background Gradients */}
+      <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-40 z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[60%] bg-gradient-to-br from-purple-100 via-pink-50 to-transparent blur-[120px]" />
+        <div className="absolute top-[20%] right-[-10%] w-[40%] h-[50%] bg-gradient-to-bl from-blue-100 via-teal-50 to-transparent blur-[120px]" />
+        <div className="absolute bottom-[-10%] left-[20%] w-[40%] h-[40%] bg-gradient-to-t from-emerald-50 via-green-50 to-transparent blur-[100px]" />
+      </div>
+
+      <div className="flex-1 flex pt-20 h-full relative z-10">
         {/* Sidebar (List) */}
-        <div className="w-[350px] md:w-[400px] border-r border-gray-200 flex flex-col bg-gray-50 flex-shrink-0 z-20">
+        <div className="w-[350px] md:w-[400px] border-r border-gray-200/60 flex flex-col bg-white/80 backdrop-blur-sm flex-shrink-0 z-20 shadow-sm">
           {/* Sidebar Header */}
           <div className="p-4 border-b border-gray-200 bg-white shadow-sm z-10">
             <h1 className="text-2xl font-bold mb-4 tracking-tight">Inbox</h1>
@@ -280,8 +287,8 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
                 {selectedReply.thread && selectedReply.thread.length > 0 ? selectedReply.thread.map((msg, i) => (
                   <div key={i} className={`flex flex-col max-w-[85%] ${msg.isUser || msg.isAI ? 'ml-auto items-end' : 'mr-auto items-start'}`}>
                     <div className={`p-5 rounded-2xl shadow-sm text-sm border ${msg.isAI ? 'bg-purple-50 text-gray-900 border-purple-100 rounded-br-none' :
-                        msg.isUser ? 'bg-gray-100 text-gray-900 border-gray-200 rounded-br-none' :
-                          'bg-white border-gray-200 text-gray-800 rounded-bl-none shadow-sm'
+                      msg.isUser ? 'bg-gray-100 text-gray-900 border-gray-200 rounded-br-none' :
+                        'bg-white border-gray-200 text-gray-800 rounded-bl-none shadow-sm'
                       }`}>
                       {msg.isAI && <div className="text-[10px] uppercase font-bold text-purple-600 mb-2 flex items-center gap-1 tracking-widest">✨ AI Generated</div>}
                       <div className="whitespace-pre-wrap leading-relaxed">{cleanBody(msg.body)}</div>
