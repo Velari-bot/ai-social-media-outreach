@@ -245,6 +245,7 @@ async function checkUserReplies(userId: string) {
                     });
 
                     // Update data
+                    // Update data
                     const extractedData = await extractCreatorData(messageBody);
                     await db.collection('email_threads').doc(thread.id!).update({
                         last_message_from: 'user',
@@ -253,6 +254,7 @@ async function checkUserReplies(userId: string) {
                         phone_number: extractedData.phone || threadData_db.phone_number,
                         tiktok_rate: extractedData.tiktok_rate || threadData_db.tiktok_rate,
                         sound_promo_rate: extractedData.sound_promo_rate || threadData_db.sound_promo_rate,
+                        key_points: extractedData.key_points || [],
                         updated_at: Timestamp.now()
                     });
 
@@ -328,6 +330,7 @@ async function extractCreatorData(message: string): Promise<{
     phone?: string;
     tiktok_rate?: number;
     sound_promo_rate?: number;
+    key_points?: string[];
 }> {
     const completion = await getOpenAI().chat.completions.create({
         model: "gpt-4",
@@ -338,8 +341,9 @@ async function extractCreatorData(message: string): Promise<{
                 1. Phone number (with international code if provided)
                 2. TikTok post rate (in USD). LOOK FOR FORMATS LIKE: "usd 400", "400 usd", "$400", "400".
                 3. Sound Promo rate (in USD). LOOK FOR FORMATS LIKE: "usd 200", "200 usd", "$200".
+                4. Key Points: A JSON array of 3-5 strings summarizing the key info, negotiations, or questions.
                 
-                Return ONLY a JSON object with keys: phone, tiktok_rate, sound_promo_rate
+                Return ONLY a JSON object with keys: phone, tiktok_rate, sound_promo_rate, key_points
                 If a field is not found, omit it from the JSON.
                 Ensure rates are NUMBERS in the JSON (e.g. 400 not "400").`
             },

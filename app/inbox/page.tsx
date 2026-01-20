@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Navbar from "@/components/Navbar";
 import SubscriptionGuard from "@/components/SubscriptionGuard";
-import { RefreshCcw, Search, Trash2, StopCircle, PlayCircle, Mail, Phone, DollarSign, Sparkles } from "lucide-react";
+import { RefreshCcw, Search, Trash2, StopCircle, PlayCircle, Mail, Phone, DollarSign, Sparkles, Zap } from "lucide-react";
 
 interface EmailMessage {
   id: string;
@@ -37,6 +37,7 @@ interface Reply {
     phone?: string;
     tiktok_rate?: number;
     sound_promo_rate?: number;
+    key_points?: string[];
   };
 }
 
@@ -92,7 +93,10 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
             isNew: msg.isUnread,
             isUnread: msg.isUnread,
             threadId: msg.threadId,
-            insights: msg.insights || {},
+            insights: {
+              ...msg.insights,
+              key_points: msg.insights?.key_points || []
+            },
             thread: msg.fullThread?.map((bm: any) => ({
               id: bm.id,
               from: bm.from,
@@ -356,6 +360,25 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
                 </h3>
 
                 <div className="space-y-4">
+
+                  {/* Key Points Section */}
+                  <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm transition-all hover:scale-[1.02]">
+                    <div className="text-xs font-semibold text-gray-400 mb-2 flex items-center gap-1">
+                      <Zap size={12} /> Key Points
+                    </div>
+                    {selectedReply.insights?.key_points && selectedReply.insights.key_points.length > 0 ? (
+                      <ul className="list-disc list-inside space-y-1">
+                        {selectedReply.insights.key_points.map((point, idx) => (
+                          <li key={idx} className="text-xs font-medium text-gray-700 leading-relaxed">
+                            {point}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span className="text-gray-300 italic font-sans text-xs">AI analyzing conversation...</span>
+                    )}
+                  </div>
+
                   <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm transition-all hover:scale-[1.02]">
                     <div className="text-xs font-semibold text-gray-400 mb-1 flex items-center gap-1">
                       <Phone size={12} /> Phone Number
