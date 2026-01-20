@@ -1,23 +1,31 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/components/providers/AuthProvider';
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 export default function ExtensionAuthPage() {
-    const { user } = useAuth();
+    const [user, setUser] = useState<User | null>(null);
     const [status, setStatus] = useState<'checking' | 'ready' | 'success' | 'error'>('checking');
     const [message, setMessage] = useState('');
 
     useEffect(() => {
-        if (user) {
-            setStatus('ready');
-        } else {
-            setStatus('error');
-            setMessage('Please log in first');
-        }
-    }, [user]);
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
+            if (currentUser) {
+                setStatus('ready');
+            } else {
+                setStatus('error');
+                setMessage('Please log in first');
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     const handleConnect = async () => {
+        if (!user) return;
+
         try {
             setStatus('checking');
             setMessage('Getting token...');
