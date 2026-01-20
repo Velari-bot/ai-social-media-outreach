@@ -40,11 +40,24 @@ export default function ExtensionAuthPage() {
 
                 const { token } = await response.json();
 
+                // Bulletproof Token Dispatch
+                const dispatchToken = () => {
+                    if (!token) return;
+                    console.log("[Verality Auth] Website sending token to extension:", token.substring(0, 10) + "...");
+                    window.postMessage({
+                        source: "verality-auth-website",
+                        type: "VERALITY_EXTENSION_AUTH",
+                        token: token
+                    }, "*");
+                };
+
                 const onMessage = (event: MessageEvent) => {
                     if (event.data && event.data.type === 'VERALITY_EXTENSION_READY') {
-                        window.postMessage({ type: 'VERALITY_EXTENSION_AUTH', token }, '*');
+                        console.log("[Verality Auth] Extension signal received, dispatching...");
+                        dispatchToken();
                     }
                     if (event.data && event.data.type === 'VERALITY_EXTENSION_AUTH_SUCCESS_ACK') {
+                        console.log("[Verality Auth] HANDSHAKE SUCCESS!");
                         const indicator = document.getElementById('success-indicator');
                         if (indicator) indicator.style.display = 'block';
                         const headline = document.getElementById('confirming-heading');
@@ -52,7 +65,9 @@ export default function ExtensionAuthPage() {
                     }
                 };
                 window.addEventListener('message', onMessage);
-                window.postMessage({ type: 'VERALITY_EXTENSION_AUTH', token }, '*');
+
+                // Initial burst
+                dispatchToken();
 
             } catch (err: any) {
                 console.error('Auth error:', err);
