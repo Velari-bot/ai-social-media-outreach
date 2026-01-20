@@ -31,7 +31,7 @@ export default function Home() {
 
       {/* Grid Pattern Overlay */}
       <div
-        className="absolute inset-0 z-0 opacity-[0.4] pointer-events-none"
+        className="fixed inset-0 z-[-1] opacity-[0.2] pointer-events-none"
         style={{
           backgroundImage: `
             linear-gradient(to right, #E5E7EB 1px, transparent 1px),
@@ -82,7 +82,7 @@ export default function Home() {
       </section>
 
       {/* Dashboard Preview (Hero Extension) */}
-      <section className="px-6 max-w-[1440px] mx-auto -mt-0 mb-32 pt-20">
+      <section className="px-6 max-w-[1440px] mx-auto -mt-0 mb-32 pt-20 relative z-10">
         <div className="bg-white rounded-[32px] md:rounded-[48px] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] border border-gray-200/60 p-2 sm:p-4 relative overflow-hidden ring-1 ring-gray-950/5">
           <div className="absolute inset-0 bg-gradient-to-b from-gray-50/50 to-white pointer-events-none" />
           <div className="relative bg-white border border-gray-100 rounded-[24px] md:rounded-[36px] overflow-hidden shadow-sm">
@@ -177,92 +177,101 @@ export default function Home() {
       <section className="py-24 bg-white relative z-10">
         <div className="max-w-[1440px] px-6 mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-20">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 tracking-tight">Everything you need to <br className="hidden md:block" />scale your outreach.</h2>
-            <p className="text-lg text-gray-500">Stop juggling tools. Verality unifies search, email, and CRM into one powerful platform.</p>
+            <h2 className="text-4xl md:text-6xl font-black text-gray-900 mb-6 tracking-tight leading-[1.1]">Everything you need to <br className="hidden md:block" />scale your outreach.</h2>
+            <p className="text-xl text-gray-500 font-medium">Stop juggling tools. Verality unifies search, email, and CRM into one powerful platform.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Feature 1 */}
-            <div className="bg-white rounded-[32px] p-8 md:p-12 border border-gray-100 shadow-xl shadow-gray-200/50 hover:shadow-2xl hover:shadow-gray-200/70 transition-all duration-300 md:col-span-2 group relative overflow-hidden">
+            <div className="bg-white rounded-[32px] p-8 md:p-12 border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-500 md:col-span-2 group relative overflow-hidden cursor-default">
               <div className="relative z-10 max-w-lg">
-                <div className="w-14 h-14 bg-black text-white rounded-2xl flex items-center justify-center mb-8 shadow-lg shadow-black/10 group-hover:scale-105 transition-transform duration-300">
+                <div className="w-14 h-14 bg-black text-white rounded-2xl flex items-center justify-center mb-8 shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
                   <Search className="w-7 h-7" />
                 </div>
-                <h3 className="text-3xl font-bold mb-4 text-gray-900 tracking-tight">AI-Powered Creator Search</h3>
-                <p className="text-gray-500 text-lg leading-relaxed">Find the perfect creators instantly. Filter by engagement rate, keywords, niche, and follower counts across all major platforms. Our AI parses millions of bio's to find exact matches.</p>
+                <h3 className="text-3xl font-black mb-4 text-gray-900 tracking-tight">AI-Powered Creator Search</h3>
+                <p className="text-gray-500 text-lg font-medium leading-relaxed">Find the perfect creators instantly. Filter by engagement rate, keywords, niche, and follower counts across all major platforms. Our AI parses millions of bio's to find exact matches.</p>
               </div>
-              <div className="absolute top-1/2 right-10 -translate-y-1/2 opacity-[0.03] hidden lg:block group-hover:opacity-[0.06] transition-opacity duration-500 transform group-hover:scale-110">
-                <Search className="w-72 h-72" />
+              <div className="absolute top-1/2 right-0 -translate-y-1/2 opacity-[0.03] hidden lg:block group-hover:opacity-[0.06] group-hover:scale-110 transition-all duration-700">
+                <Search className="w-80 h-80" />
               </div>
             </div>
 
             {/* Feature 2 */}
-            <div className="bg-white rounded-[32px] p-8 md:p-10 border border-gray-100 shadow-lg shadow-gray-200/40 hover:shadow-xl hover:shadow-gray-200/60 transition-all duration-300 group">
-              <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-8 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
-                <Send className="w-6 h-6" />
+            <div className="bg-gray-50/50 rounded-[32px] p-8 md:p-10 border border-gray-100/80 hover:bg-white hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-500 group cursor-default flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center mb-8 shadow-lg shadow-blue-600/20 group-hover:rotate-12 transition-transform duration-300">
+                  <Send className="w-6 h-6" />
+                </div>
+                <h3 className="text-2xl font-bold mb-4 text-gray-900">Smart Drip Campaigns</h3>
+                <p className="text-gray-500 font-medium leading-relaxed">Set up multi-step email sequences. Verality automatically stops follow-ups when a creator replies.</p>
               </div>
-              <h3 className="text-2xl font-bold mb-3 text-gray-900">Smart Drip Campaigns</h3>
-              <p className="text-gray-500 font-medium leading-relaxed">Set up multi-step email sequences. Verality automatically stops follow-ups when a creator replies.</p>
             </div>
 
             {/* Feature 3 */}
-            <div className="bg-white rounded-[32px] p-8 md:p-10 border border-gray-100 shadow-lg shadow-gray-200/40 hover:shadow-xl hover:shadow-gray-200/60 transition-all duration-300 group">
-              <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-8 group-hover:bg-purple-600 group-hover:text-white transition-colors duration-300">
-                <BarChart3 className="w-6 h-6" />
+            <div className="bg-gray-50/50 rounded-[32px] p-8 md:p-10 border border-gray-100/80 hover:bg-white hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-500 group cursor-default flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 bg-purple-600 text-white rounded-xl flex items-center justify-center mb-8 shadow-lg shadow-purple-600/20 group-hover:-rotate-12 transition-transform duration-300">
+                  <BarChart3 className="w-6 h-6" />
+                </div>
+                <h3 className="text-2xl font-bold mb-4 text-gray-900">Live Pipeline</h3>
+                <p className="text-gray-500 font-medium leading-relaxed">Kanban-style board to track every relationship. Drag and drop creators through your custom deal flow.</p>
               </div>
-              <h3 className="text-2xl font-bold mb-3 text-gray-900">Live Pipeline</h3>
-              <p className="text-gray-500 font-medium leading-relaxed">Kanban-style board to track every relationship. Drag and drop creators through your custom deal flow.</p>
             </div>
 
             {/* Feature 4 (Large Visual) */}
-            <div className="bg-[#0A0A0A] rounded-[32px] p-8 md:p-12 md:col-span-2 border border-white/10 shadow-2xl text-white group overflow-hidden relative flex flex-col justify-between min-h-[320px]">
-              <div className="relative z-10 max-w-lg">
-                <h3 className="text-3xl font-bold mb-4">Team Collaboration</h3>
-                <p className="text-gray-400 text-lg leading-relaxed mb-8">Invite your entire team. Assign specific creators to agents, track individual performance, and share notes in real-time.</p>
-                <div className="flex -space-x-3">
-                  {["/charli.jpg", "/dude.jpg", "/kim.jpg"].map((src, i) => (
-                    <div key={i} className="w-12 h-12 rounded-full border-[3px] border-[#0A0A0A] overflow-hidden bg-gray-800 ring-2 ring-white/10">
-                      <img src={src} className="w-full h-full object-cover" />
-                    </div>
-                  ))}
-                  <div className="w-12 h-12 rounded-full border-[3px] border-[#0A0A0A] bg-gray-800 flex items-center justify-center text-sm font-bold text-white ring-2 ring-white/10">+5</div>
+            <div className="bg-black rounded-[40px] p-10 md:col-span-2 border border-white/10 shadow-2xl text-white group overflow-hidden relative flex flex-col justify-between min-h-[320px]">
+              <div className="relative z-10 max-w-xl">
+                <h3 className="text-3xl font-black mb-4 tracking-tight">Team Collaboration</h3>
+                <p className="text-gray-400 text-lg font-medium leading-relaxed mb-10">Invite your entire team. Assign specific creators to agents, track individual performance, and share notes in real-time.</p>
+                <div className="flex items-center gap-6">
+                  <div className="flex -space-x-4">
+                    {["/charli.jpg", "/dude.jpg", "/kim.jpg", "/mr-beast.jpg"].map((src, i) => (
+                      <div key={i} className="w-12 h-12 rounded-full border-4 border-black overflow-hidden bg-gray-800 ring-2 ring-white/5">
+                        <img src={src} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+                      </div>
+                    ))}
+                    <div className="w-12 h-12 rounded-full border-4 border-black bg-gray-800 flex items-center justify-center text-xs font-black text-white ring-2 ring-white/5">+5</div>
+                  </div>
+                  <div className="h-px w-24 bg-gradient-to-r from-gray-500/50 to-transparent" />
+                  <span className="text-xs font-black uppercase tracking-widest text-gray-500">Scale Together</span>
                 </div>
               </div>
-              {/* Abstract decorative element */}
-              <div className="absolute right-0 bottom-0 w-80 h-80 bg-gradient-to-tl from-indigo-900/40 via-purple-900/20 to-transparent rounded-full blur-[80px] pointer-events-none group-hover:scale-110 transition-transform duration-700" />
+              <div className="absolute right-0 bottom-0 w-96 h-96 bg-gradient-to-tl from-[#6B4BFF]/20 to-transparent rounded-full blur-[80px] pointer-events-none group-hover:scale-125 transition-transform duration-1000" />
             </div>
           </div>
         </div>
       </section>
 
-
-
       {/* Newsletter Section - Traffic Capture */}
       <section className="py-24 px-6 border-t border-gray-100 bg-white relative z-10">
         <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center gap-12">
           <div className="flex-1">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-100 border border-gray-200 text-gray-900 text-xs font-bold uppercase tracking-wider mb-6">
-              <span className="w-2 h-2 rounded-full bg-black animate-pulse" />
-              Free Resource
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gray-50 border border-gray-200 text-gray-900 text-[10px] font-black uppercase tracking-[0.2em] mb-6 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-[#6B4BFF] animate-pulse" />
+              Newsletter OS
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Masterminding your outreach.</h2>
-            <p className="text-gray-500 text-lg mb-8">Get our weekly "Outreach OS" newsletter. Strategies, templates, and teardowns of successful campaigns.</p>
+            <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-6 tracking-tight leading-[1.1]">Masterminding your outreach.</h2>
+            <p className="text-gray-500 text-xl mb-10 font-medium leading-relaxed">Get our weekly "Outreach OS" newsletter. Strategies, templates, and teardowns of successful campaigns.</p>
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Link href="/newsletter" className="px-8 py-4 bg-black hover:bg-gray-800 text-white rounded-xl font-bold text-lg transition-all shadow-xl shadow-black/10 flex items-center justify-center gap-2 transform hover:-translate-y-1">
-                <span className="bg-white/20 p-1 rounded-md"><Mail className="w-4 h-4" /></span>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link href="/newsletter" className="px-10 py-5 bg-black hover:bg-gray-900 text-white rounded-2xl font-black text-lg transition-all shadow-xl shadow-black/10 flex items-center justify-center gap-3 relative group overflow-hidden">
+                <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/5 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                <Mail className="w-5 h-5 text-[#6B4BFF]" />
                 Join Newsletter
               </Link>
             </div>
           </div>
 
-          <div className="flex-1 bg-[#FAFAFA] rounded-3xl p-8 border border-gray-200 relative rotate-2 hover:rotate-0 transition-transform duration-500 shadow-lg">
-            <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Upcoming Issue</div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">The "Magic Email" template with 60% reply rate</h3>
-            <p className="text-gray-500 mb-6 text-sm leading-relaxed">We break down exactly how specific subject lines consistently book more calls.</p>
-            <div className="flex items-center gap-3 border-t border-gray-100 pt-4">
-              <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-white font-bold text-xs ring-2 ring-gray-100">A</div>
-              <div className="text-xs font-bold text-gray-900">Aiden Bender <span className="text-gray-400 font-normal ml-1">Editor</span></div>
+          <div className="flex-1 bg-white rounded-3xl p-10 border border-gray-100 shadow-[20px_20px_60px_#bebebe,-20px_-20px_60px_#ffffff] relative rotate-2 hover:rotate-0 transition-all duration-700 cursor-default group">
+            <div className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-6">Upcoming Issue</div>
+            <h3 className="text-2xl font-black text-gray-900 mb-3 leading-tight tracking-tight">The "Magic Email" template with 60% reply rate</h3>
+            <p className="text-gray-500 mb-8 text-base font-medium leading-relaxed">We break down exactly how specific subject lines consistently book more calls.</p>
+            <div className="flex items-center gap-4 border-t border-gray-50 pt-6">
+              <div className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center text-white font-black text-sm ring-4 ring-gray-50 transition-transform group-hover:scale-110">A</div>
+              <div>
+                <div className="text-sm font-black text-gray-900 tracking-tight">Aiden Bender</div>
+                <div className="text-xs font-bold text-[#6B4BFF] uppercase tracking-wider">Editor-in-Chief</div>
+              </div>
             </div>
           </div>
         </div>
@@ -270,23 +279,41 @@ export default function Home() {
 
       {/* Final CTA */}
       <section className="py-24 px-6 relative z-10">
-        <div className="max-w-5xl mx-auto bg-gradient-to-br from-[#111111] via-[#050505] to-[#000000] rounded-[48px] p-12 md:p-24 text-center relative overflow-hidden shadow-2xl border border-white/5">
-          {/* Background Gradients */}
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/20 blur-[140px] rounded-full mix-blend-screen pointer-events-none animate-pulse" />
-          <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-500/20 blur-[140px] rounded-full mix-blend-screen pointer-events-none" />
+        <div className="max-w-6xl mx-auto bg-gray-900 rounded-[64px] p-12 md:p-32 text-center relative overflow-hidden shadow-[0_40px_100px_-20px_rgba(0,0,0,0.5)] border border-white/10 group">
+          {/* Animated Background Gradients */}
+          <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-[#6B4BFF]/20 blur-[120px] rounded-full mix-blend-screen pointer-events-none animate-pulse" />
+          <div className="absolute bottom-[-20%] left-[-10%] w-[600px] h-[600px] bg-[#FF5252]/10 blur-[120px] rounded-full mix-blend-screen pointer-events-none animate-pulse animation-delay-2000" />
+          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none mix-blend-overlay" />
 
           <div className="relative z-10">
-            <h2 className="text-4xl md:text-7xl font-bold text-white mb-8 tracking-tight leading-tight">Ready to scale your outreach?</h2>
-            <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto font-medium">Join the new standard in influencer marketing. Start your 14-day free trial today.</p>
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Link href="/signup" className="px-10 py-5 bg-white text-black rounded-2xl font-bold text-lg hover:bg-gray-100 transition-all shadow-xl shadow-white/5 hover:scale-105 active:scale-95">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/60 text-[10px] font-black uppercase tracking-[0.3em] mb-8">
+              Limited spots available
+            </div>
+            <h2 className="text-5xl md:text-7xl font-black text-white mb-10 tracking-tighter leading-tight italic">Scale your outreach <br />on autopilot.</h2>
+            <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto font-medium leading-relaxed">Join the new standard in influencer marketing. Start your 14-day free trial today and experience the future of outreach.</p>
+
+            <div className="flex flex-col sm:flex-row justify-center gap-6">
+              <Link href="/signup" className="px-12 py-5 bg-white text-black rounded-2xl font-black text-xl hover:bg-[#F3F1EB] transition-all shadow-[0_20px_50px_rgba(255,255,255,0.15)] hover:scale-105 active:scale-95">
                 Get Started Free
               </Link>
-              <Link href="/book" className="px-10 py-5 bg-white/5 border border-white/10 text-white rounded-2xl font-bold text-lg hover:bg-white/10 transition-all backdrop-blur-sm">
+              <Link href="/book" className="px-12 py-5 bg-transparent border border-white/20 text-white rounded-2xl font-black text-xl hover:bg-white/10 transition-all backdrop-blur-sm border-white/10 hover:border-white/30">
                 Book a Demo
               </Link>
             </div>
-            <p className="mt-10 text-sm text-gray-500 font-medium">No credit card required. Cancel anytime.</p>
+
+            <div className="mt-12 flex flex-col items-center gap-4">
+              <p className="text-sm text-gray-500 font-bold uppercase tracking-widest flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-green-500" /> No credit card required. Cancel anytime.
+              </p>
+              <div className="flex -space-x-2 mt-2">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="w-8 h-8 rounded-full border-2 border-gray-900 bg-gray-800 flex items-center justify-center overflow-hidden">
+                    <img src={`/dude.jpg`} className="w-full h-full object-cover opacity-80" />
+                  </div>
+                ))}
+                <div className="pl-4 text-xs font-bold text-gray-500 flex items-center italic">Joined by 1,200+ brands this month</div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
