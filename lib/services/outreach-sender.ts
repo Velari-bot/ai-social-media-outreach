@@ -279,11 +279,11 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
     });
 
     // Update user global stats
-    await db.collection('user_email_settings').doc(userId).update({
+    await db.collection('user_email_settings').doc(userId).set({
         total_emails_sent: (settings.total_emails_sent || 0) + sentCount,
         last_email_sent_at: Timestamp.now(),
         updated_at: Timestamp.now()
-    });
+    }, { merge: true });
 
     // UPDATE CAMPAIGN STATUS for all campaigns that had successful sends
     if (successfulCampaignIds.size > 0 && sentCount > 0) {
