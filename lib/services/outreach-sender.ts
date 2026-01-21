@@ -121,6 +121,28 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
         return { sent: 0, failed: emails.length }; // Or mark failed
     }
 
+    // --- DAILY RESET LOGIC ---
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    let needsAccountUpdate = false;
+
+    accounts = accounts.map(acc => {
+        const lastSentDate = acc.last_sent_at ? acc.last_sent_at.split('T')[0] : '';
+        if (lastSentDate && lastSentDate !== todayStr) {
+            console.log(`[Outreach Sender] Resetting daily limit for ${acc.email} (Last: ${lastSentDate})`);
+            needsAccountUpdate = true;
+            return { ...acc, sent_today: 0 };
+        }
+        return acc;
+    });
+
+    if (needsAccountUpdate) {
+        await db.collection('gmail_connections').doc(userId).update({
+            accounts,
+            updated_at: Timestamp.now()
+        });
+    }
+
     // Get user settings
     const settingsDoc = await db.collection('user_email_settings').doc(userId).get();
     const settings = settingsDoc.data() || {};

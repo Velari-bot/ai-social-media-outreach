@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sendScheduledEmails } from '@/lib/services/outreach-sender';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 300; // 5 minutes max
 
 export async function GET(request: NextRequest) {
     // Verify cron secret

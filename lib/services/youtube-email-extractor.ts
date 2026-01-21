@@ -343,20 +343,27 @@ export async function findCreatorEmail(params: {
 export async function discoverCreatorsViaYouTube(params: {
     query: string;
     limit: number;
-}): Promise<YouTubeDiscoveryResult[]> {
+    pageToken?: string;
+}): Promise<{
+    creators: YouTubeDiscoveryResult[];
+    nextPageToken?: string;
+}> {
     const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
     if (!YOUTUBE_API_KEY) {
         console.error('[YouTube Discovery] ❌ YOUTUBE_API_KEY is missing from .env.local');
-        return [];
+        return { creators: [] };
     }
 
-    const { query, limit = 50 } = params;
+    const { query, limit = 50, pageToken } = params;
 
     try {
         // 1. Search for channels
-        const searchResponse = await fetch(
-            `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=channel&maxResults=${limit}&key=${YOUTUBE_API_KEY}`
-        );
+        let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=channel&maxResults=${limit}&key=${YOUTUBE_API_KEY}`;
+        if (pageToken) {
+            url += `&pageToken=${pageToken}`;
+        }
+
+        const searchResponse = await fetch(url);
 
         if (!searchResponse.ok) {
             const err = await searchResponse.text();
@@ -366,7 +373,7 @@ export async function discoverCreatorsViaYouTube(params: {
         const searchData = await searchResponse.json();
         const items = searchData.items || [];
 
-        if (items.length === 0) return [];
+        if (items.length === 0) return { creators: [] };
 
         const channelIds = items.map((item: any) => item.snippet.channelId).join(',');
 
@@ -375,13 +382,13 @@ export async function discoverCreatorsViaYouTube(params: {
             `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelIds}&key=${YOUTUBE_API_KEY}`
         );
 
-        if (!statsResponse.ok) return [];
+        if (!statsResponse.ok) return { creators: [] };
 
         const statsData = await statsResponse.json();
         const channels = statsData.items || [];
 
         // 3. Map to our discovery format
-        return channels.map((c: any) => ({
+        const creators = channels.map((c: any) => ({
             creator_id: c.id,
             handle: c.snippet.customUrl?.replace('@', '') || c.id,
             platform: 'youtube',
@@ -392,8 +399,119 @@ export async function discoverCreatorsViaYouTube(params: {
             niche: query // Use the search query as the niche for ranking
         }));
 
+        return {
+            creators,
+            nextPageToken: searchData.nextPageToken
+        };
+
     } catch (error) {
         console.error('[YouTube Discovery] Error:', error);
-        return [];
+        return { creators: [] };
     }
+}
+
+/**
+ * Batch verify YouTube average views for a list of channel IDs.
+ * Filters out Shorts (duration < 60s) and calculates a real average.
+ */
+export async function batchVerifyYoutubeViews(channelIds: string[]): Promise<Record<string, number>> {
+    const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
+    if (!YOUTUBE_API_KEY || channelIds.length === 0) return {};
+
+    const results: Record<string, number> = {};
+
+    try {
+        // 1. Get Upload Playlist IDs for all channels
+        const channelsResponse = await fetch(
+            `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${channelIds.join(',')}&key=${YOUTUBE_API_KEY}`
+        );
+        if (!channelsResponse.ok) return {};
+        const channelsData = await channelsResponse.json();
+
+        const uploadPlaylists: Record<string, string> = {}; // channelId -> playlistId
+        channelsData.items?.forEach((c: any) => {
+            const playlistId = c.contentDetails?.relatedPlaylists?.uploads;
+            if (playlistId) uploadPlaylists[c.id] = playlistId;
+        });
+
+        // 2. For each channel, get the last 5 video IDs
+        const allVideoIds: string[] = [];
+        const channelToVideos: Record<string, string[]> = {};
+
+        await Promise.all(Object.entries(uploadPlaylists).map(async ([channelId, playlistId]) => {
+            try {
+                const playlistResponse = await fetch(
+                    `https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&maxResults=5&playlistId=${playlistId}&key=${YOUTUBE_API_KEY}`
+                );
+                if (playlistResponse.ok) {
+                    const playlistData = await playlistResponse.json();
+                    const videoIds = playlistData.items?.map((item: any) => item.contentDetails.videoId) || [];
+                    channelToVideos[channelId] = videoIds;
+                    allVideoIds.push(...videoIds);
+                }
+            } catch (e) {
+                console.error(`Error fetching playlist for ${channelId}:`, e);
+            }
+        }));
+
+        if (allVideoIds.length === 0) return {};
+
+        // 3. Get Video details (Duration and Views) in batches of 50
+        const videoStats: Record<string, { views: number; isShort: boolean }> = {};
+        for (let i = 0; i < allVideoIds.length; i += 50) {
+            const batch = allVideoIds.slice(i, i + 50);
+            const videosResponse = await fetch(
+                `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,statistics&id=${batch.join(',')}&key=${YOUTUBE_API_KEY}`
+            );
+            if (videosResponse.ok) {
+                const videosData = await videosResponse.json();
+                videosData.items?.forEach((v: any) => {
+                    const duration = v.contentDetails?.duration || ''; // ISO 8601 duration
+                    const views = parseInt(v.statistics?.viewCount || '0');
+
+                    // Simple Short Detection: If duration contains only seconds/small minutes
+                    // PT15S, PT59S, etc. or if it's less than 60 seconds.
+                    // ISO 8601 duration parsing (rough but effective for Shorts)
+                    let isShort = false;
+                    if (duration.startsWith('PT')) {
+                        const secondsMatch = duration.match(/(\d+)S/);
+                        const minutesMatch = duration.match(/(\d+)M/);
+                        const hoursMatch = duration.match(/(\d+)H/);
+
+                        const totalSeconds = (parseInt(hoursMatch?.[1] || '0') * 3600) +
+                            (parseInt(minutesMatch?.[1] || '0') * 60) +
+                            parseInt(secondsMatch?.[1] || '0');
+
+                        if (totalSeconds > 0 && totalSeconds < 60) {
+                            isShort = true;
+                        }
+                    }
+
+                    videoStats[v.id] = { views, isShort };
+                });
+            }
+        }
+
+        // 4. Calculate average for each channel, EXCLUDING Shorts
+        Object.entries(channelToVideos).forEach(([channelId, videoIds]) => {
+            const longformViews = videoIds
+                .map(vid => videoStats[vid])
+                .filter(stats => stats && !stats.isShort)
+                .map(stats => stats.views);
+
+            if (longformViews.length > 0) {
+                const avg = Math.floor(longformViews.reduce((a, b) => a + b, 0) / longformViews.length);
+                results[channelId] = avg;
+            } else {
+                // If they ONLY have shorts, maybe the views ARE from shorts
+                // But we'll mark it as 0 if we want strictly longform
+                results[channelId] = 0;
+            }
+        });
+
+    } catch (error) {
+        console.error('[YouTube Views] Batch verification failed:', error);
+    }
+
+    return results;
 }

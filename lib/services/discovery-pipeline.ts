@@ -22,8 +22,10 @@ export class DiscoveryPipeline {
         skipEnrichment?: boolean;
         campaignId?: string;
         startingOffset?: number; // Add support for pagination
+        startingKeywordIndex?: number;
+        youtubePageToken?: string;
     }): Promise<DiscoveryPipelineResponse> {
-        const { userId, filters, requestedCount, platform, skipEnrichment, campaignId, startingOffset } = params;
+        const { userId, filters, requestedCount, platform, skipEnrichment, campaignId, startingOffset, startingKeywordIndex, youtubePageToken: initialYoutubePageToken } = params;
 
         console.log(`[Discovery] Starting search for User ${userId}. Requested: ${requestedCount}. Offset: ${startingOffset || 0}`);
 
@@ -34,76 +36,64 @@ export class DiscoveryPipeline {
         let creditsConsumed = 0;
 
         // --- STRATEGY: SEMANTIC FAN-OUT ---
-        // If the API limits us to 5 results per query, we must use multiple DIFFERENT queries.
-        // We will start with the user's provided niche, and if we need more, we ask AI for related keywords.
-
         let searchKeywords: string[] = [];
 
         // Initial keyword (user provided)
-        // Note: If niche is empty string, we respect it as "Broad Search"
         if (filters.niche !== undefined && filters.niche !== null && filters.niche.trim() !== '') {
             searchKeywords.push(filters.niche);
         } else if (filters.niche === "") {
-            // User explicitly wants broad search (empty string)
             searchKeywords.push("");
         } else {
-            // Fallback if no niche provided at all (e.g. legacy call)
             searchKeywords.push("lifestyle");
         }
 
         // Processing Loop
-        let keywordIndex = 0;
-        const TARGET_COUNT = Math.max(requestedCount, 50); // Ensure we aim for 50 "no matter what" as requested
-
-        // Safety: Don't run forever. Cap at 15 keywords max.
+        let keywordIndex = startingKeywordIndex || 0;
+        const TARGET_COUNT = Math.max(requestedCount, 50); // Ensure we aim for 50
         const MAX_KEYWORDS = 15;
 
-        while (finalCreators.length < TARGET_COUNT && keywordIndex < searchKeywords.length) {
+        // Progress Tracking
+        let lastOffset = startingOffset || 0;
+        let lastYoutubeToken = initialYoutubePageToken;
+        let lastKeywordIndex = keywordIndex;
 
+        while (finalCreators.length < TARGET_COUNT && keywordIndex < searchKeywords.length) {
             const currentKeyword = searchKeywords[keywordIndex];
             console.log(`[Discovery] Searching for keyword: "${currentKeyword}" (${finalCreators.length}/${TARGET_COUNT} found)`);
 
-            // Check if we need to generate more keywords?
-            // If we are at the last keyword and still need more creators, generate expansion
+            // AI Keyword Expansion
             if (keywordIndex === searchKeywords.length - 1 && finalCreators.length < TARGET_COUNT && searchKeywords.length < MAX_KEYWORDS) {
-                console.log(`[Discovery] Almost out of keywords. Generating variations for "${filters.niche}"...`);
-                // Use filters.niche if available, otherwise currentKeyword
+                console.log(`[Discovery] Almost out of keywords. Generating variations...`);
                 const baseForExpansion = (filters.niche && filters.niche.trim() !== '') ? filters.niche : currentKeyword;
                 const newKeywords = await this.generateRelatedKeywords(baseForExpansion, 10);
-
-                // Add only new unique keywords
                 for (const k of newKeywords) {
                     if (!searchKeywords.includes(k)) {
                         searchKeywords.push(k);
                     }
                 }
-                console.log(`[Discovery] Expanded keyword list to: ${searchKeywords.length} items.`);
             }
 
-            // Perform Search for this keyword
-            // We force the 'niche' filter to be the current keyword for this iteration
             const currentFilters = { ...filters, niche: currentKeyword };
-
-            // Determine Initial Offset for this specific search
-            let currentOffset = (keywordIndex === 0 && startingOffset) ? startingOffset : 0;
+            let currentOffset = (keywordIndex === (startingKeywordIndex || 0) && startingOffset) ? startingOffset : 0;
             let keywordRetries = 0;
-            const MAX_RETRIES_PER_KEYWORD = 3;
+            const MAX_RETRIES_PER_KEYWORD = 20; // Allow skipping large backlogs
+            let youtubePageToken: string | undefined = (keywordIndex === (startingKeywordIndex || 0)) ? initialYoutubePageToken : undefined;
 
             // Inner Loop: Paging through results for this keyword
             while (keywordRetries <= MAX_RETRIES_PER_KEYWORD && finalCreators.length < TARGET_COUNT) {
                 try {
-                    // Try fetching - we know pagination might be broken so we just ask for 50 and take what we get
-                    // Try fetching
                     let externalResults = [];
 
                     if (platform === 'youtube') {
-                        // Native YouTube API Discovery (Requested by USER)
-                        externalResults = await discoverCreatorsViaYouTube({
+                        const ytResult = await discoverCreatorsViaYouTube({
                             query: currentKeyword,
-                            limit: 50
-                        }) as any;
+                            limit: 50,
+                            pageToken: youtubePageToken
+                        });
+                        externalResults = ytResult.creators;
+                        youtubePageToken = ytResult.nextPageToken;
+                        lastYoutubeToken = youtubePageToken;
                     } else {
-                        // All other platforms use Influencer Club
                         externalResults = await influencerClubClient.discoverCreators({
                             platform,
                             filters: currentFilters,
@@ -112,100 +102,88 @@ export class DiscoveryPipeline {
                         });
                     }
 
-                    let addedForKeyword = 0;
                     if (externalResults && externalResults.length > 0) {
                         externalFetches += externalResults.length;
-                        creditsConsumed += 1; // 1 credit per API call
+                        creditsConsumed += 1;
 
-                        // Deduplicate and Add
+                        let addedThisPage = 0;
                         for (const raw of externalResults) {
                             if (finalCreators.length >= TARGET_COUNT) break;
-
                             const creator = await this.resolveCreator(raw, platform);
 
-                            // MANAGEMENT CHECK (for 'custom_no_email' plan)
+                            // MANAGEMENT CHECK
                             const excludeManagement = (filters as any).excludeManagement === true;
                             if (excludeManagement) {
                                 const bio = (creator.bio || creator.basic_profile_data?.biography || "").toLowerCase();
-                                const hasManagement = bio.includes("management") || bio.includes("agency") || bio.includes("@mngt") || bio.includes("manager") || bio.includes("mgmt");
-                                if (hasManagement) {
+                                if (bio.includes("management") || bio.includes("agency") || bio.includes("@mngt") || bio.includes("manager") || bio.includes("mgmt")) {
                                     continue;
                                 }
                             }
 
-                            // Check if in finalCreators first to avoid dups in same batch
-                            if (finalCreators.some(c => c.id === creator.id)) {
-                                continue;
-                            }
+                            if (finalCreators.some(c => c.id === creator.id)) continue;
 
                             if (!userSeenIds.has(String(creator.id))) {
                                 finalCreators.push(creator);
                                 userSeenIds.add(String(creator.id));
-                                addedForKeyword++;
+                                addedThisPage++;
                             }
                         }
+                        console.log(`[Discovery] Keyword "${currentKeyword}" (Off: ${currentOffset}) found ${addedThisPage} NEW creators.`);
                     }
 
-                    console.log(`[Discovery] Keyword "${currentKeyword}" (Offset ${currentOffset}) yielded ${addedForKeyword} NEW creators (Raw: ${externalResults?.length || 0}).`);
-
-                    // SMART PAGING LOGIC
-                    // If we found results but they were ALL duplicates (addedForKeyword === 0),
-                    // AND we haven't hit our target yet,
-                    // AND we haven't maxed out retries:
-                    // THEN try the NEXT PAGE.
-                    if (externalResults && externalResults.length > 0 && addedForKeyword === 0) {
-                        console.log(`[Discovery] Offset ${currentOffset} exhausted (all duplicates). Trying next page...`);
-                        currentOffset += 50;
-                        keywordRetries++;
-                        continue; // Re-run inner loop with higher offset
-                    }
-
-                    // If we got 0 raw results, this keyword is exhausted. Break inner loop.
-                    if (!externalResults || externalResults.length === 0) {
+                    if (!externalResults || externalResults.length === 0 || (platform === 'youtube' && !youtubePageToken)) {
+                        lastOffset = 0; // Reset offset for next keyword
+                        lastYoutubeToken = undefined;
                         break;
                     }
 
-                    // If we added some creators but not enough, we might want to continue paging if we are eager?
-                    // For now, let's just proceed to next step (or next keyword if needed outside).
-                    // Actually, if we found SOME, that's success for this iteration. Break inner loop to count it.
-                    break;
-
+                    currentOffset += 50;
+                    lastOffset = currentOffset;
+                    keywordRetries++;
                 } catch (e) {
                     console.error(`[Discovery] Search failed for keyword "${currentKeyword}":`, e);
                     break;
                 }
             }
-
-
+            lastKeywordIndex = keywordIndex;
             keywordIndex++;
         }
 
-        console.log(`[Discovery] Pipeline Complete. Found ${finalCreators.length} unique creators across ${keywordIndex} keywords.`);
+        console.log(`[Discovery] Pipeline Complete. Found ${finalCreators.length} unique creators.`);
 
-        // --- NEW: RANKING LOGIC ---
-        // Score = 0.4 * Engagement + 0.3 * Log(Followers) + ...
-        // We calculate this now before returning
+        // --- RIGOROUS YT VIEW VERIFICATION ---
+        const minAvgViews = Number(filters.min_avg_views || 0);
+        if (platform === 'youtube' && minAvgViews > 0 && finalCreators.length > 0) {
+            console.log(`[Discovery] Verifying actual views for ${finalCreators.length} YouTube creators...`);
+            const { batchVerifyYoutubeViews } = await import('./youtube-email-extractor');
+
+            const channelIds = finalCreators.map(c => String(c.id));
+            const realViews = await batchVerifyYoutubeViews(channelIds);
+
+            const beforeCount = finalCreators.length;
+            finalCreators = finalCreators.filter(c => {
+                const avg = realViews[String(c.id)];
+                if (avg !== undefined) {
+                    c.avg_views = avg; // Store real avg views
+                    return avg >= minAvgViews;
+                }
+                return true; // Keep if we couldn't verify (avoid over-filtering)
+            });
+            console.log(`[Discovery] YT View Verification (${minAvgViews}+): ${beforeCount} -> ${finalCreators.length}`);
+        }
+
+        // --- RANKING LOGIC ---
         finalCreators = finalCreators.map(creator => {
             const followers = creator.followers || 1;
             const engagement = creator.engagement_rate || 0;
-
-            // Formula: 0.4 * EngagementRate + 0.3 * Log10(AudienceSize)
-            // Normalizing Engagement (assuming 0.1 is high) and Log10(Followers)
             const engagementScore = Math.min(engagement * 10, 1) * 0.4;
-            const sizeScore = Math.min(Math.log10(followers) / 7, 1) * 0.3; // 7 = 10M followers
-
-            const totalScore = engagementScore + sizeScore;
-
-            return {
-                ...creator,
-                ranking_score: totalScore
-            } as any;
+            const sizeScore = Math.min(Math.log10(followers) / 7, 1) * 0.3;
+            return { ...creator, ranking_score: engagementScore + sizeScore };
         });
 
-        // Sort Descending by score
         finalCreators.sort((a: any, b: any) => (b.ranking_score || 0) - (a.ranking_score || 0));
 
-        // 5. Clay Enrichment
+        // 5. Enrichment
         if (!skipEnrichment && finalCreators.length > 0) {
             console.log(`[Discovery] Sending ${finalCreators.length} creators to Clay...`);
             finalCreators = await this.bulkEnrichWithClay(finalCreators, userId, campaignId);
@@ -217,7 +195,10 @@ export class DiscoveryPipeline {
                 total_requested: requestedCount,
                 internal_hits: 0,
                 external_fetches: externalFetches,
-                credits_consumed: creditsConsumed
+                credits_consumed: creditsConsumed,
+                next_offset: lastOffset,
+                next_youtube_page_token: lastYoutubeToken,
+                next_keyword_index: lastKeywordIndex
             }
         };
     }

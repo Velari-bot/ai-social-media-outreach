@@ -613,6 +613,12 @@ function CreatorRequestContent() {
                             </a>
                             <span className="mx-1">•</span>
                             <span>{new Intl.NumberFormat('en-US', { notation: "compact" }).format(c.followers || 0)} Followers</span>
+                            {Number(c.avg_views || 0) > 0 && (
+                              <>
+                                <span className="mx-1">•</span>
+                                <span className="text-orange-600 font-bold">{new Intl.NumberFormat('en-US', { notation: "compact" }).format(c.avg_views)} Avg Views</span>
+                              </>
+                            )}
                           </div>
                           {!isEnriched && (
                             <button onClick={() => handleRefreshEnrichment(c.id)} className="mt-2 text-[10px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded">

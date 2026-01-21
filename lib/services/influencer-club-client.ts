@@ -41,58 +41,108 @@ export class InfluencerClubClient {
         if (!this.apiKey) throw new Error('Influencer Club API Key is missing.');
 
         const requestId = Math.random().toString(36).substring(7);
+        const { platform: rawPlatform, filters: rawFilters, limit, offset = 0 } = params;
+        const platform = rawPlatform.toLowerCase();
 
-        const { niche: cleanNiche, category: cleanCategory } = this.parseTopics(params.filters.niche || "");
+        const { niche: cleanNiche, category: cleanCategory } = this.parseTopics(rawFilters.niche || "");
+        const minFollowers = Number(rawFilters.min_followers || rawFilters.minFollowers || 1000);
+        const maxFollowers = Number(rawFilters.max_followers || rawFilters.maxFollowers || 1000000);
+        const minAvgViews = Number(rawFilters.min_avg_views || 0);
 
-        const minFollowers = Number(params.filters.min_followers || params.filters.minFollowers || 1000);
-        const maxFollowers = Number(params.filters.max_followers || params.filters.maxFollowers || 1000000);
-
-        // New Filters
-        const locationFilter = params.filters.location || params.filters.country || null;
-        const minAvgViews = Number(params.filters.min_avg_views || 0);
-
-        // Calculate page from offset
-        const limit = params.limit || 50;
-        const offset = params.offset || 0;
         const page = Math.floor(offset / limit);
 
-        // Build base payload
+        const locationFilter = rawFilters.location || rawFilters.country || null;
+
+        // --- STAGE 1: Strict niche + category search ---
+        console.log(`[InfluencerClub:${requestId}] Stage 1: Strict Search for "${cleanNiche}"`);
+        let body = this.buildPayload(platform, page, limit, minFollowers, maxFollowers, cleanNiche, cleanCategory, locationFilter, minAvgViews);
+        let accounts = await this.executeRequest(body, requestId);
+
+        // --- STAGE 2: Keyword-only fallback (if no results or API error) ---
+        if (accounts.length === 0 && cleanNiche) {
+            console.log(`[InfluencerClub:${requestId}] Stage 2: Relaxing to keyword-only search...`);
+            body = this.buildPayload(platform, page, limit, minFollowers, maxFollowers, cleanNiche, undefined, locationFilter, minAvgViews);
+            accounts = await this.executeRequest(body, requestId);
+        }
+
+        // --- STAGE 3: Broad fallback (Relax followers) ---
+        if (accounts.length === 0) {
+            console.log(`[InfluencerClub:${requestId}] Stage 3: Relaxing follower counts...`);
+            body = this.buildPayload(platform, page, limit, 0, 10000000, cleanNiche, undefined, locationFilter, minAvgViews);
+            accounts = await this.executeRequest(body, requestId);
+        }
+
+        if (accounts.length === 0) {
+            console.log(`[InfluencerClub:${requestId}] All stages failed to find creators for: "${cleanNiche}"`);
+            return [];
+        }
+
+        console.log(`[InfluencerClub:${requestId}] Success! Found ${accounts.length} candidates.`);
+
+        // Map Results
+        let mapped = this.mapResults(accounts, params.platform);
+
+        // Post-filtering for views if requested
+        if (minAvgViews > 0) {
+            const beforeCount = mapped.length;
+            mapped = mapped.filter(c => {
+                const followers = Number(c.followers || 0);
+                const er = Number(c.engagement_rate || 0);
+                if (!followers || !er) return true;
+                const multiplier = platform === 'youtube' ? 0.7 : 1;
+                const estViews = followers * er * multiplier;
+                return estViews >= minAvgViews;
+            });
+            console.log(`[InfluencerClub:${requestId}] Avg Views Filter (${minAvgViews}+): ${beforeCount} -> ${mapped.length}`);
+        }
+
+        return mapped;
+    }
+
+    private buildPayload(
+        platform: string,
+        page: number,
+        limit: number,
+        minFollowers: number,
+        maxFollowers: number,
+        niche: string | undefined,
+        category: string | undefined,
+        location: string | string[] | null,
+        minAvgViews: number
+    ) {
         const body: any = {
-            platform: params.platform.toLowerCase(),
-            paging: {
-                limit: limit,
-                page: page
-            },
+            platform,
+            paging: { limit, page },
             filters: {
                 min_followers: minFollowers,
                 max_followers: maxFollowers
             }
         };
 
-        // Add location if present (Attempting multiple keys to increase hit rate)
-        if (locationFilter) {
-            // API expects a list for location
-            body.filters.location = Array.isArray(locationFilter) ? locationFilter : [locationFilter];
+        if (location) {
+            body.filters.location = Array.isArray(location) ? location : [location];
         }
 
-        // Add platform-specific filters
-        const platform = params.platform.toLowerCase();
+        // Only add min_avg_views if it's > 0 (IC API support varies)
+        if (minAvgViews > 0) {
+            body.filters.min_avg_views = minAvgViews;
+        }
 
-        if (cleanNiche && cleanNiche.trim().length > 0) {
+        if (niche && niche.trim().length > 0) {
             if (platform === 'instagram' || platform === 'tiktok') {
-                body.filters.keywords_in_bio = [cleanNiche.toLowerCase()];
+                body.filters.keywords_in_bio = [niche.toLowerCase()];
             } else if (platform === 'youtube') {
-                // FALLBACK STRATEGY: Try 'topics' first as it's cleaner,
-                // but if that's what's failing, we add keywords as well
-                body.filters.topics = [cleanNiche];
-                body.filters.keywords = [cleanNiche]; // Added for more flexibility
+                if (category) {
+                    body.filters.topics = [category];
+                }
+                body.filters.keywords = [niche];
             }
-        } else {
-            console.log(`[InfluencerClub:${requestId}] Broad Search (No Niche) - expecting higher volume.`);
         }
 
-        console.log(`[InfluencerClub:${requestId}] ${platform.toUpperCase()} - Targeting: "${cleanNiche}" | Loc: ${locationFilter} | Views: ${minAvgViews}+`);
+        return body;
+    }
 
+    private async executeRequest(body: any, requestId: string): Promise<any[]> {
         try {
             const response = await fetch(`${this.baseUrl}/public/v1/discovery/`, {
                 method: "POST",
@@ -105,68 +155,15 @@ export class InfluencerClubClient {
 
             if (!response.ok) {
                 const text = await response.text();
-                console.error(`[InfluencerClub:${requestId}] Discovery API Failed (${response.status}): ${text.substring(0, 100)}`);
+                // 400 errors are common if filters are invalid, we treat them as 0 results to trigger fallback
+                console.warn(`[InfluencerClub:${requestId}] API Warning (${response.status}): ${text.substring(0, 100)}`);
                 return [];
             }
 
             const data = await response.json();
-            const accounts = data.accounts || data.results || data.data || [];
-
-            if (accounts.length > 0) {
-                console.log(`[InfluencerClub:${requestId}] Raw API returned ${accounts.length} candidates.`);
-            } else {
-                console.log(`[InfluencerClub:${requestId}] No results found for niche: "${cleanNiche}"`);
-            }
-
-            // Map Results
-            let mapped = this.mapResults(accounts, params.platform);
-
-            // --- CLIENT-SIDE POST-FILTERING ---
-            // Because standardizing location filters is hard, we enforce it here if provided.
-
-            /* 
-            // CLIENT-SIDE LOCATION FILTERING REMOVED 
-            // Relying on API to handle location filtering to avoid dropping valid results (e.g. "New York" vs "United States")
-            if (locationFilter) {
-                const targetLoc = locationFilter.toLowerCase();
-                const beforeCount = mapped.length;
-                mapped = mapped.filter(c => {
-                    const cLoc = (c.location || "").toLowerCase();
-                    // Loose matching: "United States" matches "US", "USA", "United States", "New York, US"
-                    if (!cLoc) return false; // Strict: if they have no location, drop them? Or keep? Let's drop.
-                    return cLoc.includes(targetLoc) ||
-                        (targetLoc === 'united states' && (cLoc === 'us' || cLoc === 'usa')) ||
-                        (targetLoc === 'united kingdom' && (cLoc === 'uk' || cLoc === 'gb'));
-                });
-                console.log(`[InfluencerClub:${requestId}] Location Filter ("${locationFilter}"): ${beforeCount} -> ${mapped.length}`);
-            }
-            */
-
-            if (minAvgViews > 0) {
-                const beforeCount = mapped.length;
-                mapped = mapped.filter(c => {
-                    // YouTube specifically provides view counts differently, but for general estimation:
-                    const followers = Number(c.followers || 0);
-                    const er = Number(c.engagement_rate || 0);
-
-                    // If we have no data, we have to let them through to avoid false negatives,
-                    // but we lower their ranking priority.
-                    if (!followers || !er) return true;
-
-                    // Improved estimation: ER * Followers is often an underestimate for views on YouTube
-                    // We apply a 2x multiplier for YouTube "reach" estimation
-                    const multiplier = params.platform === 'youtube' ? 2 : 1;
-                    const estViews = followers * er * multiplier;
-
-                    return estViews >= minAvgViews;
-                });
-                console.log(`[InfluencerClub:${requestId}] Avg Views Filter (${minAvgViews}+): ${beforeCount} -> ${mapped.length}`);
-            }
-
-            return mapped;
-
+            return data.accounts || data.results || data.data || [];
         } catch (error: any) {
-            console.error(`[InfluencerClub:${requestId}] Discovery Error:`, error.message);
+            console.error(`[InfluencerClub:${requestId}] Fetch Error:`, error.message);
             return [];
         }
     }

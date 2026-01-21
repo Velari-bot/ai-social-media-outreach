@@ -45,7 +45,9 @@ export async function POST(req: NextRequest) {
             filters: campaign.criteria as any,
             requestedCount: batchSize,
             campaignId: campaignId,
-            startingOffset: campaign.results_count || 0
+            startingOffset: campaign.search_offset || 0,
+            startingKeywordIndex: campaign.keyword_index || 0,
+            youtubePageToken: campaign.youtube_page_token || undefined
         });
 
         const foundCount = results.creators?.length || 0;
@@ -57,7 +59,10 @@ export async function POST(req: NextRequest) {
             await db.collection('creator_requests').doc(campaignId).update({
                 last_run_at: Timestamp.now(),
                 creator_ids: admin.firestore.FieldValue.arrayUnion(...newIds),
-                results_count: admin.firestore.FieldValue.increment(foundCount)
+                results_count: admin.firestore.FieldValue.increment(foundCount),
+                search_offset: results.meta.next_offset || 0,
+                youtube_page_token: results.meta.next_youtube_page_token || null,
+                keyword_index: results.meta.next_keyword_index || 0
             });
 
             // Schedule Emails for NEW findings

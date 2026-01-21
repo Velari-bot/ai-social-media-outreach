@@ -47,6 +47,9 @@ export interface CreatorRequest {
   run_count?: number; // How many times it has run
   max_runs?: number; // Default 30 days
   contacted_creator_ids?: string[]; // Track contacted creators to avoid duplicates
+  search_offset?: number;
+  youtube_page_token?: string | null;
+  keyword_index?: number;
 
   created_at: Timestamp | string;
   updated_at: Timestamp | string;

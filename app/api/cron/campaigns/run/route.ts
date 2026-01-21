@@ -112,7 +112,9 @@ export async function GET(req: NextRequest) {
                     filters: campaign.criteria as any,
                     requestedCount: batchSize,
                     campaignId: campaignId,
-                    startingOffset: campaign.results_count || 0
+                    startingOffset: campaign.search_offset || 0,
+                    startingKeywordIndex: campaign.keyword_index || 0,
+                    youtubePageToken: campaign.youtube_page_token || undefined
                 });
 
                 const foundCount = results.creators?.length || 0;
@@ -122,7 +124,10 @@ export async function GET(req: NextRequest) {
 
                 const campaignUpdates: any = {
                     last_run_at: Timestamp.now(),
-                    updated_at: Timestamp.now()
+                    updated_at: Timestamp.now(),
+                    search_offset: results.meta.next_offset || 0,
+                    youtube_page_token: results.meta.next_youtube_page_token || null,
+                    keyword_index: results.meta.next_keyword_index || 0
                 };
 
                 if (foundCount > 0) {

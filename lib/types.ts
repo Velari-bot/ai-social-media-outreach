@@ -26,6 +26,7 @@ export interface Creator {
   bio?: string | null;
   website?: string | null;
   niche?: string | null;
+  avg_views?: number;
   source?: string | 'influencers_club';
   created_at: string;
   updated_at: string;
@@ -60,6 +61,9 @@ export interface DiscoveryPipelineResponse {
     internal_hits: number;
     external_fetches: number;
     credits_consumed: number;
+    next_offset?: number;
+    next_youtube_page_token?: string;
+    next_keyword_index?: number;
   };
 }
 
