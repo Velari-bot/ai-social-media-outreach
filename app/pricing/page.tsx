@@ -10,6 +10,22 @@ import { auth } from "@/lib/firebase";
 
 const tiers = [
     {
+        name: "Lite",
+        price: 100,
+        dailyLimit: 25,
+        monthlyVolume: "750",
+        costPerCreator: "0.13",
+        description: "Perfect for Chrome Extension users",
+        bestFor: "solo scouts, extension-only users, niche research",
+        features: [
+            "25 credits per day (1 Extension Analysis)",
+            "Search creators directly on YouTube",
+            "Auto-Sync with Dashboard",
+            "Verified emails included",
+            "Export results to CSV"
+        ]
+    },
+    {
         name: "Basic",
         price: 400,
         dailyLimit: 50,
@@ -129,6 +145,7 @@ function PricingContent() {
 
         // Next.js requires static access to process.env variables (dynamic access like process.env[key] won't work in client bundles)
         const priceIds: Record<string, string | undefined> = {
+            "Lite": process.env.NEXT_PUBLIC_STRIPE_PRICE_LITE,
             "Basic": process.env.NEXT_PUBLIC_STRIPE_PRICE_BASIC,
             "Pro": process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,
             "Growth": process.env.NEXT_PUBLIC_STRIPE_PRICE_GROWTH,

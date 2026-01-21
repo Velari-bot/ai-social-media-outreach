@@ -310,8 +310,8 @@ export async function getRecentRequests(userId: string, limit: number = 10): Pro
 
     // Sort in memory
     requests.sort((a, b) => {
-      const dateA = new Date(a.created_at as string);
-      const dateB = new Date(b.created_at as string);
+      const dateA = new Date(a.date_submitted as string);
+      const dateB = new Date(b.date_submitted as string);
       return dateB.getTime() - dateA.getTime();
     });
 

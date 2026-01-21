@@ -19,67 +19,158 @@ export async function POST(req: NextRequest) {
         }
 
         const { userId } = payload;
-        const { query, limit = 50, platform = 'instagram' } = await req.json();
+        const body = await req.json();
+        const { query, limit = 50, platform = 'youtube', niche, creators: foundCreators = [] } = body;
 
         if (!query) {
             return NextResponse.json({ error: 'Query is required' }, { status: 400 });
         }
 
-        // 1. Calculate Cost
-        // User requested: 25 credits per 50 creators
-        const COST_PER_50 = 25;
-        const blocks = Math.max(1, Math.ceil(limit / 50));
-        const cost = blocks * COST_PER_50;
-
-        // 2. Enforce Credits (Atomic)
+        // 1. Resolve User & Check Subscription/Quota
         const userRef = db.collection('user_accounts').doc(userId);
+        const userDoc = await userRef.get();
+        const userData = userDoc.data();
 
-        // We do a transaction to ensure atomic deduct
-        const result = await db.runTransaction(async (transaction) => {
-            const userDoc = await transaction.get(userRef);
-            if (!userDoc.exists) {
-                throw new Error('User not found');
+        if (!userData) {
+            return NextResponse.json({ error: 'User account not found' }, { status: 404 });
+        }
+
+        const activePlans = ['lite', 'basic', 'pro', 'growth', 'scale', 'custom', 'enterprise'];
+        if (!activePlans.includes(userData.plan || '')) {
+            return NextResponse.json({
+                error: 'Active subscription required',
+                details: 'Please upgrade your plan to use the Verality Extension.'
+            }, { status: 403 });
+        }
+
+        const COST_PER_50 = 25;
+        const cost = Math.max(1, Math.ceil(limit / 50)) * COST_PER_50;
+        const remainingQuota = (userData.email_quota_daily || 0) - (userData.email_used_today || 0);
+
+        if (remainingQuota < cost && userData.plan !== 'enterprise') {
+            return NextResponse.json({ error: 'Insufficient credits (25 required per search)' }, { status: 403 });
+        }
+
+        // --- NEW: Handle Client-Side Sync ---
+        if (query === 'SYNC_FROM_CLIENT') {
+            const now = Timestamp.now();
+
+            // 1.5 Deduct credits for the discovery (25 credits)
+            if (foundCreators.length > 0) {
+                await userRef.update({
+                    email_used_today: FieldValue.increment(25),
+                    updated_at: now
+                });
             }
 
-            const userData = userDoc.data();
-            const totalQuota = userData?.email_quota_daily || 0;
-            const usedToday = userData?.email_used_today || 0;
-            const remaining = totalQuota - usedToday;
+            // 1. Create a Campaign (creator_requests)
+            const campaignId = await db.runTransaction(async (transaction) => {
+                const campaignRef = db.collection('creator_requests').doc();
+                const campaignData = {
+                    user_id: userId,
+                    name: `Extension: ${niche || 'Niche Search'}`,
+                    status: 'delivered',
+                    platforms: ['youtube'],
+                    results_count: foundCreators.length,
+                    creator_ids: foundCreators.map((c: any) => c.id),
+                    criteria: { niche: niche },
+                    is_recurring: false,
+                    date_submitted: now,
+                    created_at: now,
+                    updated_at: now
+                };
+                transaction.set(campaignRef, campaignData);
+                return campaignRef.id;
+            });
 
-            if (remaining < cost && userData?.plan !== 'enterprise') {
-                return { error: 'INSUFFICIENT_CREDITS', remaining, cost };
+            // 2. Upsert Creators & Queue Outreach
+            if (foundCreators.length > 0) {
+                const batch = db.batch();
+                foundCreators.forEach((c: any) => {
+                    const creatorRef = db.collection('creators').doc(c.id);
+                    batch.set(creatorRef, {
+                        id: c.id,
+                        handle: c.handle,
+                        name: c.name,
+                        platform: 'youtube',
+                        email: c.email || null,
+                        email_found: !!c.email,
+                        updated_at: now
+                    }, { merge: true });
+                });
+                await batch.commit();
+
+                // Trigger Outreach (handles its own 1-credit-per-email deduction)
+                const { addCreatorsToQueue } = await import('@/lib/services/outreach-queue');
+                await addCreatorsToQueue(
+                    foundCreators.map((c: any) => c.id),
+                    userId,
+                    campaignId,
+                    `Extension: ${niche || 'Niche Search'}`
+                );
+
+                // --- NEW: Trigger Clay for those WITHOUT emails ---
+                const missingEmails = foundCreators.filter((c: any) => !c.email);
+                if (missingEmails.length > 0) {
+                    const { clayClient } = await import('@/lib/services/clay-client');
+                    // Use Promise.all to ensure all pushes are completed before the response
+                    await Promise.all(missingEmails.slice(0, 50).map(async (c: any) => {
+                        try {
+                            await clayClient.enrichCreator({
+                                creatorId: c.id,
+                                handle: c.handle,
+                                platform: 'youtube',
+                                name: c.name,
+                                niche: niche || "",
+                                userId: userId,
+                                campaignId: campaignId,
+                                campaignName: `Extension: ${niche || 'Niche Search'}`
+                            });
+                        } catch (e: any) {
+                            console.error(`[Extension Sync] Clay push failed for ${c.id}:`, e);
+                        }
+                    }));
+                }
             }
 
-            // Deduct credits
-            transaction.update(userRef, {
+            // 3. Get UPDATED Credits
+            const updatedUserDoc = await db.collection('user_accounts').doc(userId).get();
+            const updatedUserData = updatedUserDoc.data();
+            const creditsRemaining = (updatedUserData?.email_quota_daily || 0) - (updatedUserData?.email_used_today || 0);
+
+            return NextResponse.json({
+                success: true,
+                campaignId: campaignId,
+                creditsRemaining: Math.max(0, creditsRemaining)
+            });
+        }
+
+        // --- Standard Server-Side Discovery Pipeline ---
+        // 4. Run Search
+        const results = await discoveryPipeline.discover({
+            userId,
+            platform: platform.toLowerCase() as any,
+            filters: { ...body.criteria, niche: niche || query },
+            requestedCount: limit
+        });
+
+        // 5. Deduct Credits only if results found
+        if (results.creators && results.creators.length > 0) {
+            await userRef.update({
                 email_used_today: FieldValue.increment(cost),
                 updated_at: Timestamp.now()
             });
-
-            return { success: true, newRemaining: remaining - cost };
-        });
-
-        if ('error' in result) {
-            return NextResponse.json(result, { status: 402 }); // Payment Required
         }
 
-        // 3. Run Search
-        const searchResponse = await discoveryPipeline.discover({
-            userId,
-            platform: platform as any,
-            filters: { niche: query, platform: platform as any },
-            requestedCount: limit,
-            skipEnrichment: true // Extension usually wants fast results first
-        });
-
         return NextResponse.json({
-            results: searchResponse.creators,
-            creditsConsumed: cost,
-            creditsRemaining: result.newRemaining
+            success: true,
+            creators: results.creators,
+            meta: results.meta,
+            creditsConsumed: cost
         });
 
     } catch (error: any) {
-        console.error('Extension search error:', error);
+        console.error('[Extension Search API] Error:', error);
         return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
     }
 }

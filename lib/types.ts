@@ -15,6 +15,7 @@ export interface Creator {
   basic_profile_data: Record<string, any> | null;
   detailed_profile_data: Record<string, any> | null;
   email: string | null;
+  email_source?: 'youtube_about' | 'youtube_description' | 'youtube_links' | 'clay' | 'none'; // Track where email came from
   name?: string | null;
   full_name?: string | null;
   followers?: number;

@@ -2,6 +2,7 @@ import { db } from '../firebase-admin';
 import { Creator, CreatorSearchFilters, DiscoveryPipelineResponse, Platform } from '../types';
 import { influencerClubClient } from './influencer-club-client';
 import { clayClient } from './clay-client';
+import { discoverCreatorsViaYouTube } from './youtube-email-extractor';
 import { Timestamp } from 'firebase-admin/firestore';
 
 /**
@@ -92,12 +93,24 @@ export class DiscoveryPipeline {
             while (keywordRetries <= MAX_RETRIES_PER_KEYWORD && finalCreators.length < TARGET_COUNT) {
                 try {
                     // Try fetching - we know pagination might be broken so we just ask for 50 and take what we get
-                    const externalResults = await influencerClubClient.discoverCreators({
-                        platform,
-                        filters: currentFilters,
-                        limit: 50,
-                        offset: currentOffset,
-                    });
+                    // Try fetching
+                    let externalResults = [];
+
+                    if (platform === 'youtube') {
+                        // Native YouTube API Discovery (Requested by USER)
+                        externalResults = await discoverCreatorsViaYouTube({
+                            query: currentKeyword,
+                            limit: 50
+                        }) as any;
+                    } else {
+                        // All other platforms use Influencer Club
+                        externalResults = await influencerClubClient.discoverCreators({
+                            platform,
+                            filters: currentFilters,
+                            limit: 50,
+                            offset: currentOffset,
+                        });
+                    }
 
                     let addedForKeyword = 0;
                     if (externalResults && externalResults.length > 0) {
@@ -168,6 +181,29 @@ export class DiscoveryPipeline {
         }
 
         console.log(`[Discovery] Pipeline Complete. Found ${finalCreators.length} unique creators across ${keywordIndex} keywords.`);
+
+        // --- NEW: RANKING LOGIC ---
+        // Score = 0.4 * Engagement + 0.3 * Log(Followers) + ...
+        // We calculate this now before returning
+        finalCreators = finalCreators.map(creator => {
+            const followers = creator.followers || 1;
+            const engagement = creator.engagement_rate || 0;
+
+            // Formula: 0.4 * EngagementRate + 0.3 * Log10(AudienceSize)
+            // Normalizing Engagement (assuming 0.1 is high) and Log10(Followers)
+            const engagementScore = Math.min(engagement * 10, 1) * 0.4;
+            const sizeScore = Math.min(Math.log10(followers) / 7, 1) * 0.3; // 7 = 10M followers
+
+            const totalScore = engagementScore + sizeScore;
+
+            return {
+                ...creator,
+                ranking_score: totalScore
+            } as any;
+        });
+
+        // Sort Descending by score
+        finalCreators.sort((a: any, b: any) => (b.ranking_score || 0) - (a.ranking_score || 0));
 
         // 5. Clay Enrichment
         if (!skipEnrichment && finalCreators.length > 0) {
@@ -305,9 +341,16 @@ export class DiscoveryPipeline {
     }
 
     /**
-     * Enrich batch of creators with Clay
+     * Enrich batch of creators with YouTube extraction first, then Clay fallback
      */
     private async bulkEnrichWithClay(creators: Creator[], userId: string, campaignId?: string): Promise<Creator[]> {
+        const { findCreatorEmail } = await import('./youtube-email-extractor');
+
+        // Track stats
+        let youtubeSuccesses = 0;
+        let clayFallbacks = 0;
+        let totalFailures = 0;
+
         // Use Promise.all for parallel enrichment, but keep it robust
         const enrichmentPromises = creators.map(async (creator) => {
             try {
@@ -317,37 +360,83 @@ export class DiscoveryPipeline {
                     updated_at: Timestamp.now()
                 });
 
-                const clayResult = await clayClient.enrichCreator({
-                    handle: creator.handle,
-                    platform: creator.platform,
-                    userId: userId,
-                    campaignId: campaignId,
-                    creatorId: creator.id,
-                    niche: creator.niche || undefined,
-                    followers: creator.followers,
-                    bio: creator.basic_profile_data?.biography || creator.bio || undefined,
-                    website: creator.website || undefined,
-                    name: creator.name || undefined
-                });
+                // STEP 1: Try YouTube extraction first (FREE)
+                let emailResult = null;
+                let emailSource = 'none';
+                let usedClay = false;
 
+                if (creator.platform === 'youtube') {
+                    console.log(`[Enrichment] Trying YouTube extraction for ${creator.handle}...`);
+
+                    const youtubeResult = await findCreatorEmail({
+                        channelId: creator.verality_id || String(creator.id),
+                        channelHandle: creator.handle,
+                        platform: 'youtube',
+                        useClayFallback: false // Don't use Clay yet
+                    });
+
+                    if (youtubeResult.email) {
+                        emailResult = youtubeResult.email;
+                        emailSource = youtubeResult.source;
+                        youtubeSuccesses++;
+                        console.log(`[Enrichment] ✅ Found email via YouTube: ${emailResult}`);
+                    }
+                }
+
+                // STEP 2: If YouTube failed, fallback to Clay (PAID)
+                if (!emailResult) {
+                    console.log(`[Enrichment] YouTube failed for ${creator.handle}, using Clay...`);
+
+                    const clayResult = await clayClient.enrichCreator({
+                        handle: creator.handle,
+                        platform: creator.platform,
+                        userId: userId,
+                        campaignId: campaignId,
+                        creatorId: creator.id,
+                        niche: creator.niche || undefined,
+                        followers: creator.followers,
+                        bio: creator.basic_profile_data?.biography || creator.bio || undefined,
+                        website: creator.website || undefined,
+                        name: creator.name || undefined
+                    });
+
+                    emailResult = clayResult.email || null;
+                    emailSource = 'clay';
+                    usedClay = true;
+                    clayFallbacks++;
+
+                    // Update with all Clay data
+                    const updateData: Partial<Creator> = {
+                        email: clayResult.email || null,
+                        email_found: !!clayResult.email,
+                        phone: clayResult.phone || null,
+                        bio: clayResult.bio || creator.bio || null,
+                        website: clayResult.website || creator.website || null,
+                        enrichment_status: (clayResult as any).is_pending ? 'processing' : 'enriched',
+                        clay_enriched_at: new Date().toISOString(),
+                        email_source: emailSource as Creator['email_source'],
+                        updated_at: new Date().toISOString(),
+                    };
+
+                    await db.collection('creators').doc(String(creator.id)).update(updateData as any);
+                    return { ...creator, ...updateData };
+                }
+
+                // STEP 3: YouTube found email - update with YouTube data only
                 const updateData: Partial<Creator> = {
-                    email: clayResult.email || null,
-                    email_found: !!clayResult.email,
-                    phone: clayResult.phone || null,
-                    bio: clayResult.bio || null,
-                    website: clayResult.website || null,
-                    enrichment_status: (clayResult as any).is_pending ? 'processing' : 'enriched',
-                    clay_enriched_at: new Date().toISOString(),
+                    email: emailResult,
+                    email_found: true,
+                    enrichment_status: 'enriched',
+                    email_source: emailSource as Creator['email_source'],
                     updated_at: new Date().toISOString(),
                 };
 
-                // If Clay provides cross-platform profiles, we could store them too
-
                 await db.collection('creators').doc(String(creator.id)).update(updateData as any);
-
                 return { ...creator, ...updateData };
+
             } catch (error) {
-                console.error(`Clay enrichment failed for ${creator.handle}:`, error);
+                console.error(`Enrichment failed for ${creator.handle}:`, error);
+                totalFailures++;
 
                 // Fail gracefully: update status but return the discovery data
                 await db.collection('creators').doc(String(creator.id)).update({
@@ -359,7 +448,13 @@ export class DiscoveryPipeline {
             }
         });
 
-        return Promise.all(enrichmentPromises);
+        const results = await Promise.all(enrichmentPromises);
+
+        // Log stats
+        console.log(`[Enrichment Stats] YouTube: ${youtubeSuccesses}, Clay: ${clayFallbacks}, Failed: ${totalFailures}`);
+        console.log(`[Enrichment Stats] 💰 Saved ${youtubeSuccesses} Clay API calls!`);
+
+        return results;
     }
 
     /**

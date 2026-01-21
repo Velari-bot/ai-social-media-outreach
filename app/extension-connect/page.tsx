@@ -12,6 +12,12 @@ export default function ExtensionConnectPage() {
     const [message, setMessage] = useState('');
 
     useEffect(() => {
+        if (!auth) {
+            setStatus('error');
+            setMessage('Firebase auth not initialized');
+            return;
+        }
+
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             setUser(currentUser);
             if (currentUser) {

@@ -19,6 +19,18 @@ export async function POST(req: NextRequest) {
                 try {
                     const decodedToken = await auth.verifyIdToken(token);
                     userId = decodedToken.uid;
+
+                    // --- NEW: Lite Plan restriction ---
+                    const { db } = await import('@/lib/firebase-admin');
+                    const userDoc = await db.collection('user_accounts').doc(userId).get();
+                    const userData = userDoc.data();
+
+                    if (userData?.plan === 'lite') {
+                        return NextResponse.json({
+                            error: 'Lite plan restriction',
+                            message: 'Your plan only allows discovery via the Verality Chrome Extension. Please use the extension on YouTube or upgrade to a Pro plan for website-based search.'
+                        }, { status: 403 });
+                    }
                 } catch (authError) {
                     console.error('Token verification failed:', authError);
                     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

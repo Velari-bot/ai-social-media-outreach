@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
                 if (userId) {
                     // Define quotas based on plan name (matching pricing tiers)
                     const planQuotas: Record<string, number> = {
+                        'lite': 75, // 25 for discovery fee + 50 for emails
                         'basic': 50,
                         'pro': 100,
                         'growth': 200,

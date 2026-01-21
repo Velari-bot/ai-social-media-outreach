@@ -59,17 +59,25 @@ export async function POST(request: NextRequest) {
         // If no email found -> failed (so UI shows red/failed state instead of infinite loading)
         updateData.enrichment_status = updateData.email_found ? 'enriched' : 'failed';
 
-        // Update Firestore Document
-        // verality_id corresponds to the Firestore Document ID
+        // --- UPSERT LOGIC ---
+        // verality_id corresponds to the YouTube Channel ID or internal ID
         const docRef = db.collection('creators').doc(verality_id);
         const docSnap = await docRef.get();
 
         if (!docSnap.exists) {
-            console.error(`[Clay Webhook] Creator ${verality_id} not found.`);
-            return NextResponse.json({ error: 'Creator not found' }, { status: 404 });
-        }
+            console.log(`[Clay Webhook] Creator ${verality_id} not found. Creating new doc...`);
+            // Add base required fields for a new creator
+            updateData.verality_id = verality_id;
+            updateData.platform = body.platform || 'youtube';
+            updateData.handle = body.username || body.handle || "";
+            updateData.name = body.creator_name || body.name || updateData.handle;
+            updateData.created_at = new Date().toISOString();
 
-        await docRef.set(updateData, { merge: true });
+            await docRef.set(updateData);
+        } else {
+            // Update existing
+            await docRef.update(updateData);
+        }
 
         // Credit Refund Logic
         // If no email was found, and this was a user request (not backfill), refund the credit.
@@ -90,55 +98,33 @@ export async function POST(request: NextRequest) {
         const isBackfill = body.backfill === true || body.backfill === "true";
 
         if (targetUserId && !updateData.email_found && !isBackfill) {
-            console.log(`[Clay Webhook] No email found for ${verality_id}. Refunding 1 credit to user ${targetUserId}.`);
-            // Import dynamically to avoid circular deps if any, or just import at top if clean
-            const { incrementEmailQuota } = await import('@/lib/database');
-            await incrementEmailQuota(targetUserId, -1);
+            console.log(`[Clay Webhook] No email found for ${verality_id}. No outreach queued.`);
         } else if (updateData.email_found && targetUserId) {
-            // AUTO-EMAIL LOGIC
-            // If we found an email, trigger the auto-responder immediately
-            // We use the `campaign_id` if available, or just the user context.
+            // AUTO-OUTREACH LOGIC
+            // Now that we have an email, add them to the queue for this specific user/campaign
             const campaignId = body.campaign_id;
             const targetEmail = updateData.email;
 
-            console.log(`[Clay Webhook] Email found for ${verality_id}. Triggering auto-responder...`);
-
-            // We call the auto-responder endpoint internally or just import the logic.
-            // Importing logic is safer for serverless execution time (calling HTTP might timeout or be weird).
-            // But `simulateOutreach` is in a route file. 
-            // Better to fetch the endpoint so it runs independently? 
-            // Or just make a fetch call to ourselves.
-
-            // Actually, best to fetch the auto-responder endpoint "fire and forget" style 
-            // OR await it if we want to be sure.
-            // Let's await it to be safe.
+            console.log(`[Clay Webhook] Email found for ${verality_id}. Adding to outreach queue...`);
 
             try {
-                // Get the user's email to know who is sending
-                const { getUserAccount } = await import('@/lib/database');
-                const user = await getUserAccount(targetUserId);
+                const { addCreatorsToQueue } = await import('@/lib/services/outreach-queue');
 
-                if (user && user.email) {
-                    // We simulate an outreach
-                    // Note: We need the base URL. In Vercel, it is tricky.
-                    // But we can just import the logic if we extract it.
-                    // For now, let's try fetch with absolute URL fallback or localhost
+                // We pass the creator ID to the existing queue service
+                // This will handle: 
+                // 1. Credit deduction (1 per email)
+                // 2. Scheduling (distributing over the day)
+                // 3. Campaign association
+                await addCreatorsToQueue(
+                    [verality_id],
+                    targetUserId,
+                    campaignId,
+                    body.campaign_name || "Enriched via Discovery"
+                );
 
-                    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-                    await fetch(`${baseUrl}/api/admin/auto-responder`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            action: 'simulate',
-                            targetEmail: user.email, // The user sending the email
-                            creatorEmail: targetEmail, // The creator receiving it
-                            campaignId: campaignId // Pass context if needed later
-                        })
-                    });
-                    console.log(`[Clay Webhook] Triggered auto-email to ${targetEmail} from ${user.email}`);
-                }
-            } catch (emailError) {
-                console.error(`[Clay Webhook] Failed to trigger auto-email:`, emailError);
+                console.log(`[Clay Webhook] Successfully queued outreach for ${targetEmail}`);
+            } catch (queueError) {
+                console.error(`[Clay Webhook] Failed to queue outreach:`, queueError);
             }
         }
 

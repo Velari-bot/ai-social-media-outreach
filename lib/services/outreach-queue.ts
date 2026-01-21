@@ -182,6 +182,14 @@ export async function queueCreatorsForOutreach(params: {
             continue;
         }
 
+        // Validate send time exists and is valid
+        const sendTime = sendTimes[i];
+        if (!sendTime || isNaN(sendTime.getTime())) {
+            console.error(`[Queue] Invalid send time for creator ${i}: ${sendTime}`);
+            skipped++;
+            continue;
+        }
+
         const queueRef = db.collection('outreach_queue').doc();
         const queueItem: Partial<OutreachQueueItem> = {
             user_id: userId,
@@ -191,7 +199,7 @@ export async function queueCreatorsForOutreach(params: {
             creator_platform: creator.platform,
             creator_name: creator.name,
             status: 'scheduled',
-            scheduled_send_time: Timestamp.fromDate(sendTimes[i]),
+            scheduled_send_time: Timestamp.fromDate(sendTime),
             campaign_id: campaignId,
             request_id: requestId,
             retry_count: 0,

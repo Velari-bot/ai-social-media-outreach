@@ -28,12 +28,14 @@ export async function GET(req: NextRequest) {
         }
 
         const userData = userDoc.data();
+        const credits = (userData?.email_quota_daily || 0) - (userData?.email_used_today || 0);
 
         return NextResponse.json({
             userId,
             email: payload.email,
             name: userData?.name || userData?.email?.split('@')[0],
-            credits: userData?.credits || 0,
+            credits: Math.max(0, credits),
+            dailyQuota: userData?.email_quota_daily || 0,
             plan: userData?.plan || 'free'
         });
     } catch (error) {

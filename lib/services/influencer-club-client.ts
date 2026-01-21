@@ -82,7 +82,10 @@ export class InfluencerClubClient {
             if (platform === 'instagram' || platform === 'tiktok') {
                 body.filters.keywords_in_bio = [cleanNiche.toLowerCase()];
             } else if (platform === 'youtube') {
+                // FALLBACK STRATEGY: Try 'topics' first as it's cleaner,
+                // but if that's what's failing, we add keywords as well
                 body.filters.topics = [cleanNiche];
+                body.filters.keywords = [cleanNiche]; // Added for more flexibility
             }
         } else {
             console.log(`[InfluencerClub:${requestId}] Broad Search (No Niche) - expecting higher volume.`);
@@ -142,10 +145,19 @@ export class InfluencerClubClient {
             if (minAvgViews > 0) {
                 const beforeCount = mapped.length;
                 mapped = mapped.filter(c => {
-                    // Estimate views = followers * engagement
-                    // Or just pass if we don't have enough data
-                    if (!c.followers || !c.engagement_rate) return true; // Give benefit of doubt
-                    const estViews = c.followers * c.engagement_rate;
+                    // YouTube specifically provides view counts differently, but for general estimation:
+                    const followers = Number(c.followers || 0);
+                    const er = Number(c.engagement_rate || 0);
+
+                    // If we have no data, we have to let them through to avoid false negatives,
+                    // but we lower their ranking priority.
+                    if (!followers || !er) return true;
+
+                    // Improved estimation: ER * Followers is often an underestimate for views on YouTube
+                    // We apply a 2x multiplier for YouTube "reach" estimation
+                    const multiplier = params.platform === 'youtube' ? 2 : 1;
+                    const estViews = followers * er * multiplier;
+
                     return estViews >= minAvgViews;
                 });
                 console.log(`[InfluencerClub:${requestId}] Avg Views Filter (${minAvgViews}+): ${beforeCount} -> ${mapped.length}`);

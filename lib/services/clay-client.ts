@@ -47,6 +47,7 @@ export class ClayClient {
     bio?: string;
     website?: string;
     campaignId?: string;
+    campaignName?: string;
   }): Promise<ClayEnrichmentResult> {
     // specific URL provided by user
     const targetUrl = this.webhookUrl || 'https://api.clay.com/v3/sources/webhook/pull-in-data-from-a-webhook-2f50d72c-37c4-4ef0-86e9-f36fd3897aac';
@@ -73,7 +74,8 @@ export class ClayClient {
         "bio": params.bio || "",
         "website": params.website || "",
         "user_id": params.userId || "",
-        "campaign_id": params.campaignId || ""
+        "campaign_id": params.campaignId || "",
+        "campaign_name": params.campaignName || ""
       };
 
       console.log('Pushing to Clay:', JSON.stringify(payload));
