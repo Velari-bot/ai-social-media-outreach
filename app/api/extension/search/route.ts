@@ -43,22 +43,21 @@ export async function POST(req: NextRequest) {
             }, { status: 403 });
         }
 
-        const COST_PER_50 = 25;
-        const cost = Math.max(1, Math.ceil(limit / 50)) * COST_PER_50;
         const remainingQuota = (userData.email_quota_daily || 0) - (userData.email_used_today || 0);
 
-        if (remainingQuota < cost && userData.plan !== 'enterprise') {
-            return NextResponse.json({ error: 'Insufficient credits (25 required per search)' }, { status: 403 });
+        if (remainingQuota < 1 && userData.plan !== 'enterprise') {
+            return NextResponse.json({ error: 'Insufficient credits' }, { status: 403 });
         }
 
         // --- NEW: Handle Client-Side Sync ---
         if (query === 'SYNC_FROM_CLIENT') {
             const now = Timestamp.now();
 
-            // 1.5 Deduct credits for the discovery (25 credits)
+            // 1.5 Deduct credits per creator (0.5 credits each, round up)
             if (foundCreators.length > 0) {
+                const searchCost = Math.ceil(foundCreators.length * 0.5);
                 await userRef.update({
-                    email_used_today: FieldValue.increment(25),
+                    email_used_today: FieldValue.increment(searchCost),
                     updated_at: now
                 });
             }
@@ -155,10 +154,11 @@ export async function POST(req: NextRequest) {
             requestedCount: limit
         });
 
-        // 5. Deduct Credits only if results found
+        // 5. Deduct Credits only if results found (0.5 per creator)
         if (results.creators && results.creators.length > 0) {
+            const searchCost = Math.ceil(results.creators.length * 0.5);
             await userRef.update({
-                email_used_today: FieldValue.increment(cost),
+                email_used_today: FieldValue.increment(searchCost),
                 updated_at: Timestamp.now()
             });
         }
@@ -166,8 +166,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
             success: true,
             creators: results.creators,
-            meta: results.meta,
-            creditsConsumed: cost
+            meta: results.meta
         });
 
     } catch (error: any) {
