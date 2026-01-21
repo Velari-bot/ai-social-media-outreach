@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
                 const searchCost = Math.ceil(foundCreators.length * 0.5);
                 await userRef.update({
                     email_used_today: FieldValue.increment(searchCost),
+                    email_used_this_month: FieldValue.increment(searchCost),
                     updated_at: now
                 });
             }
@@ -159,6 +160,7 @@ export async function POST(req: NextRequest) {
             const searchCost = Math.ceil(results.creators.length * 0.5);
             await userRef.update({
                 email_used_today: FieldValue.increment(searchCost),
+                email_used_this_month: FieldValue.increment(searchCost),
                 updated_at: Timestamp.now()
             });
         }

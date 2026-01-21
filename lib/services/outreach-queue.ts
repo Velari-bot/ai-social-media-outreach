@@ -1,5 +1,5 @@
 import { db } from '../firebase-admin';
-import { Timestamp, FieldPath } from 'firebase-admin/firestore';
+import { Timestamp, FieldPath, FieldValue } from 'firebase-admin/firestore';
 
 /**
  * Outreach Queue Item
@@ -211,11 +211,11 @@ export async function queueCreatorsForOutreach(params: {
         queued++;
     }
 
-    // Reserve credits for queued emails (1 credit per email)
+    // Reserve credits for queued emails (1 credit per email) - ATOMIC
     if (queued > 0) {
         batch.update(db.collection('user_accounts').doc(userId), {
-            email_used_today: creditsUsedToday + queued,
-            email_used_this_month: (userData.email_used_this_month || 0) + queued,
+            email_used_today: FieldValue.increment(queued),
+            email_used_this_month: FieldValue.increment(queued),
             updated_at: Timestamp.now()
         });
     }

@@ -198,17 +198,21 @@ export async function POST(request: NextRequest) {
           // We continue anyway so user gets their creators
         }
 
-        // 8. Charge based on found creators
-        // REMOVED: incrementEmailQuota logic.
-        // Reason: The `addCreatorsToQueue` function handles quota deduction (1 credit per email).
-        // Note: This temporarily removes the "2x cost for YouTube" logic, defaulting to 1x.
-        // This prevents the critical double-charging bug.
+        // 8. Charge based on found creators (0.5 credits per creator)
+        if (foundCount > 0) {
+          const searchCost = Math.ceil(foundCount * 0.5);
+          console.log(`[RequestsAPI] Deducting ${searchCost} credits for discovery of ${foundCount} creators.`);
 
-        /* 
-        if (foundCount > 0 && criteria.skipEnrichment !== true) {
-          // ... (Logic removed to prevent double charge)
-        } 
-        */
+          const userAccountRef = adminDb.collection('user_accounts').doc(userId);
+          const { FieldValue } = await import('firebase-admin/firestore');
+
+          await userAccountRef.update({
+            email_used_today: FieldValue.increment(searchCost),
+            email_used_this_month: FieldValue.increment(searchCost),
+            updated_at: Timestamp.now()
+          });
+        }
+
 
 
         console.log(`[RequestsAPI] Returning successful response for request ${newRequest.id} with creators.`);
