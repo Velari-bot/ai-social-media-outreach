@@ -15,8 +15,8 @@ const tiers = [
         dailyLimit: 25,
         monthlyVolume: "750",
         costPerCreator: "0.13",
-        description: "Perfect for Chrome Extension users",
-        bestFor: "solo scouts, extension-only users, niche research",
+        description: "For solo scouts & extension users",
+        bestFor: "solo research, extension testing, niche scouting",
         features: [
             "25 credits per day (1 Extension Analysis)",
             "Search creators directly on YouTube",
@@ -211,7 +211,7 @@ function PricingContent() {
                     </div>
 
                     {/* Pricing Grid */}
-                    <div className="grid md:grid-cols-2 xl:grid-cols-5 gap-6 items-start">
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch max-w-7xl mx-auto">
                         {tiers.map((tier) => {
                             const isDark = tier.isDark;
 
