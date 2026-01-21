@@ -109,12 +109,13 @@ export async function POST(req: NextRequest) {
                     `Extension: ${niche || 'Niche Search'}`
                 );
 
-                // --- NEW: Trigger Clay for those WITHOUT emails ---
+                // --- NEW: Trigger Clay for those WITHOUT emails (NON-BLOCKING) ---
                 const missingEmails = foundCreators.filter((c: any) => !c.email);
                 if (missingEmails.length > 0) {
                     const { clayClient } = await import('@/lib/services/clay-client');
-                    // Use Promise.all to ensure all pushes are completed before the response
-                    await Promise.all(missingEmails.slice(0, 50).map(async (c: any) => {
+                    // We don't await this so the extension gets a fast response
+                    // The serverless function will continue until these finish or it timeouts
+                    Promise.all(missingEmails.slice(0, 50).map(async (c: any) => {
                         try {
                             await clayClient.enrichCreator({
                                 creatorId: c.id,
@@ -129,7 +130,7 @@ export async function POST(req: NextRequest) {
                         } catch (e: any) {
                             console.error(`[Extension Sync] Clay push failed for ${c.id}:`, e);
                         }
-                    }));
+                    })).catch(e => console.error("[Extension Sync] Clay batch failed:", e));
                 }
             }
 
