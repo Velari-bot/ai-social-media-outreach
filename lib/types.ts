@@ -27,6 +27,8 @@ export interface Creator {
   website?: string | null;
   niche?: string | null;
   avg_views?: number;
+  insight_tag?: string;
+  ranking_score?: number;
   source?: string | 'influencers_club';
   created_at: string;
   updated_at: string;

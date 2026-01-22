@@ -172,13 +172,34 @@ export class DiscoveryPipeline {
             console.log(`[Discovery] YT View Verification (${minAvgViews}+): ${beforeCount} -> ${finalCreators.length}`);
         }
 
-        // --- RANKING LOGIC ---
+        // --- ELITE RANKING LOGIC ---
         finalCreators = finalCreators.map(creator => {
             const followers = creator.followers || 1;
             const engagement = creator.engagement_rate || 0;
-            const engagementScore = Math.min(engagement * 10, 1) * 0.4;
-            const sizeScore = Math.min(Math.log10(followers) / 7, 1) * 0.3;
-            return { ...creator, ranking_score: engagementScore + sizeScore };
+            const avgViews = creator.avg_views || 0;
+
+            const sizeScore = Math.min(Math.log10(followers) / 9, 1) * 0.15; // Subs matter less
+            const engagementScore = Math.min(engagement * 20, 1) * 0.45; // Real engagement matters most
+            const viewScore = Math.min(Math.log10(avgViews || 1) / 6.5, 1.2) * 0.4; // Massively weight huge view counts
+
+            // Quality Penalty: Penalize if subs are high but views are disproportionately low
+            const performanceRatio = avgViews / Math.max(followers, 1000);
+            const qualityMultiplier = performanceRatio < 0.02 ? 0.3 : performanceRatio > 0.5 ? 1.3 : 1.0;
+
+            const totalScore = (engagementScore + sizeScore + viewScore) * qualityMultiplier;
+
+            // Generate Insight Tag if missing
+            let insightTag = creator.insight_tag || "Relevant Match";
+            if (performanceRatio > 1.0) insightTag = "Viral Sensation";
+            else if (followers > 100000 && performanceRatio > 0.2) insightTag = "Top Tier Creator";
+            else if (followers > 100000) insightTag = "Established Authority";
+            else if (performanceRatio > 0.5) insightTag = "High Engagement";
+
+            return {
+                ...creator,
+                ranking_score: totalScore,
+                insight_tag: insightTag
+            };
         });
 
         finalCreators.sort((a: any, b: any) => (b.ranking_score || 0) - (a.ranking_score || 0));

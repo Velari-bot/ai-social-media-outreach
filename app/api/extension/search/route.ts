@@ -67,7 +67,12 @@ export async function POST(req: NextRequest) {
                         email_used_this_month: FieldValue.increment(searchCost),
                         updated_at: now
                     });
-                    console.log(`[Extension Sync] Deducted ${searchCost} credits atomicly.`);
+
+                    // Verify the update
+                    const updatedDoc = await userRef.get();
+                    const updatedData = updatedDoc.data();
+                    const remaining = (updatedData?.email_quota_daily || 0) - (updatedData?.email_used_today || 0);
+                    console.log(`[Extension Sync] Deducted ${searchCost} credits. Remaining: ${remaining}`);
                 }
             }
 
