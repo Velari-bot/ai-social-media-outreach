@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
         // 8. Charge based on found creators (0.5 credits per creator)
         if (foundCount > 0) {
           const searchCost = Math.ceil(foundCount * 0.5);
-          console.log(`[RequestsAPI] Deducting ${searchCost} credits for discovery of ${foundCount} creators.`);
+          console.log(`[RequestsAPI] Deducting credits for User ${userId}. Found: ${foundCount}, Cost: ${searchCost}`);
 
           const userAccountRef = adminDb.collection('user_accounts').doc(userId);
           const { FieldValue } = await import('firebase-admin/firestore');
@@ -211,6 +211,7 @@ export async function POST(request: NextRequest) {
             email_used_this_month: FieldValue.increment(searchCost),
             updated_at: Timestamp.now()
           });
+          console.log(`[RequestsAPI] Deducted ${searchCost} credits for User ${userId}.`);
         }
 
 

@@ -56,11 +56,19 @@ export async function POST(req: NextRequest) {
             // 1.5 Deduct credits per creator (0.5 credits each, round up)
             if (foundCreators.length > 0) {
                 const searchCost = Math.ceil(foundCreators.length * 0.5);
-                await userRef.update({
-                    email_used_today: FieldValue.increment(searchCost),
-                    email_used_this_month: FieldValue.increment(searchCost),
-                    updated_at: now
-                });
+                console.log(`[Extension Sync] User: ${userId}, Email: ${payload.email}, Found: ${foundCreators.length}, Cost: ${searchCost}`);
+
+                const userDocCheck = await userRef.get();
+                if (!userDocCheck.exists) {
+                    console.error(`[Extension Sync] CRITICAL: user_account doc NOT FOUND for userId: ${userId}`);
+                } else {
+                    await userRef.update({
+                        email_used_today: FieldValue.increment(searchCost),
+                        email_used_this_month: FieldValue.increment(searchCost),
+                        updated_at: now
+                    });
+                    console.log(`[Extension Sync] Deducted ${searchCost} credits atomicly.`);
+                }
             }
 
             // 1. Create a Campaign (creator_requests)
