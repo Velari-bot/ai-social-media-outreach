@@ -55,7 +55,7 @@ export default function StartupsPage() {
                 content: (
                     <>
                         <p className="mb-4">
-                            "Build it and they will come" is a lie. You need distribution.
+                            &quot;Build it and they will come&quot; is a lie. You need distribution.
                         </p>
                         <p className="mb-4">
                             Verality gives startups the power of a 10-person marketing team. You can scrape leads, find emails, and automate cold outreach in minutes.

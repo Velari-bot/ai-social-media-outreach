@@ -35,12 +35,12 @@ export default function GuidePage() {
                 <div className="prose prose-lg prose-gray mx-auto prose-headings:font-bold prose-headings:text-black prose-a:text-blue-600">
                     <h2>Why Manual Outreach is Dead</h2>
                     <p>
-                        If you're still using Google Sheets to track influencers and sending DMs one by one, you're already behind.
+                        If you&apos;re still using Google Sheets to track influencers and sending DMs one by one, you&apos;re already behind.
                         The most successful DTC brands in 2025 are using AI to automate the entire top-of-funnel process.
                     </p>
                     <p>
                         The problem with manual outreach is simple math: To get 10 posted videos, you need to ship products to 30 creators.
-                        To get 30 creators to say "yes", you need to email 300 of them. To find 300 good emails, you need to scan 1,000 profiles.
+                        To get 30 creators to say &quot;yes&quot;, you need to email 300 of them. To find 300 good emails, you need to scan 1,000 profiles.
                     </p>
                     <p>
                         Doing this manually takes hundreds of hours. Doing it with AI takes 5 minutes.
@@ -49,33 +49,33 @@ export default function GuidePage() {
                     <h2>Step 1: AI-Powered Discovery</h2>
                     <p>
                         Forget hashtags. AI tools like Verality allow you to search based on <strong>audience psychographics</strong>.
-                        Instead of searching for "#fitness", you can search for "creators whose audience is 70% female, aged 18-24, located in Los Angeles, and interested in skincare."
+                        Instead of searching for &quot;#fitness&quot;, you can search for &quot;creators whose audience is 70% female, aged 18-24, located in Los Angeles, and interested in skincare.&quot;
                     </p>
                     <ul>
                         <li><strong>Lookalike Search:</strong> Upload your best performing creator, and let AI find 50 more just like them.</li>
-                        <li><strong>Keywords in Bio:</strong> Filter specifically for "UGC Creator" or "Athlete" in their bio.</li>
+                        <li><strong>Keywords in Bio:</strong> Filter specifically for &quot;UGC Creator&quot; or &quot;Athlete&quot; in their bio.</li>
                         <li><strong>Engagement Filters:</strong> Automatically filter out anyone with less than 2% engagement rate.</li>
                     </ul>
 
                     <h2>Step 2: Automated Personalization</h2>
                     <p>
-                        Templates don't work. "Hey dear" DMs get ignored. But writing unique emails takes too long.
+                        Templates don&apos;t work. &quot;Hey dear&quot; DMs get ignored. But writing unique emails takes too long.
                     </p>
                     <p>
-                        AI solves this by analyzing the creator's last 5 posts and writing a personalized "icebreaker" for every single email.
+                        AI solves this by analyzing the creator&apos;s last 5 posts and writing a personalized &quot;icebreaker&quot; for every single email.
                         It mentions their specific content, compliments their style, and ties it back to your brand automatically.
                     </p>
 
                     <h2>Step 3: The automated Follow-up</h2>
                     <p>
                         70% of deals happen in the follow-up. Most creators are busy and miss the first email.
-                        An automated system ensures that if they don't reply in 3 days, a polite bump email is sent.
-                        If they still don't reply, a final "breakup" email is sent 4 days later.
+                        An automated system ensures that if they don&apos;t reply in 3 days, a polite bump email is sent.
+                        If they still don&apos;t reply, a final &quot;breakup&quot; email is sent 4 days later.
                     </p>
 
                     <h2>Conclusion</h2>
                     <p>
-                        The goal isn't to remove the human element—it's to remove the administrative work so the human can focus on building the relationship once the creator replies.
+                        The goal isn&apos;t to remove the human element—it&apos;s to remove the administrative work so the human can focus on building the relationship once the creator replies.
                     </p>
 
                     <div className="bg-gray-50 p-8 rounded-2xl border border-gray-100 mt-10 not-prose text-center">

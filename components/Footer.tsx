@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Footer() {
     return (
@@ -8,7 +9,7 @@ export default function Footer() {
                     <div className="col-span-2">
                         <Link href="/" className="flex items-center gap-2 mb-6">
                             <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
-                                <img src="/v-nav.png" alt="V" className="w-4 h-4" />
+                                <Image src="/v-nav.png" alt="V" width={16} height={16} className="w-4 h-4" />
                             </div>
                             <span className="font-bold text-xl tracking-tight text-black">verality.io</span>
                         </Link>

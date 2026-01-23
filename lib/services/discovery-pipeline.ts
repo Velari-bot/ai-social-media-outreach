@@ -160,16 +160,34 @@ export class DiscoveryPipeline {
             const channelIds = finalCreators.map(c => String(c.id));
             const realViews = await batchVerifyYoutubeViews(channelIds);
 
-            const beforeCount = finalCreators.length;
-            finalCreators = finalCreators.filter(c => {
+            // Update all creators with real view counts for accurate ranking
+            finalCreators.forEach(c => {
                 const avg = realViews[String(c.id)];
-                if (avg !== undefined) {
-                    c.avg_views = avg; // Store real avg views
-                    return avg >= minAvgViews;
-                }
-                return true; // Keep if we couldn't verify (avoid over-filtering)
+                if (avg !== undefined) c.avg_views = avg;
             });
-            console.log(`[Discovery] YT View Verification (${minAvgViews}+): ${beforeCount} -> ${finalCreators.length}`);
+
+            // Level 1: Strict Match
+            let verifiedCreators = finalCreators.filter(c => (c.avg_views || 0) >= minAvgViews);
+            console.log(`[Discovery] Strict View Check (>=${minAvgViews}): Found ${verifiedCreators.length}`);
+
+            // Level 2: Soft Match (50% threshold) if strict failed to find enough
+            if (verifiedCreators.length < 5) {
+                console.log(`[Discovery] Strict check yielded low results. Relaxing threshold to 50% (${minAvgViews * 0.5}+)...`);
+                verifiedCreators = finalCreators.filter(c => (c.avg_views || 0) >= (minAvgViews * 0.5));
+                console.log(`[Discovery] Soft Match Found: ${verifiedCreators.length}`);
+            }
+
+            // Level 3: "Best Effort" - If we still have 0, take top performers found locally
+            if (verifiedCreators.length === 0) {
+                console.log(`[Discovery] View verification failed to match target. Returning top 10 available creators (Best Effort).`);
+                // Sort by views descending and take top 10
+                verifiedCreators = finalCreators
+                    .sort((a, b) => (b.avg_views || 0) - (a.avg_views || 0))
+                    .slice(0, 10);
+            }
+
+            finalCreators = verifiedCreators;
+            console.log(`[Discovery] Final Verified Count: ${finalCreators.length}`);
         }
 
         // --- ELITE RANKING LOGIC ---

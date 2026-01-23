@@ -55,13 +55,13 @@ export default function CreatorDiscoveryPage() {
                 content: (
                     <>
                         <p className="mb-4">
-                            Finding the right influencers is the hardest part of any campaign. A manual search on Instagram can take hours, and you still won't know if their followers are real.
+                            Finding the right influencers is the hardest part of any campaign. A manual search on Instagram can take hours, and you still won&apos;t know if their followers are real.
                         </p>
                         <p className="mb-4">
-                            Verality's <strong>influencer discovery tool</strong> solves this by indexing millions of creator profiles. We analyze engagement rates, posting frequency, and audience sentiment to give you a clear picture of a creator's value.
+                            Verality&apos;s <strong>influencer discovery tool</strong> solves this by indexing millions of creator profiles. We analyze engagement rates, posting frequency, and audience sentiment to give you a clear picture of a creator&apos;s value.
                         </p>
                         <p>
-                            Don't rely on expensive agencies or outdated databases. Use real-time data to discover rising stars before your competitors do.
+                            Don&apos;t rely on expensive agencies or outdated databases. Use real-time data to discover rising stars before your competitors do.
                         </p>
                     </>
                 )

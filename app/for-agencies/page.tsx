@@ -61,7 +61,7 @@ export default function AgenciesPage() {
                             Verality is built for <strong>high-volume agency workflows</strong>. Unlike other tools that charge per seat or limit your search, we provide scalable infrastructure so you can handle more clients with the same team size.
                         </p>
                         <p>
-                            Increase your margins by automating the "busy work" of discovery and initial outreach.
+                            Increase your margins by automating the &quot;busy work&quot; of discovery and initial outreach.
                         </p>
                     </>
                 )

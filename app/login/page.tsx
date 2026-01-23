@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -223,14 +224,14 @@ export default function LoginPage() {
 
           {/* Logo Area */}
           <div className="relative z-10 w-12 h-12 bg-black rounded-xl flex items-center justify-center shadow-xl rotate-3">
-            <img src="/v-nav.png" alt="Verality" className="w-5 h-5 object-contain" />
+            <Image src="/v-nav.png" alt="Verality" width={20} height={20} className="w-5 h-5 object-contain" />
           </div>
 
           {/* Personality Card - Glassmorphism */}
           <div className="relative z-10 glass-panel p-6 rounded-2xl border border-white/40 shadow-xl backdrop-blur-md bg-white/30 max-w-sm mt-auto transform hover:scale-[1.02] transition-transform duration-500">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm">
-                <img src="/mr-beast.jpg" alt="Creator" className="w-full h-full object-cover" />
+                <Image src="/mr-beast.jpg" alt="Creator" width={40} height={40} className="w-full h-full object-cover" />
               </div>
               <div>
                 <div className="text-sm font-bold text-[#1A1A1A]">MrBeast</div>

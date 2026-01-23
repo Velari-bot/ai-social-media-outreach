@@ -112,7 +112,7 @@ export default function AffiliateSignupPage() {
 
                         {!user && !loading && (
                             <p className="mt-4 text-sm text-gray-400">
-                                You'll need a Verality account first. It's free.
+                                You&apos;ll need a Verality account first. It&apos;s free.
                             </p>
                         )}
                     </div>

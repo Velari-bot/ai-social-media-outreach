@@ -8,6 +8,7 @@ import { fetchUserAccount, fetchUserStats, fetchRecentRequests, createRequest } 
 import type { UserAccount } from "@/lib/database";
 import SubscriptionGuard from "@/components/SubscriptionGuard";
 import { Search, Loader2, Download, Instagram, Youtube, Music, ExternalLink, CheckCircle } from "lucide-react";
+import Image from "next/image";
 
 import { FLATTENED_TOPICS } from "@/lib/data/classifiers";
 
@@ -470,7 +471,7 @@ function CreatorRequestContent() {
                           max={userAccount?.email_quota_daily || 500}
                         />
                         <p className="text-[10px] text-green-600 mt-1">
-                          We'll find and email up to this many new creators each day.
+                          We&apos;ll find and email up to this many new creators each day.
                         </p>
                       </div>
 
@@ -595,7 +596,7 @@ function CreatorRequestContent() {
                       <div key={i} className="p-6 flex items-center gap-4 hover:bg-gray-50 transition-colors group">
                         <div className="h-12 w-12 bg-gray-100 rounded-full flex-shrink-0 overflow-hidden relative border border-gray-200">
                           {c.picture ? (
-                            <img src={c.picture} alt={c.handle} className="h-full w-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                            <Image src={c.picture} alt={c.handle} width={48} height={48} unoptimized className="h-full w-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
                           ) : (
                             <div className="h-full w-full flex items-center justify-center">{getPlatformIcon(c.platform)}</div>
                           )}

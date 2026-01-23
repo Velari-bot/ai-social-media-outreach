@@ -58,7 +58,7 @@ export default function SaasPage() {
                             SaaS growth is getting harder with rising ad costs. <strong>B2B influencer marketing</strong> is the untapped channel.
                         </p>
                         <p className="mb-4">
-                            Verality helps you find the "Tech Twitter" and "Productivity YouTube" stars who influence your buyers. Instead of cold outbound sales, get warm inbound leads from creator referrals.
+                            Verality helps you find the &quot;Tech Twitter&quot; and &quot;Productivity YouTube&quot; stars who influence your buyers. Instead of cold outbound sales, get warm inbound leads from creator referrals.
                         </p>
                         <p>
                             Perfect for launching on Product Hunt or scaling your PLG motion.

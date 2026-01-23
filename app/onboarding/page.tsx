@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useRef } from "react";
+import { useState, useEffect, Suspense, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { getCurrentUser } from "@/lib/auth-helpers";
@@ -99,7 +99,7 @@ function OnboardingContent() {
       processingRef.current = true;
       handleOAuthCallback(code);
     }
-  }, [searchParams, router, authInitialized]);
+  }, [searchParams, router, authInitialized, handleOAuthCallback]);
 
   const handlePurposeSelect = (selectedPurpose: PurposeType) => {
     setPurpose(selectedPurpose);
@@ -126,7 +126,7 @@ function OnboardingContent() {
     }
   };
 
-  const handleOAuthCallback = async (code: string) => {
+  const handleOAuthCallback = useCallback(async (code: string) => {
     setIsLoading(true);
     console.log("Starting OAuth callback exchange...");
     try {
@@ -177,7 +177,15 @@ function OnboardingContent() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [
+    connectGmail,
+    firstName,
+    lastName,
+    businessName,
+    purpose,
+    router,
+    updateUserAccount
+  ]);
 
   return (
     <main className="min-h-screen flex bg-gray-100 p-6">
@@ -215,7 +223,7 @@ function OnboardingContent() {
             {step === 1 && (
               <div>
                 <h1 className="text-2xl sm:text-3xl font-black text-black text-center mb-3">
-                  Let's get started
+                  Let&apos;s get started
                 </h1>
                 <p className="text-gray-600 text-center mb-8 text-sm">
                   Please provide your real name. We use this for professional email signatures in your outreach.
@@ -273,10 +281,10 @@ function OnboardingContent() {
             {step === 2 && (
               <div>
                 <h1 className="text-2xl sm:text-3xl font-black text-black text-center mb-3">
-                  What's your goal?
+                  What&apos;s your goal?
                 </h1>
                 <p className="text-gray-600 text-center mb-8 text-sm">
-                  We'll customize your experience based on what you're building.
+                  We&apos;ll customize your experience based on what you&apos;re building.
                 </p>
 
                 <div className="mb-6">

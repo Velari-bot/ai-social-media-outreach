@@ -72,6 +72,34 @@ export class InfluencerClubClient {
             accounts = await this.executeRequest(body, requestId);
         }
 
+        // --- STAGE 4: Relax Avg Views (Metadata is often missing, so we relax this and verify later) ---
+        if (accounts.length === 0 && minAvgViews > 0) {
+            console.log(`[InfluencerClub:${requestId}] Stage 4: Relaxing View Count filter (Metadata fallback)...`);
+            body = this.buildPayload(platform, page, limit, minFollowers, maxFollowers, cleanNiche, cleanCategory, locationFilter, 0);
+            accounts = await this.executeRequest(body, requestId);
+        }
+
+        // --- STAGE 5: Relax Location (Location data can be sparse) ---
+        if (accounts.length === 0 && locationFilter) {
+            console.log(`[InfluencerClub:${requestId}] Stage 5: Relaxing Location filter...`);
+            body = this.buildPayload(platform, page, limit, minFollowers, maxFollowers, cleanNiche, cleanCategory, null, minAvgViews);
+            accounts = await this.executeRequest(body, requestId);
+        }
+
+        // --- STAGE 6: Relax Both Views & Location ---
+        if (accounts.length === 0) {
+            console.log(`[InfluencerClub:${requestId}] Stage 6: Relaxing Both Views & Location...`);
+            body = this.buildPayload(platform, page, limit, minFollowers, maxFollowers, cleanNiche, cleanCategory, null, 0);
+            accounts = await this.executeRequest(body, requestId);
+        }
+
+        // --- STAGE 7: Ultimate Fallback (Broad Followers + No Location + No Views) ---
+        if (accounts.length === 0) {
+            console.log(`[InfluencerClub:${requestId}] Stage 7: Ultimate Fallback (Broad search)...`);
+            body = this.buildPayload(platform, page, limit, 0, 10000000, cleanNiche, undefined, null, 0);
+            accounts = await this.executeRequest(body, requestId);
+        }
+
         if (accounts.length === 0) {
             console.log(`[InfluencerClub:${requestId}] All stages failed to find creators for: "${cleanNiche}"`);
             return [];
@@ -82,19 +110,9 @@ export class InfluencerClubClient {
         // Map Results
         let mapped = this.mapResults(accounts, params.platform);
 
-        // Post-filtering for views if requested
-        if (minAvgViews > 0) {
-            const beforeCount = mapped.length;
-            mapped = mapped.filter(c => {
-                const followers = Number(c.followers || 0);
-                const er = Number(c.engagement_rate || 0);
-                if (!followers || !er) return true;
-                const multiplier = platform === 'youtube' ? 0.7 : 1;
-                const estViews = followers * er * multiplier;
-                return estViews >= minAvgViews;
-            });
-            console.log(`[InfluencerClub:${requestId}] Avg Views Filter (${minAvgViews}+): ${beforeCount} -> ${mapped.length}`);
-        }
+        // Post-filtering for views removed. 
+        // We rely on the API's 'min_avg_views' filter where supported, 
+        // and the rigorous implementation in DiscoveryPipeline to verify actual view counts.
 
         return mapped;
     }

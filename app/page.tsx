@@ -17,6 +17,7 @@ import {
   Star,
   Mail
 } from "lucide-react";
+import Image from "next/image";
 
 export default function Home() {
   return (
@@ -147,7 +148,7 @@ export default function Home() {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <span className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 overflow-hidden">
-                              {row.img && <img src={row.img} alt={row.name} className="w-full h-full object-cover" />}
+                              {row.img && <Image src={row.img} alt={row.name} width={32} height={32} className="w-full h-full object-cover" />}
                             </span>
                             <div>
                               <div className="font-bold text-gray-900 text-sm">{row.name}</div>
@@ -227,7 +228,7 @@ export default function Home() {
                   <div className="flex -space-x-4">
                     {["/charli.jpg", "/dude.jpg", "/kim.jpg", "/mr-beast.jpg"].map((src, i) => (
                       <div key={i} className="w-12 h-12 rounded-full border-4 border-black overflow-hidden bg-gray-800 ring-2 ring-white/5">
-                        <img src={src} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+                        <Image src={src} alt={`Team member ${i + 1}`} width={48} height={48} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
                       </div>
                     ))}
                     <div className="w-12 h-12 rounded-full border-4 border-black bg-gray-800 flex items-center justify-center text-xs font-black text-white ring-2 ring-white/5">+5</div>
@@ -273,7 +274,7 @@ export default function Home() {
               <div className="flex -space-x-3">
                 {["/charli.jpg", "/dude.jpg", "/kim.jpg", "/mkbhd.jpg"].map((src, i) => (
                   <div key={i} className="w-9 h-9 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm">
-                    <img src={src} className="w-full h-full object-cover" />
+                    <Image src={src} alt={`Subscriber ${i + 1}`} width={36} height={36} className="w-full h-full object-cover" />
                   </div>
                 ))}
               </div>
@@ -296,7 +297,7 @@ export default function Home() {
                   The "Magic Email" template with <span className="text-[#6B4BFF]">60% reply rate</span>
                 </h3>
                 <p className="text-gray-500 mb-10 text-lg font-medium leading-relaxed">
-                  We break down exactly how specific subject lines consistently book more calls than anything else we've tested.
+                  We break down exactly how specific subject lines consistently book more calls than anything else we&apos;ve tested.
                 </p>
 
                 <div className="flex items-center justify-between border-t border-gray-50 pt-8">
@@ -369,7 +370,7 @@ export default function Home() {
               <div className="flex -space-x-2 mt-2">
                 {["/charli.jpg", "/kim.jpg", "/mr-beast.jpg", "/mkbhd.jpg", "/dude.jpg"].map((src, i) => (
                   <div key={i} className="w-8 h-8 rounded-full border-2 border-gray-900 bg-gray-800 flex items-center justify-center overflow-hidden shadow-lg">
-                    <img src={src} className="w-full h-full object-cover" />
+                    <Image src={src} alt={`Brand ${i + 1}`} width={32} height={32} className="w-full h-full object-cover" />
                   </div>
                 ))}
                 <div className="pl-4 text-xs font-bold text-gray-400 flex items-center italic">Joined by 1,200+ brands this month</div>

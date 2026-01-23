@@ -14,7 +14,7 @@ export default function SupportPage() {
                         How can we help?
                     </h1>
                     <p className="text-xl text-gray-500 font-medium">
-                        Get support for Verality AI. We're here to help you grow your outreach.
+                        Get support for Verality AI. We&apos;re here to help you grow your outreach.
                     </p>
                 </div>
 
@@ -67,7 +67,7 @@ export default function SupportPage() {
                     <div className="text-left space-y-4 mt-6">
                         <div>
                             <h4 className="font-bold text-gray-900">How do I reset my password?</h4>
-                            <p className="text-sm text-gray-500">You can reset your password from the login page by clicking "Forgot Password".</p>
+                            <p className="text-sm text-gray-500">You can reset your password from the login page by clicking &quot;Forgot Password&quot;.</p>
                         </div>
                         <div>
                             <h4 className="font-bold text-gray-900">Where can I see my invoices?</h4>

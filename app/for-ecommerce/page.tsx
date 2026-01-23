@@ -58,7 +58,7 @@ export default function EcommercePage() {
                             For DTC brands, <strong>product seeding</strong> (gifting) is the most cost-effective way to grow. But emailing creators one by one is slow.
                         </p>
                         <p className="mb-4">
-                            Verality allows you to run "seeding campaigns" on autopilot. You set the criteria (e.g., "Skincare influencers in USA with 10k-50k followers"), and our AI handles the introduction.
+                            Verality allows you to run &quot;seeding campaigns&quot; on autopilot. You set the criteria (e.g., &quot;Skincare influencers in USA with 10k-50k followers&quot;), and our AI handles the introduction.
                         </p>
                         <p>
                             Get more UGC, more authentic shoutouts, and lower your CAC by leveraging the power of micro-influencers.

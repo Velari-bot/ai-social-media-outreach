@@ -58,7 +58,7 @@ export default function CampaignsPage() {
                             Spreadsheets are where influencer campaigns go to die. You need a <strong>Creator Relationship Management (CRM)</strong> system that is built for the chaos of social media DMs.
                         </p>
                         <p className="mb-4">
-                            Verality's campaign manager unifies your outreach data with your relationship status. Know exactly who has been sent product, who posted, and who is ghosting you.
+                            Verality&apos;s campaign manager unifies your outreach data with your relationship status. Know exactly who has been sent product, who posted, and who is ghosting you.
                         </p>
                         <p>
                             By centralizing this data, you can run multiple campaigns simultaneously without losing track of a single relationship.

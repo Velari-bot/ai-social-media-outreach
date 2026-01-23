@@ -11,6 +11,7 @@ import { Search, Loader2, Download, Instagram, Youtube, Music, ExternalLink, Che
 
 import { useRouter } from "next/navigation";
 import { FLATTENED_TOPICS } from "@/lib/data/classifiers";
+import Image from "next/image";
 
 // 1. Dynamic Niches List from Classifiers (API aligned)
 // Updated with new filters
@@ -563,7 +564,7 @@ function CreatorRequestContent() {
                               <div className="flex items-center gap-3">
                                 <div className="h-8 w-8 rounded bg-gray-100 flex-shrink-0 border border-gray-200 overflow-hidden">
                                   {c.picture ? (
-                                    <img src={c.picture} alt="" className="h-full w-full object-cover" />
+                                    <Image src={c.picture} alt="" width={32} height={32} unoptimized className="h-full w-full object-cover" />
                                   ) : (
                                     <div className="h-full w-full flex items-center justify-center text-gray-300">
                                       {getPlatformIcon(c.platform)}

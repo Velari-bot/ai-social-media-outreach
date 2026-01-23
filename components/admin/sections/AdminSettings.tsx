@@ -114,7 +114,7 @@ export default function AdminSettings() {
                         <div className="flex items-center justify-between p-4 bg-red-50/50 border border-red-100 rounded-2xl">
                             <div>
                                 <p className="font-bold text-sm text-gray-900">Fix MRR / Plan Bug</p>
-                                <p className="text-xs text-gray-500 mt-1">Downgrades users who were incorrectly assigned 'Pro' plan without payment.</p>
+                                <p className="text-xs text-gray-500 mt-1">Downgrades users who were incorrectly assigned &apos;Pro&apos; plan without payment.</p>
                             </div>
                             <button
                                 onClick={async () => {
