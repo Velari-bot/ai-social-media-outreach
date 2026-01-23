@@ -12,14 +12,26 @@ import Image from "next/image";
 
 import { FLATTENED_TOPICS } from "@/lib/data/classifiers";
 
-// 1. Dynamic Niches List from Classifiers (API aligned)
-// Updated with new filters
-const NICHES = FLATTENED_TOPICS.map(t => t.name);
-
-// Fallback if data is missing
-if (NICHES.length === 0) {
-  NICHES.push("Gaming", "Fashion", "Tech", "Beauty");
-}
+// 1. Broad Niches List (Simplified for better results)
+const NICHES = [
+  "Art & Design",
+  "Automotive",
+  "Beauty",
+  "Business & Finance",
+  "Education",
+  "Entertainment",
+  "Family",
+  "Fashion",
+  "Food & Drink",
+  "Gaming",
+  "Health & Fitness",
+  "Lifestyle",
+  "Music",
+  "Pets",
+  "Sports",
+  "Tech",
+  "Travel"
+];
 
 // Helper for UI icons
 const getPlatformIcon = (platform: string, className = "h-4 w-4") => {
