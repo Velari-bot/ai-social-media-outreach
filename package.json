@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "worker": "node dist/scripts/run-worker.js",
+    "build:worker": "tsc -p tsconfig.worker.json"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",

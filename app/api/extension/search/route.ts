@@ -35,19 +35,14 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'User account not found' }, { status: 404 });
         }
 
-        const activePlans = ['lite', 'basic', 'pro', 'growth', 'scale', 'custom', 'enterprise'];
-        if (!activePlans.includes(userData.plan || '')) {
-            return NextResponse.json({
-                error: 'Active subscription required',
-                details: 'Please upgrade your plan to use the Verality Extension.'
-            }, { status: 403 });
+        if (!userData) {
+            return NextResponse.json({ error: 'User account not found' }, { status: 404 });
         }
 
-        const remainingQuota = (userData.email_quota_daily || 0) - (userData.email_used_today || 0);
+        // Logic split:
+        // 1. SYNC_FROM_CLIENT: Allows recording findings even if restrictions apply (best effort)
+        // 2. Server-Side: Strict plan & quota checks
 
-        if (remainingQuota < 1 && userData.plan !== 'enterprise') {
-            return NextResponse.json({ error: 'Insufficient credits' }, { status: 403 });
-        }
 
         // --- NEW: Handle Client-Side Sync ---
         if (query === 'SYNC_FROM_CLIENT') {
@@ -160,6 +155,20 @@ export async function POST(req: NextRequest) {
         }
 
         // --- Standard Server-Side Discovery Pipeline ---
+
+        const activePlans = ['lite', 'basic', 'pro', 'growth', 'scale', 'custom', 'enterprise'];
+        if (!activePlans.includes(userData.plan || '')) {
+            return NextResponse.json({
+                error: 'Active subscription required',
+                details: 'Please upgrade your plan to use the Verality Extension.'
+            }, { status: 403 });
+        }
+
+        const remainingQuota = (userData.email_quota_daily || 0) - (userData.email_used_today || 0);
+        if (remainingQuota < 1 && userData.plan !== 'enterprise') {
+            return NextResponse.json({ error: 'Insufficient credits' }, { status: 403 });
+        }
+
         // 4. Run Search
         const results = await discoveryPipeline.discover({
             userId,

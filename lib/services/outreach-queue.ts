@@ -145,6 +145,19 @@ export async function queueCreatorsForOutreach(params: {
         sending_hours_end: 17
     };
 
+    // Check for Business Hours Override (24/7 mode)
+    // Default to strict business hours (true) if undefined
+    const businessHoursOnly = userData.business_hours_only !== false;
+
+    let startHour = settings.sending_hours_start;
+    let endHour = settings.sending_hours_end;
+
+    if (!businessHoursOnly) {
+        console.log(`[Queue] User ${userId} enabled 24/7 sending. Overriding business hours.`);
+        startHour = 0;
+        endHour = 24;
+    }
+
     let queued = 0;
     let skipped = 0;
 
@@ -160,8 +173,8 @@ export async function queueCreatorsForOutreach(params: {
     const sendTimes = distributeEmailsOverDay(
         creatorsToQueue.length,
         settings.min_minutes_between_emails,
-        settings.sending_hours_start,
-        settings.sending_hours_end
+        startHour,
+        endHour
     );
 
     const batch = db.batch();
@@ -355,3 +368,73 @@ export const addCreatorsToQueue = async (
         requestId: campaignId
     });
 };
+
+/**
+ * Reschedule all PENDING/SCHEDULED emails for a user
+ * Called when users change their sending settings (e.g. toggle 24/7 mode)
+ */
+export async function rescheduleUserQueue(userId: string, businessHoursOnly: boolean) {
+    console.log(`[Queue] Rescheduling for user ${userId} (Business Hours Only: ${businessHoursOnly})`);
+
+    // 1. Get all scheduled items
+    const snapshot = await db.collection('outreach_queue')
+        .where('user_id', '==', userId)
+        .where('status', '==', 'scheduled')
+        .get();
+
+    if (snapshot.empty) return;
+
+    // 2. Get Settings
+    const settingsDoc = await db.collection('user_email_settings').doc(userId).get();
+    const settings = settingsDoc.data() as UserEmailSettings || {
+        min_minutes_between_emails: 10,
+        sending_hours_start: 9,
+        sending_hours_end: 17
+    };
+
+    let startHour = settings.sending_hours_start;
+    let endHour = settings.sending_hours_end;
+
+    if (!businessHoursOnly) {
+        startHour = 0;
+        endHour = 24;
+    }
+
+    // 3. Calculate new times
+    // We treat this as "queueing them from scratch" starting NOW
+    const items = snapshot.docs;
+    const newTimes = distributeEmailsOverDay(
+        items.length,
+        settings.min_minutes_between_emails,
+        startHour,
+        endHour
+    );
+
+    // 4. Batch Update
+    // Firestore batches limited to 500 ops.
+    const batches = [];
+    let currentBatch = db.batch();
+    let opCount = 0;
+
+    items.forEach((doc, index) => {
+        if (opCount >= 450) {
+            batches.push(currentBatch);
+            currentBatch = db.batch();
+            opCount = 0;
+        }
+
+        const newTime = newTimes[index];
+        if (newTime) {
+            currentBatch.update(doc.ref, {
+                scheduled_send_time: Timestamp.fromDate(newTime),
+                updated_at: Timestamp.now()
+            });
+            opCount++;
+        }
+    });
+
+    batches.push(currentBatch);
+
+    await Promise.all(batches.map(b => b.commit()));
+    console.log(`[Queue] Rescheduled ${items.length} emails for user ${userId}`);
+}

@@ -49,6 +49,7 @@ function SettingsContent() {
   const [intent, setIntent] = useState("");
   const [personaMessage, setPersonaMessage] = useState("");
   const [subjectLine, setSubjectLine] = useState("");
+  const [businessHoursOnly, setBusinessHoursOnly] = useState(true);
 
   useEffect(() => {
     async function loadSettings() {
@@ -63,6 +64,7 @@ function SettingsContent() {
           remaining_monthly: 2550
         });
         setIntent("rates and phone number");
+        setBusinessHoursOnly(true);
         setLoading(false);
         return;
       }
@@ -95,6 +97,8 @@ function SettingsContent() {
           setIntent(acc.outreach_intent || "");
           setPersonaMessage(acc.outreach_persona_message || "");
           setSubjectLine(acc.outreach_subject_line || "");
+          // Default to true if undefined to match old behavior
+          setBusinessHoursOnly(acc.business_hours_only !== false);
         }
 
       } catch (error) {
@@ -119,7 +123,8 @@ function SettingsContent() {
       const res = await updateUserAccount({
         outreach_intent: intent,
         outreach_persona_message: personaMessage,
-        outreach_subject_line: subjectLine
+        outreach_subject_line: subjectLine,
+        business_hours_only: businessHoursOnly
       });
       if (res.success) {
         toast.success("Outreach intent updated");
@@ -346,6 +351,23 @@ function SettingsContent() {
                 </p>
               </label>
 
+              <div className="flex items-center justify-between py-4 border-t border-gray-100">
+                <div>
+                  <span className="text-sm font-bold text-gray-700 uppercase tracking-wider block">Business Hours Only</span>
+                  <p className="text-sm text-gray-500 mt-1">
+                    If enabled, emails will only send between 9 AM - 5 PM. If disabled, they send 24/7.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setBusinessHoursOnly(!businessHoursOnly)}
+                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none ${businessHoursOnly ? 'bg-black' : 'bg-gray-200'}`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${businessHoursOnly ? 'translate-x-6' : 'translate-x-1'}`}
+                  />
+                </button>
+              </div>
+
               <div className="border-t border-gray-100 pt-6">
                 <label className="block mb-4">
                   <span className="text-sm font-bold text-gray-700 uppercase tracking-wider block mb-2">Subject Line</span>
@@ -367,7 +389,7 @@ function SettingsContent() {
                     <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded-full uppercase tracking-wide">AI Personality</span>
                   </div>
                   <p className="text-sm text-gray-500 mb-3">
-                    Paste an example of a first outreach email you've written. The AI will analyze your tone, sentence structure, and signature to mimic your personal style.
+                    Paste an example of a first outreach email you&apos;ve written. The AI will analyze your tone, sentence structure, and signature to mimic your personal style.
                   </p>
                   <textarea
                     placeholder="Hey [Name],&#10;&#10;I loved your recent video on... it was super insightful.&#10;&#10;I'm with [Company] and we're looking to..."
@@ -493,7 +515,7 @@ function SettingsContent() {
                   <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
                     <div className="text-sm font-medium text-red-800 mb-2">Are you sure?</div>
                     <p className="text-sm text-red-700 mb-4">
-                      This action cannot be undone. Your subscription will be cancelled and you'll lose access to premium features at the end of your billing period.
+                      This action cannot be undone. Your subscription will be cancelled and you&apos;ll lose access to premium features at the end of your billing period.
                     </p>
                     <div className="flex gap-2">
                       <button

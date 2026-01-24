@@ -1,0 +1,25 @@
+#!/usr/bin/expect -f
+
+set timeout 20
+set ip "149.28.35.225"
+set user "root"
+set password "-oV2})Y\$}.\[PJQ}r"
+
+spawn ssh -o StrictHostKeyChecking=no $user@$ip
+
+expect {
+    "password:" {
+        send -- "$password\r"
+        exp_continue
+    }
+    "# " {
+        send "echo 'Login Successful!'\r"
+        send "exit\r"
+    }
+    timeout {
+        puts "Connection timed out"
+        exit 1
+    }
+}
+
+expect eof

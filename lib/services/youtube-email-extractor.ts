@@ -344,6 +344,7 @@ export async function discoverCreatorsViaYouTube(params: {
     query: string;
     limit: number;
     pageToken?: string;
+    location?: string;
 }): Promise<{
     creators: YouTubeDiscoveryResult[];
     nextPageToken?: string;
@@ -354,11 +355,20 @@ export async function discoverCreatorsViaYouTube(params: {
         return { creators: [] };
     }
 
-    const { query, limit = 50, pageToken } = params;
+    const { query, limit = 50, pageToken, location } = params;
 
     try {
         // 1. Search for channels
         let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=channel&maxResults=${limit}&key=${YOUTUBE_API_KEY}`;
+
+        // Add region filtering if location provided
+        if (location) {
+            const regionCode = getRegionCode(location);
+            if (regionCode) {
+                url += `&regionCode=${regionCode}`;
+            }
+        }
+
         if (pageToken) {
             url += `&pageToken=${pageToken}`;
         }
@@ -514,4 +524,55 @@ export async function batchVerifyYoutubeViews(channelIds: string[]): Promise<Rec
     }
 
     return results;
+}
+
+/**
+ * Helper to map full country names to ISO 3166-1 alpha-2 region codes
+ */
+function getRegionCode(location: string): string | undefined {
+    if (!location) return undefined;
+
+    // Normalize
+    const norm = location.trim().toLowerCase();
+
+    const map: Record<string, string> = {
+        'united states': 'US',
+        'usa': 'US',
+        'us': 'US',
+        'united kingdom': 'GB',
+        'uk': 'GB',
+        'britain': 'GB',
+        'great britain': 'GB',
+        'canada': 'CA',
+        'australia': 'AU',
+        'germany': 'DE',
+        'france': 'FR',
+        'india': 'IN',
+        'brazil': 'BR',
+        'japan': 'JP',
+        'spain': 'ES',
+        'italy': 'IT',
+        'mexico': 'MX',
+        'netherlands': 'NL',
+        'russia': 'RU',
+        'south korea': 'KR',
+        'turkey': 'TR',
+        'sweden': 'SE',
+        'switzerland': 'CH',
+        'united arab emirates': 'AE',
+        'uae': 'AE',
+        'belgium': 'BE',
+        'austria': 'AT',
+        'norway': 'NO',
+        'denmark': 'DK',
+        'finland': 'FI',
+        'ireland': 'IE',
+        'new zealand': 'NZ',
+        'singapore': 'SG',
+        'south africa': 'ZA',
+        'poland': 'PL',
+        'portugal': 'PT'
+    };
+
+    return map[norm];
 }

@@ -150,9 +150,33 @@ export class InfluencerClubClient {
             if (platform === 'instagram' || platform === 'tiktok') {
                 body.filters.keywords_in_bio = [niche.toLowerCase()];
             } else if (platform === 'youtube') {
-                if (category) {
-                    body.filters.topics = [category];
+                // youtube logic: Topics must be sub-topics (e.g. "Fashion"), NOT categories (e.g. "Lifestyle").
+                // Top-Level topics cause 400 errors.
+                const INVALID_YT_TOPICS = new Set([
+                    "Gaming", "Lifestyle", "Entertainment", "Sports", "Society", "Music",
+                    "Fashion & Beauty", "Travel & Tourism", "Food & Drink", "Fitness & Health",
+                    "Business & Finance", "Technology", "Family & Parenting", "Art & Design",
+                    "Pets & Animals", "Automotive", "Home & Garden", "Tech", "Beauty", "Travel"
+                ]);
+
+                // 1. Try to find a valid topic source
+                // 'niche' is usually the sub-topic (e.g. "Fashion"). 'category' is usually the main topic (e.g. "Lifestyle").
+                // So we prefer 'niche' for the Topic filter.
+                let validTopic: string | null = null;
+
+                if (niche && !INVALID_YT_TOPICS.has(niche)) {
+                    validTopic = niche;
+                } else if (category && !INVALID_YT_TOPICS.has(category)) {
+                    validTopic = category;
                 }
+
+                // 2. Apply Topic Filter if valid
+                if (validTopic) {
+                    body.filters.topics = [validTopic];
+                }
+
+                // 3. Always apply Keyword Filter as fallback/reinforcement
+                // This ensures broad searches (like "Gaming") still work via keywords even if topic is invalid.
                 body.filters.keywords = [niche];
             }
         }
@@ -189,15 +213,25 @@ export class InfluencerClubClient {
     private mapResults(accounts: any[], platform: string): ModashDiscoveryResult[] {
         return accounts.map((p: any) => {
             const profile = p.profile || p;
+
+            // Fix for YouTube ID mapping: Prioritize 'profile.id' if it looks like a Channel ID (UC...)
+            // The API often returns internal 'user_id' (e.g. uc_12345) which fails verification.
+            let correctId = p.user_id || profile.username || profile.id;
+
+            if (platform === 'youtube' && profile.id && String(profile.id).startsWith('UC')) {
+                correctId = profile.id;
+            }
+
             return {
-                creator_id: String(p.user_id || profile.username || profile.id || Math.random().toString(36).substring(7)),
+                creator_id: String(correctId || Math.random().toString(36).substring(7)),
                 handle: String(profile.username || p.user_id || profile.id || "unknown"),
                 platform: platform,
                 followers: Number(profile.followers || profile.followers_count || p.followers || 0),
                 engagement_rate: profile.engagement_percent ? (profile.engagement_percent / 100) : (profile.engagement_rate || 0),
                 fullname: profile.full_name || profile.name || profile.username || "Creator",
                 picture: profile.picture || profile.profile_pic_url || profile.avatar_url,
-                emails: profile.emails || p.emails || []
+                emails: profile.emails || p.emails || [],
+                avg_views: Number(profile.avg_views || profile.average_views || p.avg_views || p.average_views || 0)
             };
         });
     }

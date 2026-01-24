@@ -125,6 +125,7 @@ export async function updateUserAccount(updates: {
   outreach_persona_message?: string;
   outreach_subject_line?: string;
   ai_autopilot_enabled?: boolean;
+  business_hours_only?: boolean;
 }): Promise<{ success: boolean; account?: any; error?: string }> {
   const token = await getIdToken();
   if (!token) {

@@ -84,23 +84,14 @@ export class DiscoveryPipeline {
                 try {
                     let externalResults = [];
 
-                    if (platform === 'youtube') {
-                        const ytResult = await discoverCreatorsViaYouTube({
-                            query: currentKeyword,
-                            limit: 50,
-                            pageToken: youtubePageToken
-                        });
-                        externalResults = ytResult.creators;
-                        youtubePageToken = ytResult.nextPageToken;
-                        lastYoutubeToken = youtubePageToken;
-                    } else {
-                        externalResults = await influencerClubClient.discoverCreators({
-                            platform,
-                            filters: currentFilters,
-                            limit: 50,
-                            offset: currentOffset,
-                        });
-                    }
+                    // Per user instruction: Always use Influencer Club for website discovery, regardless of platform.
+                    // YouTube API is reserved for the browser extension.
+                    externalResults = await influencerClubClient.discoverCreators({
+                        platform,
+                        filters: currentFilters,
+                        limit: 50,
+                        offset: currentOffset,
+                    });
 
                     if (externalResults && externalResults.length > 0) {
                         externalFetches += externalResults.length;
@@ -153,41 +144,50 @@ export class DiscoveryPipeline {
 
         // --- RIGOROUS YT VIEW VERIFICATION ---
         const minAvgViews = Number(filters.min_avg_views || 0);
+        const hasYoutubeKey = !!process.env.YOUTUBE_API_KEY;
+
         if (platform === 'youtube' && minAvgViews > 0 && finalCreators.length > 0) {
-            console.log(`[Discovery] Verifying actual views for ${finalCreators.length} YouTube creators...`);
-            const { batchVerifyYoutubeViews } = await import('./youtube-email-extractor');
 
-            const channelIds = finalCreators.map(c => String(c.id));
-            const realViews = await batchVerifyYoutubeViews(channelIds);
+            if (!hasYoutubeKey) {
+                console.log(`[Discovery] YOUTUBE_API_KEY missing. Skipping rigorous verification and trusting Influencer Club results.`);
+                // If we rely on IC, we assume the creators meet the criteria. 
+                // We'll leave avg_views as-is (likely 0 or undefined from IC), or could patch it.
+            } else {
+                console.log(`[Discovery] Verifying actual views for ${finalCreators.length} YouTube creators...`);
+                const { batchVerifyYoutubeViews } = await import('./youtube-email-extractor');
 
-            // Update all creators with real view counts for accurate ranking
-            finalCreators.forEach(c => {
-                const avg = realViews[String(c.id)];
-                if (avg !== undefined) c.avg_views = avg;
-            });
+                const channelIds = finalCreators.map(c => c.verality_id || String(c.id));
+                const realViews = await batchVerifyYoutubeViews(channelIds);
 
-            // Level 1: Strict Match
-            let verifiedCreators = finalCreators.filter(c => (c.avg_views || 0) >= minAvgViews);
-            console.log(`[Discovery] Strict View Check (>=${minAvgViews}): Found ${verifiedCreators.length}`);
+                // Update all creators with real view counts for accurate ranking
+                finalCreators.forEach(c => {
+                    const avg = realViews[c.verality_id || String(c.id)];
+                    if (avg !== undefined) c.avg_views = avg;
+                });
 
-            // Level 2: Soft Match (50% threshold) if strict failed to find enough
-            if (verifiedCreators.length < 5) {
-                console.log(`[Discovery] Strict check yielded low results. Relaxing threshold to 50% (${minAvgViews * 0.5}+)...`);
-                verifiedCreators = finalCreators.filter(c => (c.avg_views || 0) >= (minAvgViews * 0.5));
-                console.log(`[Discovery] Soft Match Found: ${verifiedCreators.length}`);
+                // Level 1: Strict Match
+                let verifiedCreators = finalCreators.filter(c => (c.avg_views || 0) >= minAvgViews);
+                console.log(`[Discovery] Strict View Check (>=${minAvgViews}): Found ${verifiedCreators.length}`);
+
+                // Level 2: Soft Match (50% threshold) if strict failed to find enough
+                if (verifiedCreators.length < 5) {
+                    console.log(`[Discovery] Strict check yielded low results. Relaxing threshold to 50% (${minAvgViews * 0.5}+)...`);
+                    verifiedCreators = finalCreators.filter(c => (c.avg_views || 0) >= (minAvgViews * 0.5));
+                    console.log(`[Discovery] Soft Match Found: ${verifiedCreators.length}`);
+                }
+
+                // Level 3: "Best Effort" - If we still have 0, take top performers found locally
+                if (verifiedCreators.length === 0) {
+                    console.log(`[Discovery] View verification failed to match target. Returning top 10 available creators (Best Effort).`);
+                    // Sort by views descending and take top 10
+                    verifiedCreators = finalCreators
+                        .sort((a, b) => (b.avg_views || 0) - (a.avg_views || 0))
+                        .slice(0, 10);
+                }
+
+                finalCreators = verifiedCreators;
+                console.log(`[Discovery] Final Verified Count: ${finalCreators.length}`);
             }
-
-            // Level 3: "Best Effort" - If we still have 0, take top performers found locally
-            if (verifiedCreators.length === 0) {
-                console.log(`[Discovery] View verification failed to match target. Returning top 10 available creators (Best Effort).`);
-                // Sort by views descending and take top 10
-                verifiedCreators = finalCreators
-                    .sort((a, b) => (b.avg_views || 0) - (a.avg_views || 0))
-                    .slice(0, 10);
-            }
-
-            finalCreators = verifiedCreators;
-            console.log(`[Discovery] Final Verified Count: ${finalCreators.length}`);
         }
 
         // --- ELITE RANKING LOGIC ---
@@ -322,7 +322,35 @@ export class DiscoveryPipeline {
 
         if (!snapshot.empty) {
             // Found existing in Global DB
-            return this.docToCreator(snapshot.docs[0]);
+            const doc = snapshot.docs[0];
+            const existing = this.docToCreator(doc);
+
+            // Self-healing: Update verality_id if incoming is better (e.g. UC vs uc_)
+            // And update avg_views if incoming has data and existing does not
+            const updates: any = {};
+            let needsUpdate = false;
+
+            if (platform === 'youtube' && raw.creator_id && String(raw.creator_id).startsWith('UC')) {
+                if (!existing.verality_id || !existing.verality_id.startsWith('UC')) {
+                    updates.verality_id = raw.creator_id;
+                    existing.verality_id = raw.creator_id;
+                    needsUpdate = true;
+                }
+            }
+
+            // Update avg_views if we have new data and old is 0
+            if ((raw.avg_views || 0) > 0 && (existing.avg_views || 0) === 0) {
+                updates.avg_views = raw.avg_views;
+                existing.avg_views = raw.avg_views;
+                needsUpdate = true;
+            }
+
+            if (needsUpdate) {
+                await doc.ref.update({ ...updates, updated_at: Timestamp.now() });
+                console.log(`[Discovery] Self-healed creator ${handle}:`, updates);
+            }
+
+            return existing;
         }
 
         // 2. Create New
@@ -335,6 +363,7 @@ export class DiscoveryPipeline {
             full_name: raw.fullname || raw.full_name || raw.name || handle,
             followers: raw.followers || 0,
             engagement_rate: raw.engagement_rate || 0,
+            avg_views: raw.avg_views || 0,
             picture: raw.picture || raw.profile_pic_url,
             location: raw.location || raw.country || raw.geo_country || null,
             has_basic_profile: true,

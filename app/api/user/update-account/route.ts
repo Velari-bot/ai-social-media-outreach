@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/firebase-admin';
 import { db } from '@/lib/firebase-admin';
+import { rescheduleUserQueue } from '@/lib/services/outreach-queue';
 
 /**
  * POST /api/user/update-account
@@ -34,6 +35,7 @@ export async function POST(request: NextRequest) {
     if (body.outreach_persona_message !== undefined) updates.outreach_persona_message = body.outreach_persona_message;
     if (body.outreach_subject_line !== undefined) updates.outreach_subject_line = body.outreach_subject_line;
     if (body.ai_autopilot_enabled !== undefined) updates.ai_autopilot_enabled = body.ai_autopilot_enabled;
+    if (body.business_hours_only !== undefined) updates.business_hours_only = body.business_hours_only;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json(
@@ -47,6 +49,16 @@ export async function POST(request: NextRequest) {
     // Update user account in Firestore
     const userAccountRef = db.collection('user_accounts').doc(userId);
     await userAccountRef.update(updates);
+
+    // If scheduling preference changed, reschedule queue
+    if (body.business_hours_only !== undefined) {
+      try {
+        await rescheduleUserQueue(userId, body.business_hours_only);
+      } catch (err) {
+        console.error('Error rescheduling queue:', err);
+        // Don't fail the request, just log it
+      }
+    }
 
     // Get updated account
     const updatedDoc = await userAccountRef.get();

@@ -1,0 +1,43 @@
+#!/usr/bin/expect -f
+
+set timeout 300
+set ip "149.28.35.225"
+set user "root"
+set password "-oV2})Y\$}.\[PJQ}r"
+
+spawn ssh -o StrictHostKeyChecking=no $user@$ip
+
+expect {
+    "password:" {
+        send -- "$password\r"
+        exp_continue
+    }
+    "# " {
+        # Check npm 
+        send "npm -v\r"
+        expect "# "
+
+        # Install dependencies
+        send "npm install\r"
+        expect "# "
+        
+        # Install ts-node globally just in case (optional, but good for direct manual runs)
+        send "npm install -g ts-node typescript\r"
+        expect "# "
+
+        # Add crontab entry (idempotent: removes old one first if exists)
+        # Note: We escape the * characters for expect/shell
+        send "(crontab -l 2>/dev/null | grep -v 'npm run worker') | crontab -\r"
+        expect "# "
+        send "(crontab -l 2>/dev/null; echo '*/5 * * * * cd /root && npm run worker >> /var/log/verality-worker.log 2>&1') | crontab -\r"
+        expect "# "
+
+        # List crontab to verify
+        send "crontab -l\r"
+        expect "# "
+        
+        send "exit\r"
+    }
+}
+
+expect eof
