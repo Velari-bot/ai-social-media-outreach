@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-helpers";
-import { fetchUserAccount, getGmailStatus, disconnectGmail, getGmailOAuthUrl } from "@/lib/api-client";
+import { fetchUserAccount, getGmailStatus, disconnectGmail, getGmailOAuthUrl, updateUserAccount, updateGmailSettings } from "@/lib/api-client";
+import { auth } from "@/lib/firebase";
 import toast from "react-hot-toast";
 import Navbar from "@/components/Navbar";
 import SubscriptionGuard from "@/components/SubscriptionGuard";
@@ -118,8 +119,8 @@ function SettingsContent() {
       return;
     }
     setSaving(true);
+    setSaving(true);
     try {
-      const { updateUserAccount } = await import("@/lib/api-client");
       const res = await updateUserAccount({
         outreach_intent: intent,
         outreach_persona_message: personaMessage,
@@ -157,7 +158,6 @@ function SettingsContent() {
 
   const handleUpdateLimit = async (email: string, newLimit: number) => {
     try {
-      const { updateGmailSettings } = await import("@/lib/api-client");
       await updateGmailSettings('update_limit', email, newLimit);
       toast.success("Limit updated");
       // Update local state
@@ -170,7 +170,6 @@ function SettingsContent() {
   const handleRemoveAccount = async (email: string) => {
     if (!confirm(`Are you sure you want to disconnect ${email}?`)) return;
     try {
-      const { updateGmailSettings } = await import("@/lib/api-client");
       await updateGmailSettings('remove_account', email);
       setGmailAccounts(prev => prev.filter(a => a.email !== email));
       toast.success("Account disconnected");
@@ -432,7 +431,6 @@ function SettingsContent() {
                 onClick={async () => {
                   const toastId = toast.loading("Generating CSV export...");
                   try {
-                    const { auth } = await import("@/lib/firebase");
                     if (!auth || !auth.currentUser) return;
                     const token = await auth.currentUser.getIdToken();
 
@@ -473,7 +471,6 @@ function SettingsContent() {
               <button
                 onClick={async () => {
                   try {
-                    const { auth } = await import("@/lib/firebase");
                     if (auth) {
                       await auth.signOut();
                       router.push("/login");

@@ -6,13 +6,16 @@
 /**
  * Get Firebase Auth ID token for API requests
  */
+import { auth } from './firebase';
+
+/**
+ * Get Firebase Auth ID token for API requests
+ */
 async function getIdToken(): Promise<string | null> {
   if (typeof window === 'undefined') return null;
 
   try {
-    const { auth } = await import('./firebase');
     if (!auth?.currentUser) return null;
-
     return auth.currentUser.getIdToken();
   } catch (error) {
     console.error('Error getting auth token:', error);
