@@ -392,8 +392,8 @@ export async function rescheduleUserQueue(userId: string, businessHoursOnly: boo
         sending_hours_end: 17
     };
 
-    let startHour = settings.sending_hours_start;
-    let endHour = settings.sending_hours_end;
+    let startHour = settings.sending_hours_start ?? 9;
+    let endHour = settings.sending_hours_end ?? 17;
 
     if (!businessHoursOnly) {
         startHour = 0;
