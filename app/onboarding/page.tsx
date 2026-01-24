@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { fetchUserAccount, connectGmail, updateUserAccount, getGmailStatus } from "@/lib/api-client";
+import { auth } from "@/lib/firebase";
 
 type PurposeType = "brand" | "agency" | "ugc" | "other" | null;
 
@@ -63,7 +64,6 @@ function OnboardingContent() {
     // Wait for auth to initialize
     const checkAuth = async () => {
       try {
-        const { auth } = await import('@/lib/firebase');
         if (!auth) {
           setAuthInitialized(true);
           return;
@@ -83,23 +83,7 @@ function OnboardingContent() {
     checkAuth();
   }, []);
 
-  useEffect(() => {
-    if (!authInitialized) return;
 
-    const code = searchParams.get('code');
-    const error = searchParams.get('error');
-
-    if (error) {
-      toast.error(`Gmail connection failed: ${error}`);
-      router.replace('/onboarding');
-      return;
-    }
-
-    if (code && !processingRef.current) {
-      processingRef.current = true;
-      handleOAuthCallback(code);
-    }
-  }, [searchParams, router, authInitialized, handleOAuthCallback]);
 
   const handlePurposeSelect = (selectedPurpose: PurposeType) => {
     setPurpose(selectedPurpose);
@@ -178,14 +162,30 @@ function OnboardingContent() {
       setIsLoading(false);
     }
   }, [
-    connectGmail,
     firstName,
     lastName,
     businessName,
     purpose,
-    router,
-    updateUserAccount
+    router
   ]);
+
+  useEffect(() => {
+    if (!authInitialized) return;
+
+    const code = searchParams.get('code');
+    const error = searchParams.get('error');
+
+    if (error) {
+      toast.error(`Gmail connection failed: ${error}`);
+      router.replace('/onboarding');
+      return;
+    }
+
+    if (code && !processingRef.current) {
+      processingRef.current = true;
+      handleOAuthCallback(code);
+    }
+  }, [searchParams, router, authInitialized, handleOAuthCallback]);
 
   return (
     <main className="min-h-screen flex bg-gray-100 p-6">
