@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import WrenchCredits from "./WrenchCredits";
 
 export default function Footer() {
     return (
@@ -59,8 +60,11 @@ export default function Footer() {
                 </div>
 
                 <div className="pt-8 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div className="text-sm text-gray-400 font-medium">
-                        © 2026 Verality Inc. All rights reserved.
+                    <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-6">
+                        <div className="text-sm text-gray-400 font-medium">
+                            © 2026 Verality Inc. All rights reserved.
+                        </div>
+                        <WrenchCredits />
                     </div>
                     <div className="flex gap-8 text-sm font-semibold text-gray-500">
                         <Link href="/tos" className="hover:text-black">Terms</Link>
