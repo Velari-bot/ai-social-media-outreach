@@ -10,6 +10,22 @@ import { auth } from "@/lib/firebase";
 
 const tiers = [
     {
+        name: "Lite",
+        price: 29,
+        dailyLimit: 25,
+        monthlyVolume: "750",
+        costPerCreator: "0.04",
+        description: "For extension users.",
+        bestFor: "solo research",
+        features: [
+            "Browser Extension Access",
+            "750 Lookups / Month",
+            "Verified Emails",
+            "No Auto-Outreach",
+            "Export to CSV"
+        ]
+    },
+    {
         name: "Starter",
         price: 299,
         dailyLimit: 50,
@@ -96,6 +112,7 @@ function PricingContent() {
 
         // Next.js requires static access to process.env variables
         const priceIds: Record<string, string | undefined> = {
+            "Lite": process.env.NEXT_PUBLIC_STRIPE_PRICE_LITE,
             "Starter": process.env.NEXT_PUBLIC_STRIPE_PRICE_BASIC, // Reusing Basic ID likely, pending Stripe update
             "Growth": process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,   // Reusing Pro ID likely
         };
@@ -159,7 +176,7 @@ function PricingContent() {
                     </div>
 
                     {/* Pricing Grid */}
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch max-w-7xl mx-auto">
+                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 items-stretch max-w-7xl mx-auto">
                         {tiers.map((tier) => {
                             const isDark = tier.isDark;
 
