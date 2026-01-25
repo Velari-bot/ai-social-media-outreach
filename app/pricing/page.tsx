@@ -266,7 +266,7 @@ function PricingContent() {
                     {/* Credit Top Ups */}
                     <div className="max-w-4xl mx-auto mt-24 mb-20 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
                         <div className="text-center mb-10">
-                            <span className="text-xs font-bold uppercase tracking-widest text-purple-600 bg-purple-50 px-3 py-1 rounded-full border border-purple-100 mb-4 inline-block">Pay as you go</span>
+                            <span className="text-xs font-bold uppercase tracking-widest text-black bg-white px-3 py-1 rounded-full border border-gray-200 shadow-sm mb-4 inline-block">Pay as you go</span>
                             <h2 className="text-3xl md:text-4xl font-[800] text-[#1A1A1A] tracking-tight">Need extra credits?</h2>
                         </div>
                         <div className="grid md:grid-cols-3 gap-6">
@@ -275,9 +275,9 @@ function PricingContent() {
                                 { amount: "1,000 Credits", price: "$179", per: "$0.18 / credit", popular: true },
                                 { amount: "5,000 Credits", price: "$799", per: "$0.16 / credit", popular: false },
                             ].map((pack, i) => (
-                                <div key={i} className={`bg-white rounded-[24px] p-6 text-center shadow-lg border relative group cursor-pointer hover:-translate-y-1 transition-transform duration-300 ${pack.popular ? 'border-purple-500 ring-4 ring-purple-500/5' : 'border-gray-100 hover:border-gray-200'}`}>
+                                <div key={i} className={`bg-white rounded-[24px] p-6 text-center shadow-lg border relative group cursor-pointer hover:-translate-y-1 transition-transform duration-300 ${pack.popular ? 'border-2 border-black shadow-xl ring-1 ring-black/5' : 'border-gray-100 hover:border-black/50'}`}>
                                     {pack.popular && (
-                                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-purple-600 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-md">
+                                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg border border-white/20">
                                             Best Value
                                         </div>
                                     )}
@@ -285,8 +285,8 @@ function PricingContent() {
                                     <div className="text-4xl font-[800] text-[#1A1A1A] mb-1 tracking-tight">{pack.price}</div>
                                     <div className="text-xs text-gray-400 font-bold uppercase tracking-wide mb-6">{pack.per}</div>
                                     <button
-                                        className={`w-full py-3 rounded-xl font-bold text-sm transition-all shadow-sm active:scale-95 ${pack.popular ? 'bg-purple-600 text-white hover:bg-purple-700 shadow-purple-200' : 'bg-white text-black border-2 border-gray-100 hover:border-gray-900 hover:bg-gray-50'}`}
-                                        onClick={() => window.open('https://buy.stripe.com/test_topup', '_blank')} // Placeholder
+                                        className={`w-full py-3 rounded-xl font-bold text-sm transition-all shadow-sm active:scale-95 ${pack.popular ? 'bg-black text-white hover:bg-gray-800 shadow-black/20' : 'bg-white text-black border-2 border-gray-100 hover:border-black hover:bg-gray-50'}`}
+                                        onClick={() => window.open('https://buy.stripe.com/test_topup', '_blank')}
                                     >
                                         Top Up Now
                                     </button>
