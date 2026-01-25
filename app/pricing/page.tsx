@@ -11,7 +11,7 @@ import { auth } from "@/lib/firebase";
 const tiers = [
     {
         name: "Lite",
-        price: 29,
+        price: 49,
         dailyLimit: 25,
         monthlyVolume: "750",
         costPerCreator: "0.04",
@@ -27,7 +27,7 @@ const tiers = [
     },
     {
         name: "Starter",
-        price: 299,
+        price: 399,
         dailyLimit: 50,
         monthlyVolume: "1,500",
         costPerCreator: "0.20",
@@ -43,7 +43,7 @@ const tiers = [
     },
     {
         name: "Growth",
-        price: 599,
+        price: 799,
         dailyLimit: 150,
         monthlyVolume: "4,500",
         costPerCreator: "0.13",
@@ -261,6 +261,38 @@ function PricingContent() {
                                 </div>
                             );
                         })}
+                    </div>
+
+                    {/* Credit Top Ups */}
+                    <div className="max-w-4xl mx-auto mt-24 mb-20 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
+                        <div className="text-center mb-10">
+                            <span className="text-xs font-bold uppercase tracking-widest text-purple-600 bg-purple-50 px-3 py-1 rounded-full border border-purple-100 mb-4 inline-block">Pay as you go</span>
+                            <h2 className="text-3xl md:text-4xl font-[800] text-[#1A1A1A] tracking-tight">Need extra credits?</h2>
+                        </div>
+                        <div className="grid md:grid-cols-3 gap-6">
+                            {[
+                                { amount: "500 Credits", price: "$50", per: "$0.10 / credit", popular: false },
+                                { amount: "1,000 Credits", price: "$90", per: "$0.09 / credit", popular: true },
+                                { amount: "5,000 Credits", price: "$400", per: "$0.08 / credit", popular: false },
+                            ].map((pack, i) => (
+                                <div key={i} className={`bg-white rounded-[24px] p-6 text-center shadow-lg border relative group cursor-pointer hover:-translate-y-1 transition-transform duration-300 ${pack.popular ? 'border-purple-500 ring-4 ring-purple-500/5' : 'border-gray-100 hover:border-gray-200'}`}>
+                                    {pack.popular && (
+                                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-purple-600 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-md">
+                                            Best Value
+                                        </div>
+                                    )}
+                                    <div className="text-lg font-bold text-gray-900 mb-2">{pack.amount}</div>
+                                    <div className="text-4xl font-[800] text-[#1A1A1A] mb-1 tracking-tight">{pack.price}</div>
+                                    <div className="text-xs text-gray-400 font-bold uppercase tracking-wide mb-6">{pack.per}</div>
+                                    <button
+                                        className={`w-full py-3 rounded-xl font-bold text-sm transition-all shadow-sm active:scale-95 ${pack.popular ? 'bg-purple-600 text-white hover:bg-purple-700 shadow-purple-200' : 'bg-white text-black border-2 border-gray-100 hover:border-gray-900 hover:bg-gray-50'}`}
+                                        onClick={() => window.open('https://buy.stripe.com/test_topup', '_blank')} // Placeholder
+                                    >
+                                        Top Up Now
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
                     {/* Free Credits Banner */}
