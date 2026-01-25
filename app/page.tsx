@@ -53,12 +53,12 @@ export default function Home() {
         </div>
 
         <h1 className="text-5xl sm:text-7xl lg:text-[80px] font-bold text-gray-900 mb-6 tracking-tight leading-[1.1] max-w-5xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
-          The Autonomous <br className="hidden sm:block" />
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900">Creator Deal Engine.</span>
+          Verality turns cold creators into <br className="hidden sm:block" />
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900">signed deals — automatically.</span>
         </h1>
 
         <p className="text-lg sm:text-xl text-gray-600 mb-10 leading-relaxed font-medium max-w-2xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-200">
-          Stop managing tools. Start managing revenue. <br className="hidden md:inline" /> Input your niche and offer — Verality delivers signed deals.
+          Built for performance brands and agencies that need creator placements at scale. <br className="hidden md:inline" /> Stop managing tools. Start managing revenue.
         </p>
 
         {/* Public Creator Search Integration */}
@@ -79,6 +79,68 @@ export default function Home() {
           >
             View Demo
           </Link>
+        </div>
+      </section>
+
+      {/* VS Section (What Verality Replaces) - Infrastructure Positioning */}
+      <section className="px-6 pb-24 relative z-10">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-[32px] p-8 md:p-12 border border-gray-200 shadow-xl flex flex-col md:flex-row items-center gap-12 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-gray-200 to-green-500" />
+
+            {/* The Old Way */}
+            <div className="flex-1 w-full space-y-4">
+              <span className="text-xs font-bold text-red-500 uppercase tracking-widest mb-2 block">The Chaos You Have</span>
+              <ul className="space-y-3">
+                <li className="flex items-center gap-3 text-gray-400 font-medium line-through decoration-red-200 decoration-2">
+                  <span className="w-6 h-6 rounded-full bg-red-50 text-red-500 flex items-center justify-center text-xs font-black shrink-0">✕</span>
+                  Multiple VA salaries ($2k/mo+)
+                </li>
+                <li className="flex items-center gap-3 text-gray-400 font-medium line-through decoration-red-200 decoration-2">
+                  <span className="w-6 h-6 rounded-full bg-red-50 text-red-500 flex items-center justify-center text-xs font-black shrink-0">✕</span>
+                  Manual scraping & spreadsheets
+                </li>
+                <li className="flex items-center gap-3 text-gray-400 font-medium line-through decoration-red-200 decoration-2">
+                  <span className="w-6 h-6 rounded-full bg-red-50 text-red-500 flex items-center justify-center text-xs font-black shrink-0">✕</span>
+                  Inbox chaos & missed follow-ups
+                </li>
+                <li className="flex items-center gap-3 text-gray-400 font-medium line-through decoration-red-200 decoration-2">
+                  <span className="w-6 h-6 rounded-full bg-red-50 text-red-500 flex items-center justify-center text-xs font-black shrink-0">✕</span>
+                  Expensive search tools ($299/mo)
+                </li>
+              </ul>
+            </div>
+
+            {/* Divider */}
+            <div className="flex flex-row md:flex-col items-center gap-4 text-gray-300">
+              <div className="h-px w-12 md:w-px md:h-24 bg-gray-200" />
+              <div className="text-xs font-black uppercase tracking-widest bg-gray-100 px-2 py-1 rounded text-gray-400">vs</div>
+              <div className="h-px w-12 md:w-px md:h-24 bg-gray-200" />
+            </div>
+
+            {/* The Verality Way */}
+            <div className="flex-1 w-full space-y-4">
+              <span className="text-xs font-bold text-green-600 uppercase tracking-widest mb-2 block">The Engine You Need</span>
+              <ul className="space-y-3">
+                <li className="flex items-center gap-3 text-gray-900 font-bold">
+                  <span className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs font-black shrink-0">✓</span>
+                  One Automated Deal Engine
+                </li>
+                <li className="flex items-center gap-3 text-gray-900 font-bold">
+                  <span className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs font-black shrink-0">✓</span>
+                  Built-in Enrichment & Savings
+                </li>
+                <li className="flex items-center gap-3 text-gray-900 font-bold">
+                  <span className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs font-black shrink-0">✓</span>
+                  Autonomous Negotiation Agent
+                </li>
+                <li className="flex items-center gap-3 text-gray-900 font-bold">
+                  <span className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs font-black shrink-0">✓</span>
+                  Single Source of Truth
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       </section>
 
