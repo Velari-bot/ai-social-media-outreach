@@ -221,12 +221,15 @@ function SettingsContent() {
                 <div>
                   <div className="flex justify-between items-end mb-2">
                     <span className="text-sm font-medium text-gray-600">Daily Emails (Global)</span>
-                    <span className="text-sm font-bold text-black">{limits.email_used_today} / {limits.email_quota_daily}</span>
+                    <span className="text-sm font-bold text-black">
+                      {/* Calculate total sent from all connected accounts for accuracy */}
+                      {gmailAccounts.reduce((acc, curr) => acc + (curr.sent_today || 0), 0)} / {limits.email_quota_daily}
+                    </span>
                   </div>
                   <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-black transition-all duration-1000"
-                      style={{ width: `${(limits.email_used_today / limits.email_quota_daily) * 100}%` }}
+                      style={{ width: `${(Math.min(gmailAccounts.reduce((acc, curr) => acc + (curr.sent_today || 0), 0) / limits.email_quota_daily, 1)) * 100}%` }}
                     />
                   </div>
                   <p className="text-xs text-gray-400 mt-2">Resets every 24 hours</p>
@@ -234,12 +237,12 @@ function SettingsContent() {
                 <div>
                   <div className="flex justify-between items-end mb-2">
                     <span className="text-sm font-medium text-gray-600">Monthly Volume</span>
-                    <span className="text-sm font-bold text-black">{limits.email_used_today} / {limits.email_quota_monthly}</span>
+                    <span className="text-sm font-bold text-black">{limits.email_used_this_month} / {limits.email_quota_monthly}</span>
                   </div>
                   <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-blue-600 transition-all duration-1000"
-                      style={{ width: `${(limits.email_used_this_month / limits.email_quota_monthly) * 100}%` }}
+                      style={{ width: `${(Math.min(limits.email_used_this_month / limits.email_quota_monthly, 1)) * 100}%` }}
                     />
                   </div>
                   <p className="text-xs text-gray-400 mt-2">Based on your billing cycle</p>
