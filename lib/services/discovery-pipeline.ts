@@ -50,21 +50,25 @@ export class DiscoveryPipeline {
 
         // Processing Loop
         let keywordIndex = startingKeywordIndex || 0;
-        const TARGET_COUNT = Math.max(requestedCount, 50); // Ensure we aim for 50
+        const TARGET_COUNT = Math.max(requestedCount, 50);
         const MAX_KEYWORDS = 15;
+        const MAX_TOTAL_SCANS = TARGET_COUNT * 10; // Safety cap: don't scan more than 10x target
 
         // Progress Tracking
         let lastOffset = startingOffset || 0;
         let lastYoutubeToken = initialYoutubePageToken;
         let lastKeywordIndex = keywordIndex;
 
-        while (finalCreators.length < TARGET_COUNT && keywordIndex < searchKeywords.length) {
+        let totalEmailsFound = 0;
+        let totalScanned = 0;
+
+        while ((skipEnrichment ? finalCreators.length < TARGET_COUNT : totalEmailsFound < TARGET_COUNT) && keywordIndex < searchKeywords.length && totalScanned < MAX_TOTAL_SCANS) {
             const currentKeyword = searchKeywords[keywordIndex];
-            console.log(`[Discovery] Searching for keyword: "${currentKeyword}" (${finalCreators.length}/${TARGET_COUNT} found)`);
+            console.log(`[Discovery] Keyword: "${currentKeyword}" | Found: ${finalCreators.length} creators, ${totalEmailsFound} emails | Target: ${TARGET_COUNT}`);
 
             // AI Keyword Expansion
-            if (keywordIndex === searchKeywords.length - 1 && finalCreators.length < TARGET_COUNT && searchKeywords.length < MAX_KEYWORDS) {
-                console.log(`[Discovery] Almost out of keywords. Generating variations...`);
+            if (keywordIndex === searchKeywords.length - 1 && (skipEnrichment ? finalCreators.length < TARGET_COUNT : totalEmailsFound < TARGET_COUNT) && searchKeywords.length < MAX_KEYWORDS) {
+                console.log(`[Discovery] Expanding keywords...`);
                 const baseForExpansion = (filters.niche && filters.niche.trim() !== '') ? filters.niche : currentKeyword;
                 const newKeywords = await this.generateRelatedKeywords(baseForExpansion, 10);
                 for (const k of newKeywords) {
@@ -77,16 +81,14 @@ export class DiscoveryPipeline {
             const currentFilters = { ...filters, niche: currentKeyword };
             let currentOffset = (keywordIndex === (startingKeywordIndex || 0) && startingOffset) ? startingOffset : 0;
             let keywordRetries = 0;
-            const MAX_RETRIES_PER_KEYWORD = 20; // Allow skipping large backlogs
+            const MAX_RETRIES_PER_KEYWORD = 30; // Increased to allow deep paging to find emails
             let youtubePageToken: string | undefined = (keywordIndex === (startingKeywordIndex || 0)) ? initialYoutubePageToken : undefined;
 
             // Inner Loop: Paging through results for this keyword
-            while (keywordRetries <= MAX_RETRIES_PER_KEYWORD && finalCreators.length < TARGET_COUNT) {
+            while (keywordRetries <= MAX_RETRIES_PER_KEYWORD && (skipEnrichment ? finalCreators.length < TARGET_COUNT : totalEmailsFound < TARGET_COUNT) && totalScanned < MAX_TOTAL_SCANS) {
                 try {
                     let externalResults = [];
-
-                    // Per user instruction: Always use Influencer Club for website discovery, regardless of platform.
-                    // YouTube API is reserved for the browser extension.
+                    // Always use Influencer Club
                     externalResults = await influencerClubClient.discoverCreators({
                         platform,
                         filters: currentFilters,
@@ -97,10 +99,11 @@ export class DiscoveryPipeline {
                     if (externalResults && externalResults.length > 0) {
                         externalFetches += externalResults.length;
                         creditsConsumed += 1;
+                        totalScanned += externalResults.length;
 
-                        let addedThisPage = 0;
+                        let pageBatch: Creator[] = [];
+
                         for (const raw of externalResults) {
-                            if (finalCreators.length >= TARGET_COUNT) break;
                             const creator = await this.resolveCreator(raw, platform);
 
                             // MANAGEMENT CHECK
@@ -115,16 +118,39 @@ export class DiscoveryPipeline {
                             if (finalCreators.some(c => c.id === creator.id)) continue;
 
                             if (!userSeenIds.has(String(creator.id))) {
-                                finalCreators.push(creator);
+                                pageBatch.push(creator);
                                 userSeenIds.add(String(creator.id));
-                                addedThisPage++;
                             }
                         }
-                        console.log(`[Discovery] Keyword "${currentKeyword}" (Off: ${currentOffset}) found ${addedThisPage} NEW creators.`);
+
+                        // ENRICH BATCH IMMEDIATELY
+                        if (!skipEnrichment && pageBatch.length > 0) {
+                            console.log(`[Discovery] Enriching batch of ${pageBatch.length} creators...`);
+                            const enrichedBatch = await this.bulkEnrichWithClay(pageBatch, userId, campaignId);
+
+                            // Add to final list
+                            finalCreators.push(...enrichedBatch);
+
+                            // Count and Queue Emails
+                            const validInBatch = enrichedBatch.filter(c => c.email && c.email.includes('@') && (c.enrichment_status === 'enriched' || c.email_found));
+                            totalEmailsFound += validInBatch.length;
+
+                            const idsToQueue = validInBatch.map(c => String(c.id));
+
+                            if (idsToQueue.length > 0) {
+                                console.log(`[Discovery] +${idsToQueue.length} emails found & queued.`);
+                                await addCreatorsToQueue(idsToQueue, userId, campaignId);
+                            }
+                        } else {
+                            // No enrichment needed
+                            finalCreators.push(...pageBatch);
+                        }
+
+                        console.log(`[Discovery] Progress: ${totalEmailsFound}/${TARGET_COUNT} emails.`);
                     }
 
                     if (!externalResults || externalResults.length === 0 || (platform === 'youtube' && !youtubePageToken)) {
-                        lastOffset = 0; // Reset offset for next keyword
+                        lastOffset = 0;
                         lastYoutubeToken = undefined;
                         break;
                     }
@@ -139,104 +165,6 @@ export class DiscoveryPipeline {
             }
             lastKeywordIndex = keywordIndex;
             keywordIndex++;
-        }
-
-        console.log(`[Discovery] Pipeline Complete. Found ${finalCreators.length} unique creators.`);
-
-        // --- RIGOROUS YT VIEW VERIFICATION ---
-        const minAvgViews = Number(filters.min_avg_views || 0);
-        const hasYoutubeKey = !!process.env.YOUTUBE_API_KEY;
-
-        if (platform === 'youtube' && minAvgViews > 0 && finalCreators.length > 0) {
-
-            if (!hasYoutubeKey) {
-                console.log(`[Discovery] YOUTUBE_API_KEY missing. Skipping rigorous verification and trusting Influencer Club results.`);
-                // If we rely on IC, we assume the creators meet the criteria. 
-                // We'll leave avg_views as-is (likely 0 or undefined from IC), or could patch it.
-            } else {
-                console.log(`[Discovery] Verifying actual views for ${finalCreators.length} YouTube creators...`);
-                const { batchVerifyYoutubeViews } = await import('./youtube-email-extractor');
-
-                const channelIds = finalCreators.map(c => c.verality_id || String(c.id));
-                const realViews = await batchVerifyYoutubeViews(channelIds);
-
-                // Update all creators with real view counts for accurate ranking
-                finalCreators.forEach(c => {
-                    const avg = realViews[c.verality_id || String(c.id)];
-                    if (avg !== undefined) c.avg_views = avg;
-                });
-
-                // Level 1: Strict Match
-                let verifiedCreators = finalCreators.filter(c => (c.avg_views || 0) >= minAvgViews);
-                console.log(`[Discovery] Strict View Check (>=${minAvgViews}): Found ${verifiedCreators.length}`);
-
-                // Level 2: Soft Match (50% threshold) if strict failed to find enough
-                if (verifiedCreators.length < 5) {
-                    console.log(`[Discovery] Strict check yielded low results. Relaxing threshold to 50% (${minAvgViews * 0.5}+)...`);
-                    verifiedCreators = finalCreators.filter(c => (c.avg_views || 0) >= (minAvgViews * 0.5));
-                    console.log(`[Discovery] Soft Match Found: ${verifiedCreators.length}`);
-                }
-
-                // Level 3: "Best Effort" - If we still have 0, take top performers found locally
-                if (verifiedCreators.length === 0) {
-                    console.log(`[Discovery] View verification failed to match target. Returning top 10 available creators (Best Effort).`);
-                    // Sort by views descending and take top 10
-                    verifiedCreators = finalCreators
-                        .sort((a, b) => (b.avg_views || 0) - (a.avg_views || 0))
-                        .slice(0, 10);
-                }
-
-                finalCreators = verifiedCreators;
-                console.log(`[Discovery] Final Verified Count: ${finalCreators.length}`);
-            }
-        }
-
-        // --- ELITE RANKING LOGIC ---
-        finalCreators = finalCreators.map(creator => {
-            const followers = creator.followers || 1;
-            const engagement = creator.engagement_rate || 0;
-            const avgViews = creator.avg_views || 0;
-
-            const sizeScore = Math.min(Math.log10(followers) / 9, 1) * 0.15; // Subs matter less
-            const engagementScore = Math.min(engagement * 20, 1) * 0.45; // Real engagement matters most
-            const viewScore = Math.min(Math.log10(avgViews || 1) / 6.5, 1.2) * 0.4; // Massively weight huge view counts
-
-            // Quality Penalty: Penalize if subs are high but views are disproportionately low
-            const performanceRatio = avgViews / Math.max(followers, 1000);
-            const qualityMultiplier = performanceRatio < 0.02 ? 0.3 : performanceRatio > 0.5 ? 1.3 : 1.0;
-
-            const totalScore = (engagementScore + sizeScore + viewScore) * qualityMultiplier;
-
-            // Generate Insight Tag if missing
-            let insightTag = creator.insight_tag || "Relevant Match";
-            if (performanceRatio > 1.0) insightTag = "Viral Sensation";
-            else if (followers > 100000 && performanceRatio > 0.2) insightTag = "Top Tier Creator";
-            else if (followers > 100000) insightTag = "Established Authority";
-            else if (performanceRatio > 0.5) insightTag = "High Engagement";
-
-            return {
-                ...creator,
-                ranking_score: totalScore,
-                insight_tag: insightTag
-            };
-        });
-
-        finalCreators.sort((a: any, b: any) => (b.ranking_score || 0) - (a.ranking_score || 0));
-
-        // 5. Enrichment
-        if (!skipEnrichment && finalCreators.length > 0) {
-            console.log(`[Discovery] Sending ${finalCreators.length} creators to Clay...`);
-            finalCreators = await this.bulkEnrichWithClay(finalCreators, userId, campaignId);
-
-            // Automatically queue found emails
-            const enrichedIds = finalCreators
-                .filter(c => c.email && c.email.includes('@') && (c.enrichment_status === 'enriched' || c.email_found))
-                .map(c => String(c.id));
-
-            if (enrichedIds.length > 0) {
-                console.log(`[Discovery] Automatically queuing ${enrichedIds.length} creators for outreach...`);
-                await addCreatorsToQueue(enrichedIds, userId, campaignId);
-            }
         }
 
         return {
