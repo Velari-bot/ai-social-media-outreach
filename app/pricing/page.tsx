@@ -271,9 +271,9 @@ function PricingContent() {
                         </div>
                         <div className="grid md:grid-cols-3 gap-6">
                             {[
-                                { amount: "500 Credits", price: "$50", per: "$0.10 / credit", popular: false },
-                                { amount: "1,000 Credits", price: "$90", per: "$0.09 / credit", popular: true },
-                                { amount: "5,000 Credits", price: "$400", per: "$0.08 / credit", popular: false },
+                                { amount: "500 Credits", price: "$99", per: "$0.20 / credit", popular: false },
+                                { amount: "1,000 Credits", price: "$179", per: "$0.18 / credit", popular: true },
+                                { amount: "5,000 Credits", price: "$799", per: "$0.16 / credit", popular: false },
                             ].map((pack, i) => (
                                 <div key={i} className={`bg-white rounded-[24px] p-6 text-center shadow-lg border relative group cursor-pointer hover:-translate-y-1 transition-transform duration-300 ${pack.popular ? 'border-purple-500 ring-4 ring-purple-500/5' : 'border-gray-100 hover:border-gray-200'}`}>
                                     {pack.popular && (
