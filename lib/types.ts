@@ -56,6 +56,31 @@ export interface FirestoreCreator {
   [key: string]: any;
 }
 
+/**
+ * A/B Test Variant Configuration
+ */
+export interface ABTestVariant {
+  subject_line?: string;
+  cta_text?: string;
+  email_body?: string; // Optional: full body override
+}
+
+/**
+ * A/B Test Configuration for Campaigns
+ */
+export interface ABTestConfig {
+  enabled: boolean;
+  variant_a: ABTestVariant;
+  variant_b: ABTestVariant;
+  // Results tracking (calculated)
+  variant_a_sent?: number;
+  variant_b_sent?: number;
+  variant_a_replies?: number;
+  variant_b_replies?: number;
+  variant_a_interested?: number;
+  variant_b_interested?: number;
+}
+
 export interface DiscoveryPipelineResponse {
   creators: Creator[];
   meta: {
@@ -77,6 +102,8 @@ export interface SearchRequest {
   filters_hash: string;
   requested_count: number;
   created_at: string;
+  // A/B Testing
+  ab_test?: ABTestConfig;
 }
 
 export interface UsageCounters {
@@ -152,6 +179,16 @@ export interface AvailabilitySlot {
   endTime: string; // ISO string
   isBooked: boolean;
 }
+
+export type IntentState =
+  | 'price_inquiry'
+  | 'interested'
+  | 'interested_but_busy'
+  | 'needs_more_info'
+  | 'agency_response'
+  | 'not_interested'
+  | 'out_of_office'
+  | 'unknown';
 
 export interface BookingDetails {
   name: string;

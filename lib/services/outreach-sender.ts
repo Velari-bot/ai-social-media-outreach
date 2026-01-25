@@ -8,6 +8,7 @@ import { db } from '../firebase-admin';
 import { google } from 'googleapis';
 import OpenAI from 'openai';
 import { Timestamp } from 'firebase-admin/firestore';
+import { processEmailForUTMs } from './utm-injection-service';
 
 let openai_inst: OpenAI | null = null;
 function getOpenAI() {
@@ -203,6 +204,27 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
             oauth2Client.setCredentials({ refresh_token: selectedAccount.refresh_token });
             const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
+            // A/B Test: Assign variant at send time
+            let assignedVariant: 'A' | 'B' | undefined;
+            let variantContent: { subject?: string; cta?: string; body?: string } = {};
+
+            if (emailItem.campaign_id) {
+                const campaignDoc = await db.collection('creator_requests').doc(emailItem.campaign_id).get();
+                const campaignData = campaignDoc.data();
+                const abTest = campaignData?.ab_test;
+
+                if (abTest && abTest.enabled) {
+                    const { assignVariant, getVariantContent } = await import('./ab-test-service');
+                    assignedVariant = assignVariant();
+                    variantContent = getVariantContent(
+                        abTest,
+                        assignedVariant,
+                        userData.outreach_subject_line,
+                        userData.outreach_persona_message
+                    );
+                }
+            }
+
             // Generate AI email (Personalized from this specific email address)
             const emailContent = await generateOutreachEmail({
                 creatorName: emailItem.creator_name || emailItem.creator_handle,
@@ -211,15 +233,24 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
                 userName: userName,
                 userEmail: sendingEmail, // Send from selected account
                 persona: settings.ai_persona || "Cory from Beyond Vision",
-                templateBody: userData.outreach_persona_message,
-                templateSubject: userData.outreach_subject_line
+                templateBody: variantContent.body || userData.outreach_persona_message,
+                templateSubject: variantContent.subject || userData.outreach_subject_line,
+                ctaText: variantContent.cta
             });
+
+            // UTM Injection for Attribution
+            const { processedBody, linksFound } = processEmailForUTMs(
+                emailContent.body,
+                emailItem.campaign_id ? String(emailItem.campaign_id) : 'organic',
+                emailItem.campaign_name, // If we had this, but campagn_id is good enough
+                String(emailItem.creator_id)
+            );
 
             // Send via Gmail
             const result = await sendGmailMessage(gmail, {
                 to: emailItem.creator_email,
                 subject: emailContent.subject,
-                body: emailContent.body,
+                body: processedBody, // Use body with UTMs
                 userEmail: sendingEmail
             });
 
@@ -271,6 +302,8 @@ async function sendEmailsForUser(userId: string, emails: any[]) {
                 email_subject: emailContent.subject,
                 email_body: emailContent.body,
                 sent_from_email: sendingEmail,
+                ab_test_variant: assignedVariant, // Store variant for tracking
+                links_sent: linksFound, // Track which links were included
                 updated_at: Timestamp.now()
             });
 
@@ -388,8 +421,9 @@ async function generateOutreachEmail(params: {
     persona: string;
     templateBody?: string;
     templateSubject?: string;
+    ctaText?: string;
 }): Promise<{ subject: string; body: string }> {
-    const { creatorName, creatorHandle, creatorPlatform, userName, userEmail, persona, templateBody, templateSubject } = params;
+    const { creatorName, creatorHandle, creatorPlatform, userName, userEmail, persona, templateBody, templateSubject, ctaText } = params;
 
     // 1. STRICT TEMPLATE MODE
     if (templateBody && templateBody.trim().length > 10) {

@@ -140,29 +140,37 @@ async function processAllThreads(targetEmail: string, skipDelay: boolean = false
             }
             const completion = await openai.chat.completions.create({
                 model: "gpt-4o",
+                response_format: { type: "json_object" },
                 messages: [
                     {
                         role: "system",
-                        content: `You are Cory, a Campaign Manager at Beyond Vision. You are negotiating with a Creator (or their manager).
-                        
-                        **YOUR STYLE (Based on proven examples)**:
+                        content: `You are Cory, a Campaign Manager at Beyond Vision. You are negotiating with a Creator.
+
+                        **OUTPUT FORMAT**:
+                        You must return a JSON object with:
+                        - "intent": One of ["price_inquiry", "interested", "interested_but_busy", "needs_more_info", "agency_response", "not_interested", "out_of_office", "unknown"]
+                        - "reply_text": The email body reply (or "IGNORE" if no reply needed).
+                        - "reasoning": Brief explanation of why you chose this intent.
+
+                        **INTENT DEFINITIONS**:
+                        - "price_inquiry": They asked about budget, rates, or payment.
+                        - "interested": They said yes or positive sentiment.
+                        - "interested_but_busy": Positive but deferred timing.
+                        - "needs_more_info": Asked for brief, brand info, or details.
+                        - "agency_response": "Talk to my manager" or "Contact my agent".
+                        - "not_interested": Explicit no.
+                        - "out_of_office": Auto-reply.
+
+                        **YOUR STYLE**:
                         - Start with: "Thanks for that!" or "Great to hear from you!"
                         - Tone: Friendly, professional, upbeat, but direct.
-                        - You are looking for specific rates for campaigns like "Sheglam".
+                        - GOAL 1: **Flat Rate in USD** for "1x TikTok post" or "Sound Promo".
+                        - GOAL 2: **Phone Number** (theirs or manager's).
 
-                        **YOUR SPECIFIC GOALS**:
-                        1. **Flat Rate in USD** for a "1x TikTok post" or "Sound Promo". (If they give a range, ask for a specific flat USD rate).
-                        2. **Phone Number**: Always ask for a phone number (theirs or a manager's) for "drafting purposes". Request include international dialing code (e.g., +1).
-
-                        **SIGN OFF**:
-                        Sign off ONLY as "Best, Cory" or "Best, Cory Hodkinson".
-                        
                         **RULES**:
                         1. Always be polite and direct.
                         2. NEVER suggest a call or Zoom.
-                        3. Confirm the rate per video or ask for it if not known.
-                        
-                        If they seem uninterested 2+ times, reply "IGNORE".`
+                        3. If they seem uninterested 2+ times, set reply_text to "IGNORE".`
                     },
                     {
                         role: "user",
@@ -171,7 +179,31 @@ async function processAllThreads(targetEmail: string, skipDelay: boolean = false
                 ],
             });
 
-            const aiText = completion.choices[0].message.content || '';
+            const content = completion.choices[0].message.content || '{}';
+            let aiData: { intent?: string; reply_text?: string; reasoning?: string } = {};
+
+            try {
+                aiData = JSON.parse(content);
+            } catch (e) {
+                console.error("Failed to parse AI JSON response", e);
+                aiData = { reply_text: content, intent: 'unknown' }; // Fallback
+            }
+
+            const aiText = aiData.reply_text || '';
+            const detectedIntent = aiData.intent || 'unknown';
+
+            // Store ID to update DB
+            const threadId = th.id!;
+
+            // Update Thread Intent in DB (Fire & Forget)
+            db.collection('email_threads').doc(threadId).set({
+                intent: detectedIntent,
+                intent_confidence: 1.0, // Placeholder
+                intent_updated_at: new Date(),
+                ai_last_reasoning: aiData.reasoning || '',
+                // Ensure other fields exist if record is new (fallback)
+                status: (detectedIntent === 'not_interested') ? 'closed' : 'active'
+            }, { merge: true }).catch(err => console.error(`Failed to update intent for ${threadId}:`, err));
 
             if (aiText.trim() === 'IGNORE') {
                 // Mark as read and skip

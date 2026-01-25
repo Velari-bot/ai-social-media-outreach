@@ -438,9 +438,24 @@ export class DiscoveryPipeline {
 
         const results = await Promise.all(enrichmentPromises);
 
+        // Track Cost Savings (Differentiator)
+        if (youtubeSuccesses > 0) {
+            const SAVINGS_PER_HIT = 0.10; // $0.10 per contact
+            const totalSaved = youtubeSuccesses * SAVINGS_PER_HIT;
+
+            try {
+                // Increment user's lifetime savings
+                await db.collection('user_accounts').doc(userId).update({
+                    lifetime_savings_usd: require('firebase-admin/firestore').FieldValue.increment(totalSaved)
+                });
+            } catch (e) {
+                console.error('Failed to update user savings', e);
+            }
+        }
+
         // Log stats
         console.log(`[Enrichment Stats] YouTube: ${youtubeSuccesses}, Clay: ${clayFallbacks}, Failed: ${totalFailures}`);
-        console.log(`[Enrichment Stats] 💰 Saved ${youtubeSuccesses} Clay API calls!`);
+        console.log(`[Enrichment Stats] 💰 Saved ${youtubeSuccesses} Clay API calls ($${(youtubeSuccesses * 0.10).toFixed(2)})!`);
 
         return results;
     }

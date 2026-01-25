@@ -384,6 +384,41 @@ function SettingsContent() {
                   <p className="text-xs text-gray-400 italic mt-2">
                     This subject line will be used for the first email. Leave blank for AI generated.
                   </p>
+
+                  {/* Subject Line Spam Check */}
+                  {subjectLine && (
+                    <div className="mt-2 text-xs">
+                      {(() => {
+                        let score = 100;
+                        const warnings: string[] = [];
+                        const lower = subjectLine.toLowerCase();
+                        const triggers = ['free', 'guarantee', 'winner', 'cash', '$$$', 'urgent', '100%', 'risk-free', 'buy now', 'promotion', 'marketing', 'dear friend', 'act now', 'limited time'];
+
+                        triggers.forEach(t => { if (lower.includes(t)) { score -= 15; warnings.push(`Trigger word: "${t}"`); } });
+                        if (subjectLine.length > 10 && subjectLine.replace(/[^A-Z]/g, "").length / subjectLine.length > 0.4) { score -= 20; warnings.push("Too many CAPITALS"); }
+                        if (subjectLine.includes('!!!') || subjectLine.includes('???')) { score -= 10; warnings.push("Excessive punctuation"); }
+                        if (subjectLine.trim().startsWith('Re:') || subjectLine.trim().startsWith('Fwd:')) { score -= 10; warnings.push("Avoid fake Re:/Fwd:"); }
+
+                        const color = score >= 90 ? 'text-green-600' : score >= 70 ? 'text-yellow-600' : 'text-red-500';
+                        const bg = score >= 90 ? 'bg-green-50' : score >= 70 ? 'bg-yellow-50' : 'bg-red-50';
+
+                        return (
+                          <div className={`p-3 rounded-lg border ${bg} border-transparent flex justify-between items-start gap-4`}>
+                            <div>
+                              <div className={`font-black ${color} flex items-center gap-1 uppercase tracking-wider text-[10px]`}>
+                                Subject Health: {score}/100
+                              </div>
+                              {warnings.length > 0 && (
+                                <ul className="mt-1 space-y-0.5">
+                                  {warnings.map((w, i) => <li key={i} className={`text-[10px] font-medium ${color}`}>• {w}</li>)}
+                                </ul>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
                 </label>
 
                 <label className="block">
@@ -400,6 +435,50 @@ function SettingsContent() {
                     onChange={(e) => setPersonaMessage(e.target.value)}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 text-black placeholder:text-gray-400 font-medium min-h-[200px] leading-relaxed resize-y"
                   />
+
+                  {/* Body Spam Check */}
+                  {personaMessage && (
+                    <div className="mt-3">
+                      {(() => {
+                        let score = 100;
+                        const warnings: string[] = [];
+                        const lower = personaMessage.toLowerCase();
+                        const triggers = ['free', 'guarantee', 'winner', 'cash', '$$$', 'urgent', '100%', 'risk-free', 'buy now', 'promotion', 'marketing', 'dear friend', 'click here', 'subscribe', 'amazing', 'opportunity'];
+
+                        triggers.forEach(t => { if (lower.includes(t)) { score -= 10; warnings.push(`Trigger word: "${t}"`); } });
+                        if (personaMessage.replace(/[^A-Z]/g, "").length / personaMessage.length > 0.3) { score -= 20; warnings.push("Too many CAPITALS"); }
+                        if ((personaMessage.match(/http/g) || []).length > 2) { score -= 10; warnings.push("Too many links (keep < 2)"); }
+                        if (personaMessage.length > 2000) { score -= 10; warnings.push("Email is too long > 2000 chars"); }
+
+                        const color = score >= 90 ? 'text-green-600' : score >= 70 ? 'text-yellow-600' : 'text-red-500';
+                        const bg = score >= 90 ? 'bg-green-50' : score >= 70 ? 'bg-yellow-50' : 'bg-red-50';
+                        const borderColor = score >= 90 ? 'border-green-100' : score >= 70 ? 'border-yellow-100' : 'border-red-100';
+
+                        return (
+                          <div className={`p-4 rounded-xl border-2 ${borderColor} ${bg} transition-all`}>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className={`font-black ${color} flex items-center gap-2 uppercase tracking-wider text-xs`}>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                Deliverability Score: {score}/100
+                              </div>
+                              {score < 100 && <span className="text-[10px] font-bold bg-white/50 px-2 py-0.5 rounded text-gray-500">Fix Issues</span>}
+                            </div>
+                            {warnings.length > 0 ? (
+                              <div className="space-y-1">
+                                {warnings.map((w, i) => (
+                                  <div key={i} className="flex items-start gap-2 text-xs font-medium text-gray-700">
+                                    <span className={`${color}`}>•</span> {w}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-green-700 font-medium">✨ Great job! This email has a low risk of hitting spam.</p>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
                 </label>
               </div>
             </div>

@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import Navbar from "@/components/Navbar";
 import DemoDashboard from "@/components/demo/DemoDashboard";
 import SubscriptionGuard from "@/components/SubscriptionGuard";
+import OutcomeMetricsPanel from "@/components/OutcomeMetricsPanel";
 import { Eye, X, ExternalLink, Youtube, Instagram, Music, Globe, Mail, MapPin, Users, Info, Loader2, Download } from "lucide-react";
 
 interface DashboardMetrics {
@@ -21,6 +22,7 @@ interface DashboardMetrics {
   totalCredits: number;
   creditsUsed: number;
   creditsRemaining: number;
+  lifetimeSavings: number;
 }
 
 interface SystemStatus {
@@ -70,6 +72,7 @@ function DashboardContent() {
     totalCredits: 0,
     creditsUsed: 0,
     creditsRemaining: 0,
+    lifetimeSavings: 0,
   });
 
   const [status, setStatus] = useState<SystemStatus>({
@@ -125,6 +128,7 @@ function DashboardContent() {
             totalCredits: 0,
             creditsUsed: 0,
             creditsRemaining: 0,
+            lifetimeSavings: 0,
           });
         }
 
@@ -144,6 +148,7 @@ function DashboardContent() {
             // If we want total emails sent today to match usage, we can override, 
             // but stats.totalEmailsSent might be historical. We'll stick to stats for historical if available.
             // But actually, the dashboard tile says "Emails Sent". Usually implies total.
+            lifetimeSavings: accountRes.account.lifetime_savings_usd || 0
           }));
         }
 
@@ -460,7 +465,17 @@ function DashboardContent() {
             color="bg-white border-2 border-green-100"
             textColor="text-green-900"
           />
+          <StatTile
+            label="ENRICHMENT SAVED"
+            value={`$${(metrics.lifetimeSavings || 0).toFixed(2)}`}
+            suffix="all time"
+            color="bg-purple-900 border-2 border-purple-900 shadow-xl"
+            textColor="text-white"
+          />
         </div>
+
+        {/* Outcome Metrics Panel - Priority #1 */}
+        <OutcomeMetricsPanel />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
           {/* Main Feed: Campaigns & Activity */}

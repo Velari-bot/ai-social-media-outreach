@@ -53,12 +53,12 @@ export default function Home() {
         </div>
 
         <h1 className="text-5xl sm:text-7xl lg:text-[80px] font-bold text-gray-900 mb-6 tracking-tight leading-[1.1] max-w-5xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
-          Your Outreach. <br className="hidden sm:block" />
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900">Smarter. Faster. Personal.</span>
+          The Autonomous <br className="hidden sm:block" />
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900">Creator Deal Engine.</span>
         </h1>
 
         <p className="text-lg sm:text-xl text-gray-600 mb-10 leading-relaxed font-medium max-w-2xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-200">
-          Stop manual searching. Start closing deals. Verality automates the entire creator outreach lifecycle—from discovery to signed contract.
+          Stop managing tools. Start managing revenue. <br className="hidden md:inline" /> Input your niche and offer — Verality delivers signed deals.
         </p>
 
         {/* Public Creator Search Integration */}
@@ -189,8 +189,8 @@ export default function Home() {
                 <div className="w-14 h-14 bg-black text-white rounded-2xl flex items-center justify-center mb-8 shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
                   <Search className="w-7 h-7" />
                 </div>
-                <h3 className="text-3xl font-black mb-4 text-gray-900 tracking-tight">AI-Powered Creator Search</h3>
-                <p className="text-gray-500 text-lg font-medium leading-relaxed">Find the perfect creators instantly. Filter by engagement rate, keywords, niche, and follower counts across all major platforms. Our AI parses millions of bio's to find exact matches.</p>
+                <h3 className="text-3xl font-black mb-4 text-gray-900 tracking-tight">Autonomous Deal Sourcing</h3>
+                <p className="text-gray-500 text-lg font-medium leading-relaxed">Don&apos;t just &quot;search&quot;. Verality actively identifies creators with high intent, fetches their contact info, and qualifies them for your specific offer automatically.</p>
               </div>
               <div className="absolute top-1/2 right-0 -translate-y-1/2 opacity-[0.03] hidden lg:block group-hover:opacity-[0.06] group-hover:scale-110 transition-all duration-700">
                 <Search className="w-80 h-80" />
@@ -214,8 +214,8 @@ export default function Home() {
                 <div className="w-12 h-12 bg-purple-600 text-white rounded-xl flex items-center justify-center mb-8 shadow-lg shadow-purple-600/20 group-hover:-rotate-12 transition-transform duration-300">
                   <BarChart3 className="w-6 h-6" />
                 </div>
-                <h3 className="text-2xl font-bold mb-4 text-gray-900">Live Pipeline</h3>
-                <p className="text-gray-500 font-medium leading-relaxed">Kanban-style board to track every relationship. Drag and drop creators through your custom deal flow.</p>
+                <h3 className="text-2xl font-bold mb-4 text-gray-900">Automated Negotiation</h3>
+                <p className="text-gray-500 font-medium leading-relaxed">Our AI agent handles the back-and-forth. It negotiates rates, answers FAQ, and only loops you in when the deal is ready to sign.</p>
               </div>
             </div>
 

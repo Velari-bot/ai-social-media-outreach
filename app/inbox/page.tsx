@@ -38,6 +38,7 @@ interface Reply {
     tiktok_rate?: number;
     sound_promo_rate?: number;
     key_points?: string[];
+    intent?: string; // One of IntentState
   };
   connectedAccount?: string;
 }
@@ -97,7 +98,8 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
             connectedAccount: msg.connectedAccount,
             insights: {
               ...msg.insights,
-              key_points: msg.insights?.key_points || []
+              key_points: msg.insights?.key_points || [],
+              intent: msg.insights?.intent || 'unknown'
             },
             thread: msg.fullThread?.map((bm: any) => ({
               id: bm.id,
@@ -371,6 +373,37 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
 
                 <div className="space-y-4">
 
+                  {/* Detected Intent */}
+                  <div className={`p-4 rounded-xl border-2 flex items-center justify-between shadow-sm transition-all ${selectedReply.insights?.intent === 'price_inquiry' ? 'bg-green-50 border-green-200' :
+                      selectedReply.insights?.intent === 'interested' ? 'bg-yellow-50 border-yellow-200' :
+                        selectedReply.insights?.intent === 'interested_but_busy' ? 'bg-orange-50 border-orange-200' :
+                          selectedReply.insights?.intent === 'not_interested' ? 'bg-red-50 border-red-100' :
+                            selectedReply.insights?.intent === 'agency_response' ? 'bg-purple-50 border-purple-200' :
+                              'bg-white border-gray-100'
+                    }`}>
+                    <div>
+                      <div className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-0.5">
+                        Detected Intent
+                      </div>
+                      <div className={`text-sm font-black ${selectedReply.insights?.intent === 'price_inquiry' ? 'text-green-700' :
+                          selectedReply.insights?.intent === 'interested' ? 'text-yellow-700' :
+                            selectedReply.insights?.intent === 'interested_but_busy' ? 'text-orange-700' :
+                              selectedReply.insights?.intent === 'not_interested' ? 'text-red-500' :
+                                selectedReply.insights?.intent === 'agency_response' ? 'text-purple-700' :
+                                  'text-gray-700'
+                        }`}>
+                        {selectedReply.insights?.intent === 'price_inquiry' && '💰 Price Inquiry'}
+                        {selectedReply.insights?.intent === 'interested' && '⭐ Interested'}
+                        {selectedReply.insights?.intent === 'interested_but_busy' && '🕒 Interested (Busy)'}
+                        {selectedReply.insights?.intent === 'needs_more_info' && '❓ Needs Info'}
+                        {selectedReply.insights?.intent === 'agency_response' && '🏢 Agency'}
+                        {selectedReply.insights?.intent === 'not_interested' && '❌ Not Interested'}
+                        {selectedReply.insights?.intent === 'out_of_office' && '🌴 OOO'}
+                        {(selectedReply.insights?.intent === 'unknown' || !selectedReply.insights?.intent) && '⚪ Analyzing...'}
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Key Points Section */}
                   <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm transition-all hover:scale-[1.02]">
                     <div className="text-xs font-semibold text-gray-400 mb-2 flex items-center gap-1">
@@ -424,14 +457,81 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
                 </div>
               </div>
 
-              {/* Quick Actions (Future placeholder) */}
-              <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl p-6 shadow-lg text-white">
-                <h3 className="font-bold text-sm mb-2">Campaign Status</h3>
-                <p className="text-xs text-gray-400 mb-4">This creator is currently active in your outreach campaign.</p>
-                <div className="flex items-center gap-2 text-xs font-mono bg-white/10 p-2 rounded-lg">
-                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                  Status: ACTIVE
-                </div>
+              {/* Deal Tracking Actions */}
+              <div className="bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl p-6 shadow-lg text-white space-y-3">
+                <h3 className="font-bold text-sm mb-2 flex items-center gap-2">
+                  <DollarSign size={16} />
+                  Deal Tracking
+                </h3>
+                <p className="text-xs text-purple-100 mb-4">Mark this conversation&apos;s status for outcome metrics</p>
+
+                <button
+                  onClick={async () => {
+                    if (!selectedReply?.threadId) return;
+                    const toastId = toast.loading('Marking as deal...');
+                    try {
+                      const { getCurrentUser } = await import("@/lib/auth-helpers");
+                      const user = await getCurrentUser();
+                      const token = await user?.getIdToken();
+
+                      const res = await fetch('/api/user/threads/mark-deal', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ threadId: selectedReply.threadId })
+                      });
+
+                      const data = await res.json();
+                      if (data.success) {
+                        toast.success('Marked as deal started! 🎉', { id: toastId });
+                      } else {
+                        toast.error('Failed to mark as deal', { id: toastId });
+                      }
+                    } catch (e) {
+                      toast.error('Error marking as deal', { id: toastId });
+                    }
+                  }}
+                  className="w-full py-3 bg-white text-purple-600 rounded-xl font-bold hover:bg-purple-50 transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                >
+                  <DollarSign size={16} />
+                  Mark as Deal Started
+                </button>
+
+                <button
+                  onClick={async () => {
+                    if (!selectedReply?.threadId) return;
+                    const toastId = toast.loading('Marking as interested...');
+                    try {
+                      const { getCurrentUser } = await import("@/lib/auth-helpers");
+                      const user = await getCurrentUser();
+                      const token = await user?.getIdToken();
+
+                      const res = await fetch('/api/user/threads/mark-interested', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ threadId: selectedReply.threadId })
+                      });
+
+                      const data = await res.json();
+                      if (data.success) {
+                        toast.success('Marked as interested! ✨', { id: toastId });
+                      } else {
+                        toast.error('Failed to mark as interested', { id: toastId });
+                      }
+                    } catch (e) {
+                      toast.error('Error marking as interested', { id: toastId });
+                    }
+                  }}
+                  className="w-full py-3 bg-white/20 text-white border-2 border-white/30 rounded-xl font-bold hover:bg-white/30 transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <Sparkles size={16} />
+                  Mark as Interested
+                </button>
               </div>
             </div>
           )}

@@ -1,8 +1,3 @@
-
-const { db } = require('./dist/lib/firebase-admin'); // Using compiled JS if available or ts-node if setup, but usually I need to use the method compatible with local env. 
-// Actually, I should use the source TS files with ts-node if possible, or just standard admin SDK init in a standalone script.
-// Let's create a standalone script that initializes firebase admin.
-
 const admin = require('firebase-admin');
 const { getFirestore, Timestamp } = require('firebase-admin/firestore');
 

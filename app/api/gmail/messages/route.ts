@@ -181,7 +181,8 @@ export async function GET(request: NextRequest) {
                     insights: {
                         phone: threadData.phone_number,
                         tiktok_rate: threadData.tiktok_rate,
-                        sound_promo_rate: threadData.sound_promo_rate
+                        sound_promo_rate: threadData.sound_promo_rate,
+                        intent: threadData.intent // Pass detected intent
                     }
                 };
             } catch (e) {
