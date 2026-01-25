@@ -3,7 +3,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAuth } from '@/lib/auth-helpers';
+import { verifyAuth } from '@/lib/auth-admin';
 import { calculateABTestResults } from '@/lib/services/ab-test-service';
 
 export async function GET(req: NextRequest) {

@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAuth } from '@/lib/auth-helpers';
+import { verifyAuth } from '@/lib/auth-admin';
 import { markThreadAsInterested } from '@/lib/services/metrics-calculator';
 
 export async function POST(req: NextRequest) {
