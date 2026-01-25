@@ -39,6 +39,7 @@ interface Reply {
     sound_promo_rate?: number;
     key_points?: string[];
   };
+  connectedAccount?: string;
 }
 
 export default function InboxPage({ searchParams }: { searchParams: { demo?: string } }) {
@@ -93,6 +94,7 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
             isNew: msg.isUnread,
             isUnread: msg.isUnread,
             threadId: msg.threadId,
+            connectedAccount: msg.connectedAccount,
             insights: {
               ...msg.insights,
               key_points: msg.insights?.key_points || []
@@ -124,24 +126,25 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
   }, [loadInbox]);
 
   // Filter Logic
-  const filteredReplies = useMemo(() => {
-    let result = [...replies];
-    if (activeTab === "inbox") {
-      result = result.filter(r => {
-        const lastMsg = r.thread && r.thread.length > 0 ? r.thread[r.thread.length - 1] : null;
-        if (!lastMsg) return true;
-        return !lastMsg.isUser;
-      });
-    } else {
-      result = result.filter(r => {
-        const lastMsg = r.thread && r.thread.length > 0 ? r.thread[r.thread.length - 1] : null;
-        if (!lastMsg) return false;
-        return lastMsg.isUser;
-      });
-    }
-    result.sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime());
-    return result;
-  }, [replies, activeTab]);
+  const { inboxReplies, sentReplies } = useMemo(() => {
+    const sorted = [...replies].sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime());
+
+    const inbox = sorted.filter(r => {
+      const lastMsg = r.thread && r.thread.length > 0 ? r.thread[r.thread.length - 1] : null;
+      if (!lastMsg) return true; // Default to inbox if confusing
+      return !lastMsg.isUser; // Reply is from Creator
+    });
+
+    const sent = sorted.filter(r => {
+      const lastMsg = r.thread && r.thread.length > 0 ? r.thread[r.thread.length - 1] : null;
+      if (!lastMsg) return false;
+      return lastMsg.isUser; // Last msg is from Us
+    });
+
+    return { inboxReplies: inbox, sentReplies: sent };
+  }, [replies]);
+
+  const visibleReplies = activeTab === 'inbox' ? inboxReplies : sentReplies;
 
   const formatTimestamp = (dateString: string) => {
     const date = new Date(dateString);
@@ -217,21 +220,21 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
             <h1 className="text-2xl font-black mb-4 tracking-tight flex items-center gap-2">
               Inbox
               <span className="text-xs font-normal text-gray-500 bg-white border border-gray-200 px-2 py-0.5 rounded-full">
-                {replies.length}
+                {visibleReplies.length}
               </span>
             </h1>
             <div className="flex bg-gray-100/50 p-1 rounded-xl mb-3">
               <button
                 onClick={() => setActiveTab('inbox')}
-                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'inbox' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}
+                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'inbox' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}
               >
-                Inbox
+                Inbox <span className="text-[10px] opacity-60">({inboxReplies.length})</span>
               </button>
               <button
                 onClick={() => setActiveTab('sent')}
-                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'sent' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}
+                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'sent' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}
               >
-                Sent
+                Sent <span className="text-[10px] opacity-60">({sentReplies.length})</span>
               </button>
             </div>
             <button
@@ -247,13 +250,13 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             {loading && replies.length === 0 ? (
               <div className="p-8 text-center text-gray-500 text-sm">Loading conversations...</div>
-            ) : filteredReplies.length === 0 ? (
+            ) : visibleReplies.length === 0 ? (
               <div className="p-8 text-center text-gray-500 text-sm flex flex-col items-center">
                 <Mail className="w-8 h-8 opacity-20 mb-2" />
                 No emails found in {activeTab}.
               </div>
             ) : (
-              filteredReplies.map(reply => (
+              visibleReplies.map(reply => (
                 <div
                   key={reply.id}
                   onClick={() => setSelectedReply(reply)}
@@ -264,6 +267,13 @@ function InboxContent({ searchParams }: { searchParams: { demo?: string } }) {
                     <span className="text-[10px] text-gray-400 whitespace-nowrap">{formatTimestamp(reply.receivedAt).split(',')[0]}</span>
                   </div>
                   <p className={`text-xs truncate mb-1.5 ${reply.isUnread ? 'text-gray-900 font-bold' : 'text-gray-500'}`}>{reply.subject}</p>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    {reply.connectedAccount && (
+                      <span className="text-[9px] font-mono bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded uppercase tracking-wider truncate max-w-[120px]">
+                        via {reply.connectedAccount.split('@')[0]}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">{reply.snippet}</p>
                 </div>
               ))

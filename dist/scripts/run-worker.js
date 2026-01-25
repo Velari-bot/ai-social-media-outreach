@@ -58,12 +58,13 @@ dotenv.config({ path: path_1.default.resolve(process.cwd(), '.env.local') });
 // Note: We use relative paths assuming this is run from project root or robust ts-node resolution
 const outreach_sender_1 = require("../lib/services/outreach-sender");
 const reply_monitor_1 = require("../lib/services/reply-monitor");
+const campaign_engine_1 = require("../lib/services/campaign-engine");
 async function main() {
     console.log(`\n[\x1b[36m${new Date().toISOString()}\x1b[0m] Starting Verality Outreach Worker...`);
     const start = Date.now();
     try {
         // Run tasks in parallel to save time
-        const [senderResult, monitorResult] = await Promise.all([
+        const [senderResult, monitorResult, autopilotResult, recurringResult] = await Promise.all([
             (0, outreach_sender_1.sendScheduledEmails)().catch(err => {
                 console.error("[\x1b[31mSender Failed\x1b[0m]", err);
                 return { sent: 0, failed: 0 };
@@ -71,12 +72,22 @@ async function main() {
             (0, reply_monitor_1.monitorAllReplies)().catch(err => {
                 console.error("[\x1b[31mMonitor Failed\x1b[0m]", err);
                 return { totalReplies: 0, totalResponses: 0 };
+            }),
+            (0, campaign_engine_1.runAutopilotDiscovery)().catch(err => {
+                console.error("[\x1b[31mAutopilot Failed\x1b[0m]", err);
+                return { processed: 0 };
+            }),
+            (0, campaign_engine_1.runRecurringCampaigns)().catch(err => {
+                console.error("[\x1b[31mRecurring Failed\x1b[0m]", err);
+                return { totalRun: 0, totalFailed: 0 };
             })
         ]);
         const duration = ((Date.now() - start) / 1000).toFixed(2);
         console.log(`\n[\x1b[32mWorker Complete\x1b[0m] Duration: ${duration}s`);
         console.log(`> Emails Sent: ${senderResult?.sent || 0} (Failed: ${senderResult?.failed || 0})`);
         console.log(`> Replies Processed: ${monitorResult?.totalReplies || 0} (Responses: ${monitorResult?.totalResponses || 0})`);
+        console.log(`> Autopilot Users Processed: ${autopilotResult?.processed || 0}`);
+        console.log(`> Recurring Campaigns Run: ${recurringResult?.totalRun || 0}`);
         process.exit(0);
     }
     catch (globalError) {

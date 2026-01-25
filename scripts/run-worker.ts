@@ -24,6 +24,8 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 import { sendScheduledEmails } from '../lib/services/outreach-sender';
 import { monitorAllReplies } from '../lib/services/reply-monitor';
 
+import { runAutopilotDiscovery, runRecurringCampaigns } from '../lib/services/campaign-engine';
+
 async function main() {
     console.log(`\n[\x1b[36m${new Date().toISOString()}\x1b[0m] Starting Verality Outreach Worker...`);
 
@@ -31,7 +33,7 @@ async function main() {
 
     try {
         // Run tasks in parallel to save time
-        const [senderResult, monitorResult] = await Promise.all([
+        const [senderResult, monitorResult, autopilotResult, recurringResult] = await Promise.all([
             sendScheduledEmails().catch(err => {
                 console.error("[\x1b[31mSender Failed\x1b[0m]", err);
                 return { sent: 0, failed: 0 };
@@ -39,6 +41,14 @@ async function main() {
             monitorAllReplies().catch(err => {
                 console.error("[\x1b[31mMonitor Failed\x1b[0m]", err);
                 return { totalReplies: 0, totalResponses: 0 };
+            }),
+            runAutopilotDiscovery().catch(err => {
+                console.error("[\x1b[31mAutopilot Failed\x1b[0m]", err);
+                return { processed: 0 };
+            }),
+            runRecurringCampaigns().catch(err => {
+                console.error("[\x1b[31mRecurring Failed\x1b[0m]", err);
+                return { totalRun: 0, totalFailed: 0 };
             })
         ]);
 
@@ -47,6 +57,8 @@ async function main() {
         console.log(`\n[\x1b[32mWorker Complete\x1b[0m] Duration: ${duration}s`);
         console.log(`> Emails Sent: ${senderResult?.sent || 0} (Failed: ${senderResult?.failed || 0})`);
         console.log(`> Replies Processed: ${monitorResult?.totalReplies || 0} (Responses: ${monitorResult?.totalResponses || 0})`);
+        console.log(`> Autopilot Users Processed: ${autopilotResult?.processed || 0}`);
+        console.log(`> Recurring Campaigns Run: ${recurringResult?.totalRun || 0}`);
 
         process.exit(0);
     } catch (globalError) {

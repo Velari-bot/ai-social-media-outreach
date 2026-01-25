@@ -177,6 +177,7 @@ export async function GET(request: NextRequest) {
                     fullThread: threadHistory,
                     // Pass specific thread data from DB if needed
                     dbStatus: threadData.status,
+                    connectedAccount: accountEmail,
                     insights: {
                         phone: threadData.phone_number,
                         tiktok_rate: threadData.tiktok_rate,
