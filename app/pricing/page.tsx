@@ -10,101 +10,52 @@ import { auth } from "@/lib/firebase";
 
 const tiers = [
     {
-        name: "Lite",
-        price: 100,
-        dailyLimit: 25,
-        monthlyVolume: "750",
-        costPerCreator: "0.13",
-        description: "For solo scouts & extension users",
-        bestFor: "solo research, extension testing, niche scouting",
-        features: [
-            "25 credits per day (1 Extension Analysis)",
-            "Search creators directly on YouTube",
-            "Auto-Sync with Dashboard",
-            "Verified emails included",
-            "Export results to CSV"
-        ]
-    },
-    {
-        name: "Basic",
-        price: 400,
+        name: "Starter",
+        price: 299,
         dailyLimit: 50,
         monthlyVolume: "1,500",
-        costPerCreator: "0.27",
-        description: "For small teams getting started",
-        bestFor: "testing outreach, small agencies, solo founders",
-        features: [
-            "50 creators per day (≈ 1,500 / month)",
-            "Search creators by platform, niche, and follower count",
-            "Verified emails included",
-            "Export results to CSV",
-            "Email support"
-        ]
-    },
-    {
-        name: "Pro",
-        price: 600,
-        fromText: "From",
-        dailyLimit: 100,
-        monthlyVolume: "3,000",
         costPerCreator: "0.20",
-        isDark: true,
-        description: "For teams running consistent outreach",
-        bestFor: "agencies running daily campaigns",
+        description: "For emerging brands.",
+        bestFor: "solo founders, small teams",
         features: [
-            "100 creators per day (≈ 3,000 / month)",
-            "Advanced search filters (location, email presence, engagement)",
-            "Verified emails",
-            "Campaign management tools",
-            "Priority support"
+            "1,500 creators / month",
+            "Automated Deal Outreach",
+            "Negotiation Hub",
+            "Campaign Management",
+            "Email Support"
         ]
     },
     {
         name: "Growth",
-        price: 900,
-        dailyLimit: 200,
-        monthlyVolume: "6,000",
-        costPerCreator: "0.15",
-        description: "For agencies scaling volume",
-        bestFor: "teams with systems + automation",
-        features: [
-            "200 creators per day (≈ 6,000 / month)",
-            "Everything in Pro",
-            "API access for automation",
-            "White-label reports",
-            "Dedicated success manager"
-        ]
-    },
-    {
-        name: "Scale",
-        price: 1500,
-        dailyLimit: 400,
-        monthlyVolume: "12,000",
+        price: 599,
+        dailyLimit: 150,
+        monthlyVolume: "4,500",
         costPerCreator: "0.13",
-        description: "For high-volume teams",
-        bestFor: "large agencies and outbound teams",
+        isDark: true,
+        description: "For scaling teams.",
+        bestFor: "performance brands, ecom teams",
         features: [
-            "400 creators per day (≈ 12,000 / month)",
-            "Everything in Growth",
-            "Unlimited seats",
-            "Custom integrations",
-            "SLA-backed support"
+            "4,500 creators / month",
+            "Everything in Starter",
+            "Intent Detection (AI)",
+            "Enrichment Cost Savings",
+            "Priority Support"
         ]
     },
     {
-        name: "Custom",
+        name: "Agency",
         price: "Custom",
-        priceText: "Custom pricing",
-        description: "For enterprise & special use cases",
-        bestFor: "enterprises, data platforms, marketplaces",
+        priceText: "Let's talk",
+        description: "For multi-client ops.",
+        bestFor: "agencies, high-volume teams",
         isCustom: true,
         features: [
-            "Unlimited creator volume",
-            "Full API access",
-            "Custom discovery logic",
-            "Dedicated engineering support",
-            "24/7 priority support",
-            "On-premise or private deployments"
+            "Unlimited Volume",
+            "White-label Reports",
+            "Dedicated Success Manager",
+            "API Access",
+            "Slack Channel",
+            "Custom Integrations"
         ]
     }
 ];
@@ -143,13 +94,10 @@ function PricingContent() {
             return;
         }
 
-        // Next.js requires static access to process.env variables (dynamic access like process.env[key] won't work in client bundles)
+        // Next.js requires static access to process.env variables
         const priceIds: Record<string, string | undefined> = {
-            "Lite": process.env.NEXT_PUBLIC_STRIPE_PRICE_LITE,
-            "Basic": process.env.NEXT_PUBLIC_STRIPE_PRICE_BASIC,
-            "Pro": process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,
-            "Growth": process.env.NEXT_PUBLIC_STRIPE_PRICE_GROWTH,
-            "Scale": process.env.NEXT_PUBLIC_STRIPE_PRICE_SCALE,
+            "Starter": process.env.NEXT_PUBLIC_STRIPE_PRICE_BASIC, // Reusing Basic ID likely, pending Stripe update
+            "Growth": process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,   // Reusing Pro ID likely
         };
 
         const priceId = priceIds[tier.name];
@@ -230,7 +178,6 @@ function PricingContent() {
                                         </h3>
 
                                         <div className="flex items-baseline gap-1.5 mb-2 mt-4">
-                                            {tier.fromText && <span className="text-sm font-medium opacity-60">{tier.fromText}</span>}
                                             <span className="text-4xl font-[800] tracking-tight">
                                                 {typeof tier.price === 'number' ? `$${tier.price}` : tier.priceText || tier.price}
                                             </span>
