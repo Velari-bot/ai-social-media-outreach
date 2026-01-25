@@ -3,6 +3,7 @@ import { Creator, CreatorSearchFilters, DiscoveryPipelineResponse, Platform } fr
 import { influencerClubClient } from './influencer-club-client';
 import { clayClient } from './clay-client';
 import { discoverCreatorsViaYouTube } from './youtube-email-extractor';
+import { addCreatorsToQueue } from './outreach-queue';
 import { Timestamp } from 'firebase-admin/firestore';
 
 /**
@@ -226,6 +227,16 @@ export class DiscoveryPipeline {
         if (!skipEnrichment && finalCreators.length > 0) {
             console.log(`[Discovery] Sending ${finalCreators.length} creators to Clay...`);
             finalCreators = await this.bulkEnrichWithClay(finalCreators, userId, campaignId);
+
+            // Automatically queue found emails
+            const enrichedIds = finalCreators
+                .filter(c => c.email && c.email.includes('@') && (c.enrichment_status === 'enriched' || c.email_found))
+                .map(c => String(c.id));
+
+            if (enrichedIds.length > 0) {
+                console.log(`[Discovery] Automatically queuing ${enrichedIds.length} creators for outreach...`);
+                await addCreatorsToQueue(enrichedIds, userId, campaignId);
+            }
         }
 
         return {

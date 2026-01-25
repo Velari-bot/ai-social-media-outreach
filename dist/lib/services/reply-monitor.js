@@ -352,27 +352,29 @@ async function extractCreatorData(message) {
             {
                 role: "system",
                 content: `Extract the following data from the creator's message:
-                1. Phone number (with international code if provided)
-                2. TikTok post rate (in USD). LOOK FOR FORMATS LIKE: "usd 400", "400 usd", "$400", "400".
-                3. Sound Promo rate (in USD). LOOK FOR FORMATS LIKE: "usd 200", "200 usd", "$200".
-                4. Key Points: A JSON array of 3-5 strings summarizing the key info, negotiations, or questions.
+                1. Phone number (any format, e.g. +1..., (555)..., or just digits. PREFER international format if possible).
+                2. TikTok post rate (in USD). Interpret "1k" as 1000. If they just say "rate is $500", assume TikTok rate.
+                3. Sound Promo rate (in USD).
+                4. Key Points: A JSON array of 3-5 strings summarizing the key info.
                 
-                Return ONLY a JSON object with keys: phone, tiktok_rate, sound_promo_rate, key_points
+                Return ONLY a JSON object with keys: phone, tiktok_rate, sound_promo_rate, key_points.
                 If a field is not found, omit it from the JSON.
-                Ensure rates are NUMBERS in the JSON (e.g. 400 not "400").`
+                Ensure rates are clean NUMBERS (e.g. 400 not "400").`
             },
             {
                 role: "user",
-                content: message
+                content: `Message Body:\n${message}`
             }
         ],
         temperature: 0
     });
     try {
         const response = completion.choices[0].message.content || "{}";
+        console.log(`[Reply Monitor] Extracted Data Raw: ${response}`);
         return JSON.parse(response);
     }
-    catch {
+    catch (e) {
+        console.error(`[Reply Monitor] Extraction Error:`, e);
         return {};
     }
 }
@@ -385,12 +387,32 @@ function extractMessageBody(message) {
         return Buffer.from(payload.body.data, 'base64').toString('utf-8');
     }
     // Check parts
+    let htmlBody = '';
     if (payload.parts) {
         for (const part of payload.parts) {
             if (part.mimeType === 'text/plain' && part.body?.data) {
                 return Buffer.from(part.body.data, 'base64').toString('utf-8');
             }
+            if (part.mimeType === 'text/html' && part.body?.data) {
+                htmlBody = Buffer.from(part.body.data, 'base64').toString('utf-8');
+            }
+            // Handle nested parts (multipart/alternative)
+            if (part.parts) {
+                for (const subPart of part.parts) {
+                    if (subPart.mimeType === 'text/plain' && subPart.body?.data) {
+                        return Buffer.from(subPart.body.data, 'base64').toString('utf-8');
+                    }
+                    if (subPart.mimeType === 'text/html' && subPart.body?.data) {
+                        htmlBody = Buffer.from(subPart.body.data, 'base64').toString('utf-8');
+                    }
+                }
+            }
         }
+    }
+    // Fallback to HTML if no plain text found
+    if (htmlBody) {
+        // Simple strip tags
+        return htmlBody.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
     }
     return '';
 }
