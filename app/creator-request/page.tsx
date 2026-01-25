@@ -114,7 +114,7 @@ function CreatorRequestContent() {
           window.location.href = '/email-finder';
           return;
         }
-        // Set default limit to remaining quota if available
+        // Set default limit to max daily quota
         const quota = accountRes.account.email_quota_daily || 50;
         setAutopilotDailyLimit(quota);
       }
@@ -471,7 +471,7 @@ function CreatorRequestContent() {
                       <div>
                         <label className="block text-[10px] font-bold text-green-800 uppercase tracking-wide mb-1.5 flex justify-between">
                           <span>Daily Credits Limit</span>
-                          <span>Max: {userAccount?.email_quota_daily || 500}</span>
+                          <span>Max: {userAccount?.email_quota_daily || 'Unlimited'}</span>
                         </label>
                         <input
                           type="number"
@@ -480,7 +480,7 @@ function CreatorRequestContent() {
                           value={autopilotDailyLimit}
                           onChange={(e) => setAutopilotDailyLimit(Number(e.target.value))}
                           min={10}
-                          max={userAccount?.email_quota_daily || 500}
+                          max={userAccount?.email_quota_daily || 1000000}
                         />
                         <p className="text-[10px] text-green-600 mt-1">
                           We&apos;ll find and email up to this many new creators each day.
