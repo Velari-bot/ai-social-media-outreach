@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
     try {
-        const { priceId, planName, userId, userEmail, referralCode } = await req.json();
+        const { priceId, planName, userId, userEmail, referralCode, mode } = await req.json();
 
         if (!priceId) {
             return NextResponse.json({ error: 'Price ID is required' }, { status: 400 });
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
         const origin = req.headers.get('origin') || 'http://localhost:3000';
 
         const sessionConfig: any = {
-            mode: 'subscription',
+            mode: mode || 'subscription',
             payment_method_types: ['card'],
             line_items: [
                 {

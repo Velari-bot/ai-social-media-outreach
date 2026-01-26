@@ -115,6 +115,9 @@ function PricingContent() {
             "Lite": process.env.NEXT_PUBLIC_STRIPE_PRICE_LITE,
             "Starter": process.env.NEXT_PUBLIC_STRIPE_PRICE_BASIC, // Reusing Basic ID likely, pending Stripe update
             "Growth": process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,   // Reusing Pro ID likely
+            "500 Credits": process.env.NEXT_PUBLIC_STRIPE_PRICE_TOPUP_500,
+            "1,000 Credits": process.env.NEXT_PUBLIC_STRIPE_PRICE_TOPUP_1000,
+            "5,000 Credits": process.env.NEXT_PUBLIC_STRIPE_PRICE_TOPUP_5000,
         };
 
         const priceId = priceIds[tier.name];
@@ -135,7 +138,8 @@ function PricingContent() {
                     planName: tier.name,
                     userId,
                     userEmail,
-                    referralCode: typeof window !== 'undefined' ? localStorage.getItem("verality_affiliate_ref") : undefined
+                    referralCode: typeof window !== 'undefined' ? localStorage.getItem("verality_affiliate_ref") : undefined,
+                    mode: tier.mode || 'subscription'
                 }),
             });
 
@@ -286,7 +290,7 @@ function PricingContent() {
                                     <div className="text-xs text-gray-400 font-bold uppercase tracking-wide mb-6">{pack.per}</div>
                                     <button
                                         className={`w-full py-3 rounded-xl font-bold text-sm transition-all shadow-sm active:scale-95 ${pack.popular ? 'bg-black text-white hover:bg-gray-800 shadow-black/20' : 'bg-white text-black border-2 border-gray-100 hover:border-black hover:bg-gray-50'}`}
-                                        onClick={() => window.open('https://buy.stripe.com/test_topup', '_blank')}
+                                        onClick={() => handleCheckout({ name: pack.amount, mode: 'payment' })}
                                     >
                                         Top Up Now
                                     </button>
