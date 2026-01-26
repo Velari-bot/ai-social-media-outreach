@@ -1,4 +1,26 @@
 {
+    "crons": [
+        {
+            "path": "/api/cron/outreach/send",
+            "schedule": "*/10 * * * *"
+        },
+        {
+            "path": "/api/cron/campaigns/run",
+            "schedule": "*/30 * * * *"
+        },
+        {
+            "path": "/api/admin/auto-responder",
+            "schedule": "*/10 * * * *"
+        },
+        {
+            "path": "/api/cron/credits/reset",
+            "schedule": "0 0 * * *"
+        },
+        {
+            "path": "/api/cron/aggregate-stats",
+            "schedule": "0 */4 * * *"
+        }
+    ],
     "headers": [
         {
             "source": "/api/webhooks/stripe",
