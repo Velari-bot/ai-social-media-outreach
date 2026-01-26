@@ -14,7 +14,7 @@ const tiers = [
         price: 49,
         dailyLimit: 25,
         monthlyVolume: "750",
-        costPerCreator: "0.04",
+        costPerCreator: "0.07",
         description: "For extension users.",
         bestFor: "solo research",
         features: [
@@ -30,7 +30,7 @@ const tiers = [
         price: 399,
         dailyLimit: 50,
         monthlyVolume: "1,500",
-        costPerCreator: "0.20",
+        costPerCreator: "0.27",
         description: "For emerging brands.",
         bestFor: "solo founders, small teams",
         features: [
@@ -46,7 +46,7 @@ const tiers = [
         price: 799,
         dailyLimit: 150,
         monthlyVolume: "4,500",
-        costPerCreator: "0.13",
+        costPerCreator: "0.18",
         isDark: true,
         description: "For scaling teams.",
         bestFor: "performance brands, ecom teams",
