@@ -6,6 +6,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth-admin';
 import { calculateABTestResults } from '@/lib/services/ab-test-service';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
     try {
         const userId = await verifyAuth(req);
