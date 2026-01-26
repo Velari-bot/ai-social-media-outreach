@@ -271,7 +271,7 @@ function PricingContent() {
                     <div className="max-w-4xl mx-auto mt-24 mb-20 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
                         <div className="text-center mb-10">
                             <span className="text-xs font-bold uppercase tracking-widest text-black bg-white px-3 py-1 rounded-full border border-gray-200 shadow-sm mb-4 inline-block">Pay as you go</span>
-                            <h2 className="text-3xl md:text-4xl font-[800] text-[#1A1A1A] tracking-tight">Need extra credits?</h2>
+                            <h2 className="text-3xl md:text-4xl font-[800] text-[#1A1A1A] tracking-tight">Low on credits?</h2>
                         </div>
                         <div className="grid md:grid-cols-3 gap-6">
                             {[
