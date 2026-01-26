@@ -438,7 +438,7 @@ function DashboardContent() {
         </div>
 
         {/* Stats            {/* KPI Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-10">
           <StatTile
             label="CREATORS FOUND"
             value={metrics.totalCreatorsFound || 0}
@@ -455,22 +455,22 @@ function DashboardContent() {
             label="ACTIVE CONVOS"
             value={metrics.activeConversations || 0}
             suffix="ongoing"
-            color="bg-white border-2 border-blue-100"
-            textColor="text-blue-900"
+            color="bg-white border-2 border-gray-100"
+            textColor="text-blue-600"
           />
           <StatTile
             label="INTERESTED"
             value={metrics.meetingsInterested || 0}
             suffix="leads"
-            color="bg-white border-2 border-green-100"
-            textColor="text-green-900"
+            color="bg-white border-2 border-gray-100"
+            textColor="text-green-600"
           />
           <StatTile
-            label="ENRICHMENT SAVED"
+            label="EST. SAVINGS"
             value={`$${(metrics.lifetimeSavings || 0).toFixed(2)}`}
             suffix="all time"
-            color="bg-purple-900 border-2 border-purple-900 shadow-xl"
-            textColor="text-white"
+            color="bg-white border-2 border-gray-100"
+            textColor="text-black"
           />
         </div>
 
