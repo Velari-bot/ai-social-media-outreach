@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from "react";
 import { TrendingUp, Clock, Target, DollarSign, Loader2 } from "lucide-react";
+import { getCurrentUser } from "@/lib/auth-helpers";
 
 interface OutcomeMetrics {
     repliesPer100Emails: number;
@@ -27,7 +28,15 @@ export default function OutcomeMetricsPanel() {
     useEffect(() => {
         async function fetchMetrics() {
             try {
-                const res = await fetch('/api/user/metrics/outcome');
+                const user = await getCurrentUser();
+                if (!user) return;
+                const token = await user.getIdToken();
+
+                const res = await fetch('/api/user/metrics/outcome', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
                 const data = await res.json();
 
                 if (data.success && data.metrics) {
@@ -70,158 +79,114 @@ export default function OutcomeMetricsPanel() {
     };
 
     return (
-        <div className="bg-gradient-to-br from-purple-50 via-white to-blue-50 rounded-3xl border-2 border-purple-100 p-8 shadow-xl relative overflow-hidden">
-            {/* Background Pattern */}
-            <div className="absolute inset-0 opacity-5">
-                <div className="absolute inset-0" style={{
-                    backgroundImage: 'radial-gradient(circle at 2px 2px, black 1px, transparent 0)',
-                    backgroundSize: '32px 32px'
-                }} />
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-xl font-black text-black tracking-tight">Outcome Metrics</h2>
+                    <p className="text-sm text-gray-500 font-medium">real-time predictability analysis</p>
+                </div>
+                <span className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-full">
+                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Live Data</span>
+                </span>
             </div>
 
-            <div className="relative z-10">
-                {/* Header */}
-                <div className="flex items-start justify-between mb-8">
-                    <div>
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse" />
-                            <h2 className="text-2xl font-black text-black tracking-tight">Outcome Metrics</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Reply Rate */}
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between h-40">
+                    <div className="flex justify-between items-start">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Reply Rate</span>
+                        <div className="p-2 bg-gray-50 rounded-lg">
+                            <TrendingUp className="w-4 h-4 text-black" />
                         </div>
-                        <p className="text-sm text-gray-600 font-medium">
-                            Predictability metrics that matter
+                    </div>
+                    <div>
+                        <div className="text-4xl font-black text-black tracking-tighter">
+                            {metrics.repliesPer100Emails.toFixed(1)}%
+                        </div>
+                        <p className="text-xs font-bold text-gray-400 mt-1">
+                            {metrics.totalRepliesReceived} replies / {metrics.totalEmailsSent} sent
                         </p>
                     </div>
-                    <div className="px-4 py-2 bg-white rounded-full border-2 border-purple-100 shadow-sm">
-                        <div className="text-xs font-black text-purple-600 uppercase tracking-widest">
-                            Live Data
+                </div>
+
+                {/* Interest Rate */}
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between h-40">
+                    <div className="flex justify-between items-start">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Interest Rate</span>
+                        <div className="p-2 bg-gray-50 rounded-lg">
+                            <Target className="w-4 h-4 text-black" />
                         </div>
+                    </div>
+                    <div>
+                        <div className="text-4xl font-black text-black tracking-tighter">
+                            {metrics.interestedPer100Replies.toFixed(1)}%
+                        </div>
+                        <p className="text-xs font-bold text-gray-400 mt-1">
+                            {metrics.totalInterested} interested leads
+                        </p>
                     </div>
                 </div>
 
-                {/* Main Metrics Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    {/* Replies per 100 Emails */}
-                    <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm hover:shadow-lg transition-all group">
-                        <div className="flex items-start justify-between mb-4">
-                            <div className="p-3 bg-blue-50 rounded-xl group-hover:bg-blue-100 transition-colors">
-                                <TrendingUp className="w-6 h-6 text-blue-600" />
-                            </div>
-                            <div className="text-right">
-                                <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
-                                    Reply Rate
-                                </div>
-                                <div className="text-4xl font-black text-blue-600">
-                                    {metrics.repliesPer100Emails.toFixed(1)}
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-sm font-bold text-gray-900">Replies per 100 emails</span>
-                        </div>
-                        <div className="mt-3 pt-3 border-t border-gray-100">
-                            <div className="text-xs text-gray-500 font-medium">
-                                {metrics.totalRepliesReceived} replies from {metrics.totalEmailsSent} emails
-                            </div>
+                {/* Deals */}
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between h-40">
+                    <div className="flex justify-between items-start">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Pipeline Deals</span>
+                        <div className="p-2 bg-gray-50 rounded-lg">
+                            <DollarSign className="w-4 h-4 text-black" />
                         </div>
                     </div>
-
-                    {/* Interested per 100 Replies */}
-                    <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm hover:shadow-lg transition-all group">
-                        <div className="flex items-start justify-between mb-4">
-                            <div className="p-3 bg-green-50 rounded-xl group-hover:bg-green-100 transition-colors">
-                                <Target className="w-6 h-6 text-green-600" />
-                            </div>
-                            <div className="text-right">
-                                <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
-                                    Interest Rate
-                                </div>
-                                <div className="text-4xl font-black text-green-600">
-                                    {metrics.interestedPer100Replies.toFixed(1)}
-                                </div>
-                            </div>
+                    <div>
+                        <div className="text-4xl font-black text-black tracking-tighter">
+                            {metrics.dealsStarted}
                         </div>
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-sm font-bold text-gray-900">Interested per 100 replies</span>
-                        </div>
-                        <div className="mt-3 pt-3 border-t border-gray-100">
-                            <div className="text-xs text-gray-500 font-medium">
-                                {metrics.totalInterested} interested from {metrics.totalRepliesReceived} replies
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Deals Started */}
-                    <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm hover:shadow-lg transition-all group">
-                        <div className="flex items-start justify-between mb-4">
-                            <div className="p-3 bg-purple-50 rounded-xl group-hover:bg-purple-100 transition-colors">
-                                <DollarSign className="w-6 h-6 text-purple-600" />
-                            </div>
-                            <div className="text-right">
-                                <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
-                                    Deals
-                                </div>
-                                <div className="text-4xl font-black text-purple-600">
-                                    {metrics.dealsStarted}
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-sm font-bold text-gray-900">Deals started</span>
-                        </div>
-                        <div className="mt-3 pt-3 border-t border-gray-100">
-                            <div className="text-xs text-gray-500 font-medium">
-                                {metrics.conversionRate.toFixed(2)}% conversion rate
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Avg Time to First Reply */}
-                    <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm hover:shadow-lg transition-all group">
-                        <div className="flex items-start justify-between mb-4">
-                            <div className="p-3 bg-orange-50 rounded-xl group-hover:bg-orange-100 transition-colors">
-                                <Clock className="w-6 h-6 text-orange-600" />
-                            </div>
-                            <div className="text-right">
-                                <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
-                                    Response Time
-                                </div>
-                                <div className="text-4xl font-black text-orange-600">
-                                    {formatTime(metrics.avgTimeToFirstReply)}
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-sm font-bold text-gray-900">Avg time to first reply</span>
-                        </div>
-                        <div className="mt-3 pt-3 border-t border-gray-100">
-                            <div className="text-xs text-gray-500 font-medium">
-                                Based on {metrics.totalRepliesReceived} conversations
-                            </div>
-                        </div>
+                        <p className="text-xs font-bold text-gray-400 mt-1">
+                            {(metrics.conversionRate || 0).toFixed(1)}% conversion
+                        </p>
                     </div>
                 </div>
 
-                {/* Predictability Statement */}
-                <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-6 text-white">
-                    <div className="flex items-start gap-4">
-                        <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                            <TrendingUp className="w-6 h-6" />
+                {/* Avg Response Time */}
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between h-40">
+                    <div className="flex justify-between items-start">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Avg Response</span>
+                        <div className="p-2 bg-gray-50 rounded-lg">
+                            <Clock className="w-4 h-4 text-black" />
                         </div>
-                        <div className="flex-1">
-                            <h3 className="font-black text-lg mb-2">Your Predictability Score</h3>
-                            {metrics.totalEmailsSent >= 100 ? (
-                                <p className="text-white/90 font-medium leading-relaxed">
-                                    Based on your data: <strong>Verality averages {metrics.interestedPer100Replies.toFixed(1)} interested creators per 100 replies</strong>,
-                                    with a {metrics.repliesPer100Emails.toFixed(1)}% reply rate.
-                                    That&apos;s <strong>{((metrics.repliesPer100Emails / 100) * (metrics.interestedPer100Replies / 100) * 1000).toFixed(1)} interested creators per 1,000 emails</strong>.
-                                </p>
-                            ) : (
-                                <p className="text-white/90 font-medium leading-relaxed">
-                                    Send at least 100 emails to see your personalized predictability metrics.
-                                    Current progress: {metrics.totalEmailsSent}/100 emails sent.
-                                </p>
-                            )}
+                    </div>
+                    <div>
+                        <div className="text-4xl font-black text-black tracking-tighter">
+                            {formatTime(metrics.avgTimeToFirstReply)}
                         </div>
+                        <p className="text-xs font-bold text-gray-400 mt-1">
+                            time to first reply
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Insight Banner */}
+            <div className="bg-black text-white p-6 rounded-3xl flex items-center justify-between shadow-xl">
+                <div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Predictability Score</div>
+                    <div className="text-sm font-medium text-gray-300">
+                        {metrics.totalEmailsSent >= 100 ? (
+                            <span>
+                                You are generating <span className="text-white font-bold">{((metrics.repliesPer100Emails / 100) * (metrics.interestedPer100Replies / 100) * 1000).toFixed(1)} interested leads</span> for every 1,000 emails sent.
+                            </span>
+                        ) : (
+                            <span>Send 100+ emails to unlock predictive analytics. Current: {metrics.totalEmailsSent}/100</span>
+                        )}
+                    </div>
+                </div>
+                {/* Visual Flair */}
+                <div className="hidden sm:block">
+                    <div className="flex gap-1">
+                        <div className="w-1 h-8 bg-gray-800 rounded-full"></div>
+                        <div className="w-1 h-12 bg-gray-700 rounded-full"></div>
+                        <div className="w-1 h-6 bg-gray-800 rounded-full"></div>
+                        <div className="w-1 h-10 bg-white rounded-full"></div>
+                        <div className="w-1 h-5 bg-gray-800 rounded-full"></div>
                     </div>
                 </div>
             </div>

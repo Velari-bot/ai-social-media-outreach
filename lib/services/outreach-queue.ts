@@ -350,7 +350,7 @@ export const addCreatorsToQueue = async (
         snap.docs.forEach(doc => {
             const data = doc.data();
             creators.push({
-                creator_id: data.id,
+                creator_id: data.id || doc.id,
                 email: data.email || data.contact_email,
                 handle: data.handle || data.username,
                 platform: data.platform || 'instagram',

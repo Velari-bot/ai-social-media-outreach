@@ -10,7 +10,7 @@ import Navbar from "@/components/Navbar";
 import DemoDashboard from "@/components/demo/DemoDashboard";
 import SubscriptionGuard from "@/components/SubscriptionGuard";
 import OutcomeMetricsPanel from "@/components/OutcomeMetricsPanel";
-import { Eye, X, ExternalLink, Youtube, Instagram, Music, Globe, Mail, MapPin, Users, Info, Loader2, Download } from "lucide-react";
+import { Eye, X, ExternalLink, Youtube, Instagram, Music, Globe, Mail, MapPin, Users, Info, Loader2, Download, Search, ArrowRight } from "lucide-react";
 
 interface DashboardMetrics {
   repliesReceived: number;
@@ -387,91 +387,75 @@ function DashboardContent() {
       <Navbar />
 
       {/* Background Gradients */}
-      <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-60">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[60%] bg-gradient-to-br from-purple-100 via-pink-100 to-transparent blur-[100px]" />
-        <div className="absolute top-[20%] right-[-10%] w-[40%] h-[50%] bg-gradient-to-bl from-blue-100 via-teal-50 to-transparent blur-[100px]" />
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-32 space-y-8 relative z-10">
-        {/* Welcome Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-28 space-y-8 relative z-10">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-gray-200/60">
           <div>
-            <h1 className="text-4xl sm:text-5xl font-black text-black tracking-tight mb-2">
+            <h1 className="text-3xl sm:text-4xl font-black text-black tracking-tight mb-2">
               {getTimeGreeting()}, {userName || userEmail?.split('@')[0]}
             </h1>
-            <p className="text-lg text-black font-medium flex items-center gap-2">
-              Your automated outreach is {aiAutopilot ? <span className="font-bold text-green-600">active</span> : <span className="font-bold text-orange-600">paused (Enable Autopilot)</span>}.
-              <Link
-                href="/settings"
-                className="inline-flex items-center gap-1.5 px-3 py-1 bg-white rounded-full text-xs font-black text-black border border-gray-200 shadow-sm uppercase tracking-widest hover:bg-gray-50 transition-colors group"
-              >
-                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse group-hover:animate-none"></span>
-                Focus: {outreachIntent || "Phone Number & Rates"}
-                <svg className="w-3 h-3 ml-0.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M7 17L17 7M17 7H7M17 7V17" />
-                </svg>
-              </Link>
+            <p className="text-gray-500 font-medium text-lg">
+              Here is what&apos;s happening with your outreach today.
             </p>
           </div>
-          <div className="flex gap-3 items-center">
-            <button
-              onClick={handleDownloadAll}
-              className="px-4 py-2.5 bg-white text-black border-2 border-gray-200 rounded-xl font-bold hover:bg-gray-50 transition-all hover:scale-105 active:scale-95 shadow-sm flex items-center gap-2 h-[46px]"
-              title="Download All Creators (CSV)"
-            >
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Export All</span>
-            </button>
-            <div className="px-5 py-2 bg-white rounded-xl border-2 border-gray-100 shadow-sm h-[46px] flex flex-col justify-center min-w-[140px]">
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Credits</div>
-              <div className="text-base font-black text-black leading-none whitespace-nowrap">
-                {metrics.creditsRemaining.toLocaleString()} <span className="text-gray-300 font-medium">/ {metrics.totalCredits.toLocaleString()}</span>
-              </div>
+          <div className="flex flex-wrap gap-3 items-center">
+            <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-gray-200 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-black animate-pulse"></span>
+              <span className="text-sm font-bold text-gray-600 uppercase tracking-widest">
+                {metrics.creditsRemaining.toLocaleString()} Credits Left
+              </span>
             </div>
+
             <Link
               href="/creator-request"
-              className="px-6 py-2.5 bg-black text-white rounded-xl font-bold hover:bg-gray-800 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-black/10 flex items-center gap-2 h-[46px]"
+              className="px-6 py-2.5 bg-black text-white rounded-full font-bold hover:bg-gray-800 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-black/10 flex items-center gap-2"
             >
               <span>+ New Campaign</span>
             </Link>
           </div>
         </div>
 
-        {/* Stats            {/* KPI Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-10">
-          <StatTile
-            label="CREATORS FOUND"
-            value={metrics.totalCreatorsFound || 0}
-            suffix="total"
-            color="bg-white border-2 border-gray-100"
-          />
-          <StatTile
-            label="EMAILS SENT"
-            value={metrics.totalEmailsSent || 0}
-            suffix="total"
-            color="bg-white border-2 border-gray-100"
-          />
-          <StatTile
-            label="ACTIVE CONVOS"
-            value={metrics.activeConversations || 0}
-            suffix="ongoing"
-            color="bg-white border-2 border-gray-100"
-            textColor="text-blue-600"
-          />
-          <StatTile
-            label="INTERESTED"
-            value={metrics.meetingsInterested || 0}
-            suffix="leads"
-            color="bg-white border-2 border-gray-100"
-            textColor="text-green-600"
-          />
-          <StatTile
-            label="EST. SAVINGS"
-            value={`$${(metrics.lifetimeSavings || 0).toFixed(2)}`}
-            suffix="all time"
-            color="bg-white border-2 border-gray-100"
-            textColor="text-black"
-          />
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Pipeline Volume */}
+          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Pipeline Volume</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-3xl font-black text-black mb-1">{metrics.totalCreatorsFound.toLocaleString()}</div>
+                <div className="text-sm font-bold text-gray-500">Creators Found</div>
+              </div>
+              <div>
+                <div className="text-3xl font-black text-black mb-1">{metrics.totalEmailsSent.toLocaleString()}</div>
+                <div className="text-sm font-bold text-gray-500">Emails Sent</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Performance Outcomes */}
+          <div className="bg-black text-white rounded-3xl p-6 shadow-xl relative overflow-hidden group hover:scale-[1.01] transition-transform">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
+
+            <div className="flex justify-between items-start relative z-10">
+              <div>
+                <h3 className="text-xs font-black text-white/60 uppercase tracking-widest mb-6">Campaign Performance</h3>
+                <div className="flex gap-12">
+                  <div>
+                    <div className="text-4xl font-black text-white mb-1">{metrics.activeConversations}</div>
+                    <div className="text-sm font-bold text-white/60">Active Convos</div>
+                  </div>
+                  <div>
+                    <div className="text-4xl font-black text-green-400 mb-1">{metrics.meetingsInterested}</div>
+                    <div className="text-sm font-bold text-green-400/80">Interested Leads</div>
+                  </div>
+                </div>
+              </div>
+              <div className="hidden sm:block text-right">
+                <div className="text-2xl font-black text-white/40">${(metrics.lifetimeSavings || 0).toLocaleString()}</div>
+                <div className="text-xs font-bold text-white/20 uppercase tracking-wider">Est. Value</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Outcome Metrics Panel - Priority #1 */}
@@ -483,15 +467,17 @@ function DashboardContent() {
 
             {/* Active Campaigns */}
             <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-black flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-black animate-pulse"></span>
-                  Active Campaigns
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-black text-black flex items-center gap-3">
+                  Your Campaigns
+                  <span className="bg-gray-100 text-black text-xs px-2 py-1 rounded-full">{recentCampaigns.length}</span>
                 </h2>
-                <Link href="/creator-request" className="text-sm font-bold text-gray-900 hover:text-black hover:underline">View All</Link>
+                {recentCampaigns.length > 0 && (
+                  <Link href="/creator-request" className="text-sm font-bold text-gray-500 hover:text-black">View All</Link>
+                )}
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {recentCampaigns && recentCampaigns.length > 0 ? (
                   recentCampaigns.map((campaign) => (
                     <CampaignCard
@@ -503,47 +489,15 @@ function DashboardContent() {
                     />
                   ))
                 ) : (
-                  <div className="p-8 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 text-center">
-                    <p className="text-gray-900 font-bold mb-4">No active campaigns running.</p>
-                    <Link href="/creator-request" className="text-sm font-bold text-black border-b-2 border-black pb-0.5 hover:text-gray-600 hover:border-gray-600 transition-colors">Start your first campaign</Link>
-                  </div>
-                )}
-              </div>
-            </section>
-
-            {/* Recent Inbox Activity */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-black">Inbox Activity</h2>
-                <Link href="/inbox" className="text-sm font-bold text-gray-900 hover:text-black hover:underline">Go to Inbox</Link>
-              </div>
-
-              <div className="bg-white rounded-2xl border-2 border-gray-100 overflow-hidden">
-                {recentThreads.length > 0 ? (
-                  <div className="divide-y divide-gray-100">
-                    {recentThreads.map((thread) => (
-                      <div key={thread.id} className="p-5 flex gap-4 hover:bg-gray-50 transition-colors cursor-pointer border-l-4 border-transparent hover:border-black" onClick={() => router.push('/inbox')}>
-                        <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center font-bold shrink-0">
-                          {thread.creator_email?.charAt(0).toUpperCase() || "C"}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-black truncate">
-                            {thread.last_message_from === 'user' ? 'You replied to ' : 'Reply from '}
-                            <span className="underline">{thread.creator_handle || thread.creator_email}</span>
-                          </p>
-                          <p className="text-sm text-gray-600 mt-1 truncate">
-                            {thread.last_message_from === 'user' ? 'AI Reply Sent' : 'New message received'}
-                          </p>
-                          <p className="text-[10px] text-gray-400 mt-2 uppercase tracking-wide font-bold">
-                            {thread.updated_at ? new Date(thread.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently'}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-8 text-center text-gray-900 font-medium text-sm">
-                    No recent replies found.
+                  <div className="p-12 bg-white rounded-3xl border border-gray-100 text-center shadow-sm">
+                    <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <Search className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-xl font-black text-black mb-2">No active campaigns</h3>
+                    <p className="text-gray-500 mb-6 max-w-md mx-auto">Start searching for creators to launch your first automated outreach campaign.</p>
+                    <Link href="/creator-request" className="inline-flex px-6 py-3 bg-black text-white rounded-xl font-bold hover:bg-gray-800 transition-colors">
+                      Start Discovery
+                    </Link>
                   </div>
                 )}
               </div>
@@ -554,109 +508,92 @@ function DashboardContent() {
           {/* Right Sidebar */}
           <div className="space-y-6">
 
-            {/* Action Card - High Contrast */}
-            <div className="bg-black rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
-              <div className="relative z-10">
-                <h3 className="font-bold text-lg mb-1">Check your Inbox</h3>
-                <p className="text-gray-300 text-sm mb-6">Review new leads and AI conversations.</p>
-
-                <div className="flex justify-between items-end mb-4">
-                  <span className="text-5xl font-black">{metrics.repliesReceived}</span>
-                  <span className="text-sm text-gray-300 mb-2 font-bold">new replies</span>
-                </div>
-
-                <Link href="/inbox" className="block w-full py-3 bg-white text-black rounded-xl font-bold text-center hover:bg-gray-200 transition-colors">
-                  Open Inbox
+            {/* Quick Inbox Preview */}
+            <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-bold text-black text-lg">Inbox Activity</h3>
+                <Link href="/inbox" className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100">
+                  <ArrowRight className="w-4 h-4 text-black" />
                 </Link>
               </div>
+
+              {recentThreads.length > 0 ? (
+                <div className="space-y-4">
+                  {recentThreads.map((thread) => (
+                    <div key={thread.id} className="flex gap-4 group cursor-pointer" onClick={() => router.push('/inbox')}>
+                      <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center font-bold shrink-0 group-hover:bg-black group-hover:text-white transition-colors">
+                        {thread.creator_email?.charAt(0).toUpperCase() || "C"}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-black truncate">
+                          {thread.creator_handle || thread.creator_email}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {thread.last_message_from === 'user' ? 'You: ' : ''}{thread.snippet || (thread.last_message_from === 'user' ? 'Check inbox...' : 'New message')}
+                        </p>
+                      </div>
+                      <div className="text-[10px] text-gray-400 font-bold whitespace-nowrap">
+                        {thread.updated_at ? new Date(thread.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-400 text-sm">
+                  No recent messages.
+                </div>
+              )}
             </div>
 
             {/* System Status - Clean */}
-            <div className="bg-white rounded-2xl border-2 border-gray-100 p-6">
-              <div className="flex items-center justify-between mb-4">
+            <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-6">
                 <h3 className="font-bold text-black text-sm uppercase tracking-wide">System Health</h3>
-                {/* Autopilot Toggle */}
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase text-gray-400">Autopilot</span>
+                  <div className={`w-2 h-2 rounded-full ${status.gmail && status.aiOutreach ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></div>
+                  <span className="text-xs font-bold text-gray-500">{status.gmail ? 'Operational' : 'Attention Needed'}</span>
+                </div>
+              </div>
+
+              <div className="space-y-3 mb-6">
+                <StatusRow label="Gmail Connection" active={status.gmail} />
+                <StatusRow label="AI Agent" active={status.aiOutreach} />
+                <StatusRow label="Lead Finder" active={status.creatorFinder} />
+              </div>
+
+              <div className="pt-6 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-gray-500">Autopilot</span>
                   <button
                     onClick={async () => {
                       const newState = !aiAutopilot;
                       setAiAutopilot(newState);
                       try {
                         await updateUserAccount({ ai_autopilot_enabled: newState });
-
-                        // Bulk update all campaigns to match
                         await fetch('/api/user/campaigns/toggle-all-autopilot', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ userId, enabled: newState })
                         });
-
-                        // Optimistic UI update for campaigns list
-                        setRecentCampaigns(prev => prev.map(c => ({
-                          ...c,
-                          recurring: newState
-                        })));
-
-                        toast.success(newState ? "Autopilot enabled (All Campaigns)" : "Autopilot disabled");
+                        setRecentCampaigns(prev => prev.map(c => ({ ...c, recurring: newState })));
+                        toast.success(newState ? "Autopilot enabled" : "Autopilot disabled");
                       } catch (e) {
                         setAiAutopilot(!newState);
                         console.error(e);
                         toast.error("Failed to update autopilot");
                       }
                     }}
-                    className={`w-10 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out relative ${aiAutopilot ? 'bg-green-500' : 'bg-gray-200'}`}
+                    className={`w-10 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out relative ${aiAutopilot ? 'bg-black' : 'bg-gray-200'}`}
                   >
                     <div className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-200 ${aiAutopilot ? 'translate-x-4' : 'translate-x-0'}`} />
                   </button>
                 </div>
               </div>
-              <div className="space-y-4">
-                <StatusRow label="Gmail Connected" active={status.gmail} />
-                <StatusRow label="AI Agent" active={status.aiOutreach} />
-                <StatusRow label="Lead Finder" active={status.creatorFinder} />
-              </div>
+
               {!status.gmail && (
-                <Link href="/settings" className="mt-4 block w-full py-2 border-2 border-red-100 bg-red-50 text-red-600 rounded-lg text-xs font-bold text-center hover:bg-red-100">
+                <Link href="/settings" className="mt-4 block w-full py-3 bg-red-50 text-red-600 rounded-lg text-xs font-bold text-center hover:bg-red-100">
                   Fix Connection
                 </Link>
-              )}
-              {/* Force Retry Button for Stuck Emails */}
-              {status.gmail && (
-                <button
-                  onClick={async () => {
-                    const toastId = toast.loading("Checking for stuck emails...");
-                    try {
-                      const res = await fetch('/api/debug/force-send', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ userId, forceAll: true })
-                      });
-                      const data = await res.json();
-                      if (data.sendResult && data.sendResult.sent > 0) {
-                        toast.success(`Successfully sent ${data.sendResult.sent} stuck emails!`, { id: toastId });
-                      } else if (data.message && data.message.includes("No scheduled")) {
-                        toast.success("No stuck emails found. All clear!", { id: toastId });
-                      } else {
-                        toast.success("Queue checked. Monitoring...", { id: toastId });
-                      }
-                    } catch (e) {
-                      console.error(e);
-                      toast.error("Failed to check queue", { id: toastId });
-                    }
-                  }}
-                  className="mt-4 block w-full py-2 border-2 border-gray-100 bg-gray-50 text-gray-600 rounded-lg text-xs font-bold text-center hover:bg-gray-100 transition-colors"
-                >
-                  Verify & Retry Queue
-                </button>
-              )}
-              {aiAutopilot && (
-                <div className="mt-4 p-3 bg-green-50 border border-green-100 rounded-lg flex gap-2">
-                  <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" />
-                  <p className="text-xs text-green-800 font-medium leading-relaxed">
-                    Autopilot is <strong>active</strong>. The AI will continuously find and engage creators until your daily email limit is reached.
-                  </p>
-                </div>
               )}
             </div>
 
@@ -791,22 +728,13 @@ function DashboardContent() {
             </div>
           </div>
         </div>
-      )}
-    </main>
+      )
+      }
+    </main >
   );
 }
 
-function StatTile({ label, value, suffix, color, textColor = "text-black" }: any) {
-  return (
-    <div className={`${color} p-6 rounded-2xl shadow-sm flex flex-col justify-between h-36 hover:shadow-md transition-shadow`}>
-      <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">{label}</span>
-      <div>
-        <span className={`text-4xl font-black ${textColor} tracking-tight`}>{value}</span>
-        <span className="text-sm text-gray-400 ml-1 font-bold">{suffix}</span>
-      </div>
-    </div>
-  );
-}
+
 
 function CampaignCard({ campaign, onDelete, onClick, onRunNow }: { campaign: Campaign, onDelete: (id: number) => void, onClick: () => void, onRunNow?: (id: number, e: any) => void }) {
   return (

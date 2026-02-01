@@ -446,7 +446,7 @@ async function generateOutreachEmail(params: {
             // Let's do a quick AI call for subject transparency if missing
             try {
                 const completion = await getOpenAI().chat.completions.create({
-                    model: "gpt-4",
+                    model: "gpt-4o-mini",
                     messages: [
                         { role: "system", content: "Generate a short, casual subject line for this email body. No quotes." },
                         { role: "user", content: body }
@@ -462,51 +462,79 @@ async function generateOutreachEmail(params: {
     }
 
     // 2. AI GENERATION MODE
-    const completion = await getOpenAI().chat.completions.create({
-        model: "gpt-4",
-        messages: [
-            {
-                role: "system",
-                content: `You are ${persona}. You are reaching out to creators.
-                
-                **YOUR STYLE (Exact Template to Model)**:
-                "Hey!
+    try {
+        const completion = await getOpenAI().chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+                {
+                    role: "system",
+                    content: `You are ${persona}. You are reaching out to creators.
+                    
+                    **YOUR STYLE (Exact Template to Model)**:
+                    "Hey!
 
-                Cory here with Beyond Vision! Hope you're doing well - I'm just getting in touch as we have some available budget with our client, Sheglam for November/December. 
+                    Cory here with Beyond Vision! Hope you're doing well - I'm just getting in touch as we have some available budget with our client, Sheglam for November/December. 
 
-                We'd love to get you involved on the campaign as soon as possible, please let me know your rate for 1x TikTok post?
+                    We'd love to get you involved on the campaign as soon as possible, please let me know your rate for 1x TikTok post?
 
-                If you're not interested in this deal, we work with a bunch of other brands so send over your pricing anyway and we can send over some other campaigns.
+                    If you're not interested in this deal, we work with a bunch of other brands so send over your pricing anyway and we can send over some other campaigns.
 
-                Best,
+                    Best,
 
-                Cory"
+                    Cory"
 
-                **Instructions**:
-                1. Adapt the above template for the creator
-                2. Use their name if provided, otherwise using "Hey!" or "Hi there" is fine.
-                3. Keep it brief and personalized
-                4. Sign off as "${userName}" or "Best, ${userName}"
-                5. Generate a subject line that's casual and direct`
-            },
-            {
-                role: "user",
-                content: `Draft an outreach email for @${creatorHandle} on ${creatorPlatform}. Their name is ${creatorName}.`
-            }
-        ],
-        temperature: 0.7
-    });
+                    **Instructions**:
+                    1. Adapt the above template for the creator
+                    2. Use their name if provided, otherwise using "Hey!" or "Hi there" is fine.
+                    3. Keep it brief and personalized
+                    4. Sign off as "${userName}" or "Best, ${userName}"
+                    5. Generate a subject line that's casual and direct`
+                },
+                {
+                    role: "user",
+                    content: `Draft an outreach email for @${creatorHandle} on ${creatorPlatform}. Their name is ${creatorName}.`
+                }
+            ],
+            temperature: 0.7
+        });
 
-    const response = completion.choices[0].message.content || "";
+        const response = completion.choices[0].message.content || "";
 
-    // Extract subject and body
-    const subjectMatch = response.match(/Subject:\s*(.+)/i);
-    const subject = subjectMatch ? subjectMatch[1].trim() : (templateSubject || "Quick opportunity");
+        // Extract subject and body
+        const subjectMatch = response.match(/Subject:\s*(.+)/i);
+        const subject = subjectMatch ? subjectMatch[1].trim() : (templateSubject || "Quick opportunity");
 
-    // Remove subject line from body
-    const body = response.replace(/Subject:\s*.+\n*/i, '').trim();
+        // Remove subject line from body
+        const body = response.replace(/Subject:\s*.+\n*/i, '').trim();
 
-    return { subject, body };
+        return { subject, body };
+
+    } catch (e: any) {
+        console.warn(`[Outreach Sender] AI Generation failed (Fallback mode):`, e.error?.message || e.message);
+
+        // Fallback Template
+        const subject = templateSubject || "Collaboration Opportunity";
+        let body = templateBody || `Hey [Name],
+
+I came across your content on [Platform] and loved your style!
+
+I'm ${userName} and we're looking for creators for some upcoming campaigns. We'd love to potentially work with you.
+
+Do you have a rate card or media kit you could share?
+
+Best,
+
+${userName}`;
+
+        // Replace variables in fallback
+        body = body
+            .replace(/\[Name\]/gi, creatorName ? creatorName.split(' ')[0] : "there")
+            .replace(/\[First Name\]/gi, creatorName ? creatorName.split(' ')[0] : "there")
+            .replace(/\[Handle\]/gi, creatorHandle || "")
+            .replace(/\[Platform\]/gi, creatorPlatform || "social media");
+
+        return { subject, body };
+    }
 }
 
 async function sendGmailMessage(gmail: any, params: {

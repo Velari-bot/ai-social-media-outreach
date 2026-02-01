@@ -144,37 +144,36 @@ async function processAllThreads(targetEmail: string, skipDelay: boolean = false
                 messages: [
                     {
                         role: "system",
-                        content: `You are Cory, a Campaign Manager at Beyond Vision. You are negotiating with a Creator.
+                        content: `You are ${userName}. (Do NOT use any other name).
+                        
+                        **YOUR TASK**:
+                        Negotiate a brand deal with this Creator.
+                        
+                        **OUTPUT FORMAT (JSON ONLY)**:
+                        {
+                            "intent": "interested" | "price_inquiry" | "not_interested" | "out_of_office" | "needs_info" | "deal_accepted" | "unknown",
+                            "reply_text": "The email body..." (or "IGNORE" if no reply needed),
+                            "reasoning": "Why you chose this reply..."
+                        }
 
-                        **OUTPUT FORMAT**:
-                        You must return a JSON object with:
-                        - "intent": One of ["price_inquiry", "interested", "interested_but_busy", "needs_more_info", "agency_response", "not_interested", "out_of_office", "unknown"]
-                        - "reply_text": The email body reply (or "IGNORE" if no reply needed).
-                        - "reasoning": Brief explanation of why you chose this intent.
+                        **STYLE**:
+                        - Friendly, professional, direct.
+                        - Start with "Thanks for getting back to me!" or similar.
+                        - Keep it under 4 sentences.
+                        - NEVER suggest a call/zoom.
 
-                        **INTENT DEFINITIONS**:
-                        - "price_inquiry": They asked about budget, rates, or payment.
-                        - "interested": They said yes or positive sentiment.
-                        - "interested_but_busy": Positive but deferred timing.
-                        - "needs_more_info": Asked for brief, brand info, or details.
-                        - "agency_response": "Talk to my manager" or "Contact my agent".
-                        - "not_interested": Explicit no.
-                        - "out_of_office": Auto-reply.
+                        **GOALS**:
+                        1. Get a flat USD rate.
+                        2. Get a phone number.
 
-                        **YOUR STYLE**:
-                        - Start with: "Thanks for that!" or "Great to hear from you!"
-                        - Tone: Friendly, professional, upbeat, but direct.
-                        - GOAL 1: **Flat Rate in USD** for "1x TikTok post" or "Sound Promo".
-                        - GOAL 2: **Phone Number** (theirs or manager's).
-
-                        **RULES**:
-                        1. Always be polite and direct.
-                        2. NEVER suggest a call or Zoom.
-                        3. If they seem uninterested 2+ times, set reply_text to "IGNORE".`
+                        **SCENARIOS**:
+                        - If they offered gifting -> Push for paid.
+                        - If they gave a rate -> Acknowledge and say you'll check with the team.
+                        - If uninterested -> return "IGNORE".`
                     },
                     {
                         role: "user",
-                        content: `Conversation History:\n${conversationLog}\n\nDraft a brief reply to the Creator.`
+                        content: `Conversation History:\n${conversationLog}\n\nDraft a brief reply.`
                     }
                 ],
             });
@@ -198,14 +197,14 @@ async function processAllThreads(targetEmail: string, skipDelay: boolean = false
             // Update Thread Intent in DB (Fire & Forget)
             db.collection('email_threads').doc(threadId).set({
                 intent: detectedIntent,
-                intent_confidence: 1.0, // Placeholder
+                intent_confidence: 1.0,
                 intent_updated_at: new Date(),
                 ai_last_reasoning: aiData.reasoning || '',
                 // Ensure other fields exist if record is new (fallback)
                 status: (detectedIntent === 'not_interested') ? 'closed' : 'active'
             }, { merge: true }).catch(err => console.error(`Failed to update intent for ${threadId}:`, err));
 
-            if (aiText.trim() === 'IGNORE') {
+            if (aiText.trim() === 'IGNORE' || aiText === 'IGNORE') {
                 // Mark as read and skip
                 await gmail.users.messages.modify({
                     userId: 'me',

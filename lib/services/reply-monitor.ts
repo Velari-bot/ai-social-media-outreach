@@ -85,7 +85,7 @@ async function checkUserReplies(userId: string) {
     }
 
     const data = gmailConn.data()!;
-    // Standardize accounts list: keys are 'email', 'refresh_token', 'name' (optional)
+    // Standardize accounts list
     const accounts = [];
 
     // Add Primary
@@ -93,7 +93,7 @@ async function checkUserReplies(userId: string) {
         accounts.push({
             email: data.email,
             refresh_token: data.refresh_token,
-            name: data.name // Might be tracked here?
+            name: data.name
         });
     }
     // Add Secondary
@@ -112,7 +112,10 @@ async function checkUserReplies(userId: string) {
     // Get user data (Global fallback)
     const userDoc = await db.collection('user_accounts').doc(userId).get();
     const userData = userDoc.data() || {};
-    const globalName = userData.name || userData.first_name || 'Cory'; // Absolute fallback
+
+    // Dynamic Fallbacks
+    const globalName = userData.name || userData.first_name || 'Outreach Manager';
+    const companyName = userData.company_name || userData.company || 'our brand';
 
     let totalReplies = 0;
     let totalSent = 0;
@@ -130,8 +133,6 @@ async function checkUserReplies(userId: string) {
             const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
             // Determine Name for THIS account
-            // 1. Explicitly saved name for this connected account
-            // 2. Name from User Account (Global)
             let senderName = account.name || globalName;
 
             // Check for threads in the last 2 days
@@ -143,8 +144,6 @@ async function checkUserReplies(userId: string) {
 
             const threads = threadsRes.data.threads || [];
             if (threads.length === 0) continue;
-
-            // console.log(`[Reply Monitor] ${account.email}: Found ${threads.length} unread threads`);
 
             for (const thread of threads) {
                 try {
@@ -175,111 +174,84 @@ async function checkUserReplies(userId: string) {
                     let threadData_db = threadDoc.exists ? threadDoc.data()! : null;
 
                     if (!threadDoc.exists) {
-                        console.log(`[Reply Monitor] Thread ${thread.id} not tracked. Attempting recovery...`);
+                        try {
+                            const creatorEmailMatch = from.match(/<([^>]+)>/);
+                            const creatorEmail = (creatorEmailMatch ? creatorEmailMatch[1] : from).toLowerCase().trim();
 
-                        const creatorEmailMatch = from.match(/<([^>]+)>/);
-                        const creatorEmail = (creatorEmailMatch ? creatorEmailMatch[1] : from).toLowerCase().trim();
-                        console.log(`[Reply Monitor] Attempting recovery for thread ${thread.id} (Email: ${creatorEmail})`);
-
-                        // 1. Try to find by thread ID (most reliable)
-                        let queueSnap = await db.collection('outreach_queue')
-                            .where('gmail_thread_id', '==', thread.id)
-                            .limit(1)
-                            .get();
-
-                        // 2. Fallback to creator email
-                        if (queueSnap.empty) {
-                            queueSnap = await db.collection('outreach_queue')
-                                .where('creator_email', '==', creatorEmail)
-                                .where('user_id', '==', userId)
-                                .orderBy('created_at', 'desc')
-                                .limit(1)
-                                .get();
-                        }
-
-                        if (!queueSnap.empty) {
-                            const queueItem = queueSnap.docs[0].data();
-                            console.log(`[Reply Monitor] Recovered thread ${thread.id} for creator ${queueItem.creator_id}`);
-
-                            await db.collection('email_threads').doc(thread.id!).set({
-                                user_id: userId,
-                                creator_id: queueItem.creator_id,
-                                creator_email: creatorEmail,
-                                status: 'active',
-                                last_message_from: 'creator',
-                                last_message_at: Timestamp.now(),
-                                ai_enabled: settings.ai_auto_reply_enabled !== false,
-                                ai_reply_count: 0,
-                                connected_account_email: account.email, // Bind to THIS account
-                                gmail_labels: ['VERALITY_AI'],
-                                created_at: Timestamp.now(),
-                                updated_at: Timestamp.now()
-                            });
-
-                            // UPDATE QUEUE STATUS
-                            // Find the queue item and mark it as replied
-                            const queueDocs = await db.collection('outreach_queue')
+                            // Try to find context from queue
+                            const queueSnap = await db.collection('outreach_queue')
                                 .where('creator_email', '==', creatorEmail)
                                 .where('user_id', '==', userId)
                                 .limit(1)
                                 .get();
 
-                            if (!queueDocs.empty) {
-                                await queueDocs.docs[0].ref.update({
-                                    status: 'replied',
+                            if (!queueSnap.empty) {
+                                const queueItem = queueSnap.docs[0].data();
+                                await db.collection('email_threads').doc(thread.id!).set({
+                                    user_id: userId,
+                                    creator_id: queueItem.creator_id,
+                                    creator_email: creatorEmail,
+                                    status: 'active',
+                                    last_message_from: 'creator',
+                                    last_message_at: Timestamp.now(),
+                                    ai_enabled: settings.ai_auto_reply_enabled !== false,
+                                    ai_reply_count: 0,
+                                    connected_account_email: account.email,
+                                    gmail_labels: ['VERALITY_AI'],
+                                    created_at: Timestamp.now(),
                                     updated_at: Timestamp.now()
                                 });
+                                threadDoc = await db.collection('email_threads').doc(thread.id!).get();
+                                threadData_db = threadDoc.data()!;
                             }
-
-                            threadDoc = await db.collection('email_threads').doc(thread.id!).get();
-                            threadData_db = threadDoc.data()!;
-                        } else {
-                            console.log(`[Reply Monitor] FAILED recovery for ${thread.id}. Email '${creatorEmail}' not found in queue.`);
-                            continue;
+                        } catch (recErr) {
+                            console.log(`[Recovery Failed] ${thread.id}`);
                         }
                     }
 
-                    if (!threadData_db || !threadData_db.ai_enabled) {
-                        console.log(`[Reply Monitor] Thread ${thread.id} skipped - AI disabled or data missing.`);
-                        continue;
-                    }
+                    if (!threadData_db || !threadData_db.ai_enabled) continue;
 
                     // Skip if we already processed this exact message
-                    if (threadData_db.last_processed_message_id === lastMessage.id) {
-                        console.log(`[Reply Monitor] Thread ${thread.id} already processed (Message ID: ${lastMessage.id})`);
-                        continue;
-                    }
+                    if (threadData_db.last_processed_message_id === lastMessage.id) continue;
 
                     console.log(`[Reply Monitor] Processing reply for thread ${thread.id} from creator ${threadData_db.creator_email}`);
 
-                    // Skip if the last message is from US (secondary check)
-                    if (threadData_db.last_message_from === 'user' && threadData_db.last_message_at) {
-                        // If it was more than 1 minute ago, maybe we can assume it's stable.
-                        // But mostly if it's from 'user', we shouldn't reply again unless creator replied.
-                        // Actually, the header check above (line 160) already handles this for the very last message.
-                    }
-
-                    // Use sender name specific to this thread if tracked, else current account logic
-                    // If we just recovered it, we set connected_account_email to account.email.
-                    // If it was already tracked, rely on account.email.
-
                     const messageBody = extractMessageBody(lastMessage);
 
-                    const aiResponse = await generateAIReply({
+                    // --- GENERATE AI RESPONSE ---
+                    const aiResult = await generateAIReply({
                         creatorMessage: messageBody,
                         threadHistory: messages.slice(0, -1).map(m => extractMessageBody(m)).join('\n\n'),
-                        userName: senderName, // USES CORRECT NAME for this account
-                        persona: settings.ai_persona || `Outreach Specialist at Verality`
+                        userName: senderName,
+                        companyName: companyName,
+                        persona: settings.ai_persona || `Campaign Manager`
                     });
 
-                    console.log(`[Reply Monitor] AI Response for ${thread.id}: ${aiResponse.substring(0, 50)}...`);
+                    // Parse the JSON response
+                    let aiResponseText = "";
+                    let detectedIntent = "unknown";
 
-                    if (aiResponse.toLowerCase().includes('ignore')) {
-                        console.log(`[Reply Monitor] AI decided to IGNORE thread ${thread.id}`);
+                    try {
+                        const parsed = JSON.parse(aiResult);
+                        aiResponseText = parsed.reply_text || "";
+                        detectedIntent = parsed.intent || "unknown";
+                    } catch (e) {
+                        console.error("AI JSON Parse Error", e);
+                        aiResponseText = aiResult; // Fallback to raw text if JSON fails
+                    }
+
+                    console.log(`[Reply Monitor] AI Decision: ${detectedIntent} | Reply: ${aiResponseText ? 'YES' : 'NO'}`);
+
+                    // Handle "IGNORE" or empty cases
+                    if (aiResponseText.trim().toUpperCase() === 'IGNORE' || !aiResponseText) {
                         await db.collection('email_threads').doc(thread.id!).update({
-                            status: 'closed',
+                            intent: detectedIntent, // Save intent even if ignoring
+                            last_processed_message_id: lastMessage.id,
+                            status: (detectedIntent === 'not_interested' || detectedIntent === 'out_of_office') ? 'closed' : 'active',
                             updated_at: Timestamp.now()
                         });
+
+                        // Mark read so we don't loop
                         await gmail.users.threads.modify({
                             userId: 'me',
                             id: thread.id!,
@@ -288,31 +260,39 @@ async function checkUserReplies(userId: string) {
                         continue;
                     }
 
+                    // Send the Reply
                     await sendGmailReply(gmail, {
                         threadId: thread.id!,
                         messageId: lastMessage.id!,
-                        body: aiResponse,
-                        userEmail: account.email // Send from CORRECT account
+                        body: aiResponseText,
+                        userEmail: account.email
                     });
 
-                    // Update data
-                    // Update data
+                    // Update Data & Metrics
                     const extractedData = await extractCreatorData(messageBody);
+
                     await db.collection('email_threads').doc(thread.id!).update({
                         last_message_from: 'user',
                         last_message_at: Timestamp.now(),
-                        last_processed_message_id: lastMessage.id, // TRACK THIS
+                        last_processed_message_id: lastMessage.id,
                         ai_reply_count: (threadData_db.ai_reply_count || 0) + 1,
+
+                        // NEW fields for metrics
+                        intent: detectedIntent,
+                        intent_last_updated: Timestamp.now(),
+
                         phone_number: extractedData.phone || threadData_db.phone_number,
                         tiktok_rate: extractedData.tiktok_rate || threadData_db.tiktok_rate,
                         sound_promo_rate: extractedData.sound_promo_rate || threadData_db.sound_promo_rate,
                         key_points: extractedData.key_points || [],
+
                         updated_at: Timestamp.now()
                     });
 
-                    // Increment User Stats
+                    // Increment Stats
                     await db.collection('user_email_settings').doc(userId).set({
                         total_replies_received: FieldValue.increment(1),
+                        total_ai_replies_sent: FieldValue.increment(1),
                         updated_at: Timestamp.now()
                     }, { merge: true });
 
@@ -324,7 +304,7 @@ async function checkUserReplies(userId: string) {
                     });
 
                     totalSent++;
-                    console.log(`[Reply Monitor] ✅ Sent AI reply from ${account.email} as ${senderName}`);
+                    console.log(`[Reply Monitor] ✅ Sent AI reply to ${threadData_db.creator_email}`);
 
                 } catch (e) {
                     // Ignore individual thread errors
@@ -343,62 +323,59 @@ async function generateAIReply(params: {
     creatorMessage: string;
     threadHistory: string;
     userName: string;
+    companyName: string;
     persona: string;
 }): Promise<string> {
-    const { creatorMessage, threadHistory, userName, persona } = params;
+    const { creatorMessage, threadHistory, userName, companyName, persona } = params;
 
     const completion = await getOpenAI().chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-4o",
+        response_format: { type: "json_object" }, // FORCE JSON
         messages: [
             {
                 role: "system",
-                content: `You are ${userName}. (Do NOT use any other name).
+                content: `You are ${userName}, working with ${companyName}.
                 
-                **YOUR ROLE**:
-                You are ${persona}. You are negotiating brand deals.
+                **YOUR TASK**:
+                Analyze the creator's email and generate the appropriate response (or decision to ignore).
                 
-                **FIRST STEP: ANALYZE THE CONTEXT**:
-                - Look at the VERY FIRST message sent by YOU (the user) in the \`Previous conversation\`.
-                - What was the original request? (e.g. YouTube Integration? TikTok Post? Sound Promo?)
-                - **STICK TO THAT GOAL**. Do not pivot to TikTok if the thread is about YouTube.
+                **OUTPUT FORMAT (JSON ONLY)**:
+                {
+                   "intent": "interested" | "price_inquiry" | "not_interested" | "out_of_office" | "needs_info" | "deal_accepted" | "unknown",
+                   "reply_text": "The email body..." (or "IGNORE" if no reply needed),
+                   "reasoning": "Why you chose this reply..."
+                }
 
-                **YOUR STYLE**:
-                - Friendly, professional, upbeat, but direct.
-                - Start with: "Thanks for that!" or "Great to hear from you!" or "Thanks for getting back to me!"
+                **INTENT DEFINITIONS**:
+                - "price_inquiry": Asking for budget/rates.
+                - "interested": Positive sentiment, willing to collab.
+                - "deal_accepted": Agreed to terms or sent contract back.
+                - "not_interested": Explicit no.
 
-                **SCENARIO HANDLING RULES**:
-                
-                1. **GIFTING vs PAID**:
-                   - IF they offered "Gifting only" or "Free product" (e.g. "I do it for free, just ship items"):
-                   - AND your goal is PAID (e.g. you asked for a rate):
-                   - RESPONSE: Gently push back. "Thanks for explaining! For this specific campaign, the brand is looking for a dedicated paid integration... I'd be happy to ask the team if gifting-only works, but could you let me know if you'd consider a paid integration and what that rate might be?"
-                
-                2. **THEY GAVE THE RATE YOU ASKED FOR**:
-                   - "Thanks for sending those over! I'll be in touch soon regarding the campaign. Best, ${userName}"
+                **STRATEGY**:
+                - Goal 1: Get their **Flat Rate in USD** for the campaign (check history if already asked).
+                - Goal 2: Get a **Phone Number** for "drafting the agreement".
+                - Tone: Brief, Casual Professional. (e.g. "Hey [Name], thanks for the quick reply!").
+                - Length: Under 4 sentences.
+                - **NEVER** suggest a call/Zoom. We work asynchronously.
 
-                3. **THEY ASKED A QUESTION**:
-                   - Answer it simply and redirect back to getting the rate/info needed.
+                **SCENARIOS**:
+                1. **Gift/Product Only**: If they offer free work for product -> Ask if they have a PAID rate. We prefer paid partnerships.
+                2. **Rate Provided**: If they explicitly gave a rate -> Acknowledge it. "Thanks! I'll run this by the team and get back to you shortly."
+                3. **Not Interested**: Return "reply_text": "IGNORE" (and intent: "not_interested").
                 
-                4. **GENERAL NEGOTIATION**:
-                   - If you asked for a "YouTube 2-min integration" rate, DO NOT ask for a TikTok rate unless they brought it up.
-                   - If you asked for TikTok, stick to TikTok.
-                   - ALWAYS ask for a **Phone Number** for drafting purposes if you don't have it yet.
-
-                **Strict Rules**:
-                - Sign off ONLY as "Best, ${userName}".
-                - NEVER suggest a call or Zoom.
-                - Keep it under 4-5 sentences.
-                - If they seem uninterested 2+ times, reply "IGNORE".`
+                **SIGNATURE**:
+                "Best,\n${userName}"`
             },
             {
                 role: "user",
-                content: `Previous conversation:\n${threadHistory}\n\nTheir latest message:\n${creatorMessage}\n\nGenerate your response:`
+                content: `HISTORY:\n${threadHistory}\n\nLATEST MESSAGE:\n${creatorMessage}`
             }
         ],
         temperature: 0.7
     });
 
-    return completion.choices[0].message.content || "";
+    return completion.choices[0].message.content || "{}";
 }
 
 async function extractCreatorData(message: string): Promise<{
@@ -408,7 +385,8 @@ async function extractCreatorData(message: string): Promise<{
     key_points?: string[];
 }> {
     const completion = await getOpenAI().chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-4o-mini",
+        response_format: { type: "json_object" },
         messages: [
             {
                 role: "system",
